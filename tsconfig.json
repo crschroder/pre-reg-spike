@@ -4,15 +4,19 @@
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
-    "module": "ESNext",
+    "module": "commonjs",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
 
     /* Bundler mode */
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
     "noEmit": true,
+
+    "esModuleInterop": true,
+   
+
 
     /* Linting */
     "skipLibCheck": true,
@@ -24,6 +28,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-    }
+      "@prisma/client": ["../generated/prisma/client"],
+    },
   }
 }

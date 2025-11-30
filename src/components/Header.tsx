@@ -29,7 +29,7 @@ export default function Header() {
           aria-label="Open menu"
         >
           <Menu size={24} />
-        </button>
+      </button>
         <h1 className="ml-4 text-xl font-semibold">
           <Link to="/">
             <img
