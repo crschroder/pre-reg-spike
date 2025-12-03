@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TournamentCreateRouteImport } from './routes/tournament/create'
 import { Route as DemoTableRouteImport } from './routes/demo/table'
 import { Route as DemoNeonRouteImport } from './routes/demo/neon'
 import { Route as DemoStartServerFuncsRouteImport } from './routes/demo/start.server-funcs'
@@ -24,6 +25,11 @@ import { Route as DemoStartSsrDataOnlyRouteImport } from './routes/demo/start.ss
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TournamentCreateRoute = TournamentCreateRouteImport.update({
+  id: '/tournament/create',
+  path: '/tournament/create',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoTableRoute = DemoTableRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/demo/neon': typeof DemoNeonRoute
   '/demo/table': typeof DemoTableRoute
+  '/tournament/create': typeof TournamentCreateRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/demo/neon': typeof DemoNeonRoute
   '/demo/table': typeof DemoTableRoute
+  '/tournament/create': typeof TournamentCreateRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/demo/neon': typeof DemoNeonRoute
   '/demo/table': typeof DemoTableRoute
+  '/tournament/create': typeof TournamentCreateRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/'
     | '/demo/neon'
     | '/demo/table'
+    | '/tournament/create'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/'
     | '/demo/neon'
     | '/demo/table'
+    | '/tournament/create'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/'
     | '/demo/neon'
     | '/demo/table'
+    | '/tournament/create'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -164,6 +176,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DemoNeonRoute: typeof DemoNeonRoute
   DemoTableRoute: typeof DemoTableRoute
+  TournamentCreateRoute: typeof TournamentCreateRoute
   DemoApiNamesRoute: typeof DemoApiNamesRoute
   DemoStartApiRequestRoute: typeof DemoStartApiRequestRoute
   DemoStartServerFuncsRoute: typeof DemoStartServerFuncsRoute
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tournament/create': {
+      id: '/tournament/create'
+      path: '/tournament/create'
+      fullPath: '/tournament/create'
+      preLoaderRoute: typeof TournamentCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/table': {
@@ -260,6 +280,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DemoNeonRoute: DemoNeonRoute,
   DemoTableRoute: DemoTableRoute,
+  TournamentCreateRoute: TournamentCreateRoute,
   DemoApiNamesRoute: DemoApiNamesRoute,
   DemoStartApiRequestRoute: DemoStartApiRequestRoute,
   DemoStartServerFuncsRoute: DemoStartServerFuncsRoute,

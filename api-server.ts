@@ -1,25 +1,14 @@
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client';
+import { safeParse } from 'valibot';
+import { TournamentSchema } from './validations/TournamentSchema.ts';
+import { errorHandler, HttpError } from './errors/HttpError.ts';
 
 
 const prisma = new PrismaClient();
-// import * as client from './generated/prisma/client.ts'; // not in the src folder now so only going one up
-//   const PrismaClientClass = client.PrismaClient as unknown as new () => any
 
-//         const prisma = new PrismaClientClass()
 const app = express()
-
-// Static array of items
-const tournaments2 = [
-  { id: 1, name: 'Teenage Dirtbag', artist: 'Wheatus' },
-  { id: 2, name: 'Smells Like Teen Spirit', artist: 'Nirvana' },
-  { id: 3, name: 'The Middle', artist: 'Jimmy Eat World' },
-  { id: 4, name: 'My Own Worst Enemy', artist: 'Lit' },
-  { id: 5, name: 'Fat Lip', artist: 'Sum 41' },
-  { id: 6, name: 'All the Small Things', artist: 'blink-182' },
-  { id: 7, name: 'Beverly Hills', artist: 'Weezer' },
-]
 
 // Health check endpoint
 app.get('/ping', (req: Request, res: Response) => {
@@ -40,11 +29,49 @@ app.get('/tournament/api/tournment/events', async (req: Request, res: Response, 
   }
 })
 
+// Create a new tournament
+app.post('/api/tournaments', async (req, res, next) => {
+  try {
+    const { name, date, location, organizerId } = req.body;
 
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('Error:', err)
-  res.status(500).json({ error: 'Internal server error' })
-})
+      const result = safeParse(TournamentSchema, req.body);
+
+    if (!result.success) {
+      const err = new Error(result.issues.map(i => i.message).join(", "));
+      (err as any).status = 400;
+      return next(err);
+    }
+
+
+
+    // ✅ Step 1: Verify organizer exists
+    const organizer = await prisma.user.findUnique({
+      where: { id: organizerId }
+    });
+
+    if (!organizer) {   
+      return next(new HttpError('Organizer not found', 400));
+    }
+
+    // ✅ Step 2: Create tournament
+    const tournament = await prisma.tournament.create({
+      data: {
+        name,
+        date: new Date(date),
+        location,
+        organizerId
+      }
+    });
+
+    res.status(201).json(tournament);
+  } catch (error) {
+    next(error); // 👈 Pass to centralized error handler
+  }
+});
+
+
+
+app.use(errorHandler);
 
 
 app.listen(4000, () => {

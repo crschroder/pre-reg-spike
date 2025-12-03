@@ -29,6 +29,10 @@
     "paths": {
       "@/*": ["./src/*"],
       "@prisma/client": ["../generated/prisma/client"],
+      "validations/*": ["validations/*"],
+      "errors/*": ["errors/*"]
+
+
     },
   }
 }

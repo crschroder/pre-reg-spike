@@ -71,6 +71,19 @@ export default function Header() {
             <span className="font-medium">Home</span>
           </Link>
 
+          <Link
+            to="/tournament/create"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+            activeProps={{
+              className:
+                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+            }}
+          >
+            <Home size={20} />
+            <span className="font-medium">Create New Event</span>
+          </Link>
+
           {/* Demo Links Start */}
 
           <Link
