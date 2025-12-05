@@ -41,9 +41,7 @@ model Tournament {
 }
 
 model Event {
-  id             Int             @id @default(autoincrement())
-  name           String
-  eventDivisions EventDivision[]
+  id             Int             @id @default(autoincrement()) 
   tournaments    TournamentEvent[]
 
   @@map("event")

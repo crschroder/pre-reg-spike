@@ -30,31 +30,33 @@ app.get('/tournament/api/tournment/events', async (req: Request, res: Response, 
 })
 
 // Create a new tournament
-app.post('/api/tournaments', async (req, res, next) => {
+
+
+// Update an existing tournament
+app.put('/api/tournaments/:id', async (req, res, next) => {
   try {
+    const { id } = req.params;
     const { name, date, location, organizerId } = req.body;
 
-      const result = safeParse(TournamentSchema, req.body);
-
+    // ✅ Validate input
+    const result = safeParse(TournamentSchema, req.body);
     if (!result.success) {
       const err = new Error(result.issues.map(i => i.message).join(", "));
       (err as any).status = 400;
       return next(err);
     }
 
-
-
-    // ✅ Step 1: Verify organizer exists
+    // ✅ Verify organizer exists
     const organizer = await prisma.user.findUnique({
       where: { id: organizerId }
     });
-
-    if (!organizer) {   
-      return next(new HttpError('Organizer not found', 400));
+    if (!organizer) {
+      return next(new HttpError("Organizer not found", 400));
     }
 
-    // ✅ Step 2: Create tournament
-    const tournament = await prisma.tournament.create({
+    // ✅ Update tournament
+    const tournament = await prisma.tournament.update({
+      where: { id },
       data: {
         name,
         date: new Date(date),
@@ -63,9 +65,9 @@ app.post('/api/tournaments', async (req, res, next) => {
       }
     });
 
-    res.status(201).json(tournament);
+    res.json(tournament);
   } catch (error) {
-    next(error); // 👈 Pass to centralized error handler
+    next(error);
   }
 });
 

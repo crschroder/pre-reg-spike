@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import React, { useState } from 'react';
-import {Stepper} from 'react-form-stepper'
+import {Stepper, Step} from '../Custom/Stepper'
 
 export default function CreateTournament () {
       const steps = [
@@ -11,8 +11,8 @@ export default function CreateTournament () {
 
   const [activeStep, setActiveStep] = useState(0);
 
-  const handleNext = () => {
-    if (activeStep < steps.length - 1) {
+   const handleNext = () => {
+    if (activeStep < 3) {
       setActiveStep(prev => prev + 1);
     }
   };
@@ -26,48 +26,62 @@ export default function CreateTournament () {
 
 
 
-    return ( <div className="min-h-screen bg-gray-900 p-6 text-white">
-     <div style={{ padding: '2rem' }}>
-      {/* Stepper itself */}
-      <Stepper steps={steps} activeStep={activeStep}  
-      styleConfig={{
-    activeBgColor: '#2563eb',       // Tailwind blue-600
-    activeTextColor: '#fff',
-    completedBgColor: '#9ca3af',    // Tailwind gray-400
-    completedTextColor: '#fff',
-    inactiveBgColor: '#e5e7eb',     // Tailwind gray-200
-    inactiveTextColor: '#374151',   // Tailwind gray-700
 
-    // Required extra props
-    size: '2em',             // circle size
-    circleFontSize: '1em',   // font size inside circle
-    labelFontSize: '0.875em',// font size for labels
-    borderRadius: '50%',     // round circles
-    fontWeight: 500,         // label font weight
-  }}
-
-/>
+    return (  <div className="min-h-screen bg-gray-900 p-6 text-white">
+    <div className="p-8">
+      {/* Stepper at the top with margin */}
+      <div className="mt-2">
+        <Stepper activeStep={activeStep}>
+          <Step label="Create Event" />
+          <Step label="Add Events" />
+          <Step label="Step 3" />
+          <Step label="Step 4" />
+        </Stepper>
+      </div>
 
       {/* Step content */}
-      <div style={{ marginTop: '2rem' }}>
-        {activeStep === 0 && <div>Content for Step 1</div>}
+      <div className="mt-8 text-center">
+        {activeStep === 0 && <Tournament></Tournament>}
         {activeStep === 1 && <div>Content for Step 2</div>}
         {activeStep === 2 && <div>Content for Step 3</div>}
-        {activeStep === 3 && <div>Content for Step 3</div>}
+        {activeStep === 3 && <div>Content for Step 4</div>}
       </div>
 
       {/* Navigation buttons */}
-      <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
-        <button onClick={handleBack} disabled={activeStep === 0}  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
->
+      <div className="mt-8 flex gap-4 justify-center">
+        <button
+          onClick={handleBack}
+          disabled={activeStep === 0}
+          className={`px-4 py-2 rounded ${
+            activeStep === 0
+              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
+          }`}
+        >
           Back
         </button>
-        <button onClick={handleNext} disabled={activeStep === steps.length - 1}  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
->
+        <button
+          onClick={handleNext}
+          disabled={activeStep === 3}
+          className={`px-4 py-2 rounded ${
+            activeStep === 3
+              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
+          }`}
+        >
           Next
         </button>
       </div>
     </div>
+  </div>
+)
+}
 
-    </div>)
+
+
+export function Tournament()
+{
+  return (
+    <div>External component for Step 1</div>
+  )
 }
