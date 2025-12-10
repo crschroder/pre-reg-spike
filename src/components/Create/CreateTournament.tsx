@@ -1,15 +1,29 @@
-import { Link } from '@tanstack/react-router'
+import {  getRouteApi, useParams, useMatch } from '@tanstack/react-router'
 import React, { useState } from 'react';
 import {Stepper, Step} from '../Custom/Stepper'
 
-export default function CreateTournament () {
+type Props = { tournamentId?: string };
+
+
+
+export default function CreateTournament ({tournamentId}:Props) {
       const steps = [
     { label: 'Create Event' },
     { label: 'Add Events' },
     { label: 'Step 3' },  { label: 'Step 4' },
   ];
-
+ 
   const [activeStep, setActiveStep] = useState(0);
+
+  
+
+  
+  if (tournamentId) {
+    // edit mode → fetch tournament by id
+  } else {
+    // create mode → new tournament
+  }
+
 
    const handleNext = () => {
     if (activeStep < 3) {
@@ -23,28 +37,58 @@ export default function CreateTournament () {
     }
   };
 
+  const handleSave = () => {
+    
+  }
 
+    return (
+  <div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
+    <div className="p-8 w-full max-w-md">
+      {tournamentId ? (
+        <h1 className="text-xl font-semibold mb-6">
+          Editing tournament {tournamentId}
+        </h1>
+      ) : (
+        <h1 className="text-xl font-semibold mb-6">Creating a new tournament</h1>
+      )}
 
+      {/* Form fields */}
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-200 mb-1">
+            Name
+          </label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 
+                       focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter tournament name"
+          />
+        </div>
 
+        <div>
+          <label className="block text-sm font-medium text-gray-200 mb-1">
+            Date
+          </label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 
+                       focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter tournament date"
+          />
+        </div>
 
-    return (  <div className="min-h-screen bg-gray-900 p-6 text-white">
-    <div className="p-8">
-      {/* Stepper at the top with margin */}
-      <div className="mt-2">
-        <Stepper activeStep={activeStep}>
-          <Step label="Create Event" />
-          <Step label="Add Events" />
-          <Step label="Step 3" />
-          <Step label="Step 4" />
-        </Stepper>
-      </div>
-
-      {/* Step content */}
-      <div className="mt-8 text-center">
-        {activeStep === 0 && <Tournament></Tournament>}
-        {activeStep === 1 && <div>Content for Step 2</div>}
-        {activeStep === 2 && <div>Content for Step 3</div>}
-        {activeStep === 3 && <div>Content for Step 4</div>}
+        <div>
+          <label className="block text-sm font-medium text-gray-200 mb-1">
+            Location
+          </label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 
+                       focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter tournament location"
+          />
+        </div>
       </div>
 
       {/* Navigation buttons */}
@@ -60,6 +104,13 @@ export default function CreateTournament () {
         >
           Back
         </button>
+         <button
+    onClick={handleSave}
+    className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400"
+  >
+    Save
+  </button>
+
         <button
           onClick={handleNext}
           disabled={activeStep === 3}
@@ -74,7 +125,7 @@ export default function CreateTournament () {
       </div>
     </div>
   </div>
-)
+);
 }
 
 
