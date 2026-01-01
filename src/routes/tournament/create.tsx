@@ -8,5 +8,6 @@ export const Route = createFileRoute("/tournament/create")({
 });
 
 function TournamentCreatePage() {
+  console.log("Rendering TournamentCreatePage");
   return <CreateTournament tournamentId={undefined} />;  
 }

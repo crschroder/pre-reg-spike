@@ -17,3 +17,11 @@ export type UserWithTournaments = Prisma.UserGetPayload<{
 export type TournamentLight = Prisma.TournamentGetPayload<{
   include: { organizer: false; events: false; participants: false; };
 }>;
+
+
+export interface TournamentInput {
+  name: string;
+  date: string;
+  location: string;
+  organizerId: string;
+}

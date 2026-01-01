@@ -6,6 +6,7 @@ export const Route = createFileRoute('/tournament/created/$tournamentId')({
 })
 
 function TournamentCreatedPage() {
+  console.log("Rendering TournamentCreatedPage");
   const { tournamentId } = Route.useParams();
   return <CreateTournament tournamentId={tournamentId} />;  
 }

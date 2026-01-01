@@ -1,6 +1,16 @@
 import {  getRouteApi, useParams, useMatch } from '@tanstack/react-router'
-import React, { useState } from 'react';
+import { useState, useEffect } from "react";
 import {Stepper, Step} from '../Custom/Stepper'
+import api from '@/api/axios';
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { 
+  getTournamentById,
+  createTournament,
+  updateTournament
+} from "@/api/tournaments";
+import { TournamentInput } from '../../../prisma/shared/types';
+
 
 type Props = { tournamentId?: string };
 
@@ -12,8 +22,55 @@ export default function CreateTournament ({tournamentId}:Props) {
     { label: 'Add Events' },
     { label: 'Step 3' },  { label: 'Step 4' },
   ];
- 
+  debugger;
+  console.log("tournamentId in CreateTournament:", tournamentId);
   const [activeStep, setActiveStep] = useState(0);
+
+  const queryClient = useQueryClient();
+
+  const isEdit = Boolean(tournamentId);
+
+    // Load tournament only when editing
+    const { data, isLoading } = useQuery({
+      queryKey: ["tournament", tournamentId],
+      queryFn: () => getTournamentById(tournamentId!),
+      enabled: isEdit, // only fetch when editing
+    });
+
+
+  const [form, setForm] = useState({
+    name: "",
+    date: "",
+    location: "",
+    organizerId: "1",
+  });
+
+      // Prefill when editing
+  useEffect(() => {
+    if (data) {
+      setForm({
+        name: data.name,
+        date: data.date.slice(0, 10),
+        location: data.location,
+        organizerId: data.organizerId,
+      });
+    }
+  }, [data]);
+
+
+    const mutation = useMutation({
+    mutationFn: (payload: TournamentInput) =>
+      isEdit
+        ? updateTournament(tournamentId!, payload)
+        : createTournament(payload),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+    },
+  });
+
+
+
 
   
 
@@ -37,9 +94,10 @@ export default function CreateTournament ({tournamentId}:Props) {
     }
   };
 
-  const handleSave = () => {
-    
+   function handleSave() {
+    mutation.mutate(form);
   }
+
 
     return (
   <div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
@@ -60,6 +118,9 @@ export default function CreateTournament ({tournamentId}:Props) {
           </label>
           <input
             type="text"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 
                        focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter tournament name"
@@ -71,7 +132,10 @@ export default function CreateTournament ({tournamentId}:Props) {
             Date
           </label>
           <input
-            type="text"
+            type="date"
+            value={form.date}
+            onChange={(e) => setForm({ ...form, date: e.target.value })}
+
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 
                        focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter tournament date"
@@ -84,6 +148,8 @@ export default function CreateTournament ({tournamentId}:Props) {
           </label>
           <input
             type="text"
+             value={form.location}
+             onChange={(e) => setForm({ ...form, location: e.target.value })}
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 
                        focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter tournament location"
