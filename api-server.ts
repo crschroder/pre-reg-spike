@@ -4,11 +4,18 @@ import { PrismaClient } from '@prisma/client';
 import { safeParse } from 'valibot';
 import { TournamentSchema } from './validations/TournamentSchema.ts';
 import { errorHandler, HttpError } from './errors/HttpError.ts';
-
+import cors from "cors";
 
 const prisma = new PrismaClient();
 
 const app = express()
+app.use(
+  cors({
+    origin: "http://localhost:3001",
+    credentials: true,
+  })
+);
+app.use(express.json());
 
 // Health check endpoint
 app.get('/ping', (req: Request, res: Response) => {

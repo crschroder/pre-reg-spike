@@ -10,11 +10,9 @@ import {
   updateTournament
 } from "@/api/tournaments";
 import { TournamentInput } from '../../../prisma/shared/types';
-
+import { useNavigate } from "@tanstack/react-router";
 
 type Props = { tournamentId?: string };
-
-
 
 export default function CreateTournament ({tournamentId}:Props) {
       const steps = [
@@ -22,11 +20,12 @@ export default function CreateTournament ({tournamentId}:Props) {
     { label: 'Add Events' },
     { label: 'Step 3' },  { label: 'Step 4' },
   ];
-  debugger;
   console.log("tournamentId in CreateTournament:", tournamentId);
   const [activeStep, setActiveStep] = useState(0);
 
   const queryClient = useQueryClient();
+  
+  const navigate = useNavigate();
 
   const isEdit = Boolean(tournamentId);
 
@@ -42,12 +41,13 @@ export default function CreateTournament ({tournamentId}:Props) {
     name: "",
     date: "",
     location: "",
-    organizerId: "1",
+    organizerId: 1,
   });
 
       // Prefill when editing
   useEffect(() => {
     if (data) {
+      debugger;
       setForm({
         name: data.name,
         date: data.date.slice(0, 10),
@@ -59,21 +59,24 @@ export default function CreateTournament ({tournamentId}:Props) {
 
 
     const mutation = useMutation({
-    mutationFn: (payload: TournamentInput) =>
-      isEdit
-        ? updateTournament(tournamentId!, payload)
-        : createTournament(payload),
+  mutationFn: (payload: TournamentInput) =>
+    isEdit
+      ? updateTournament(tournamentId!, payload)
+      : createTournament(payload),
 
-    onSuccess: () => {
+  onSuccess: (result) => {
+    if (!isEdit) {
+      // After creating, go to the edit page
+      navigate({
+        to: "/tournament/created/$tournamentId",
+        params: { tournamentId: result.id.toString() },
+      });
+    } else {
+      // After editing, refresh the list
       queryClient.invalidateQueries({ queryKey: ["tournaments"] });
-    },
-  });
-
-
-
-
-  
-
+    }
+  },
+});
   
   if (tournamentId) {
     // edit mode → fetch tournament by id

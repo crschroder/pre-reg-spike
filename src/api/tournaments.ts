@@ -19,5 +19,7 @@ export function updateTournament(id: string, data: TournamentInput) {
 
 
 export function getTournamentById(id: string) {
-  return api.get(`/api/tournaments/${id}`).then(res => res.data);
+  return api.get(`/api/tournaments/${id}`).then(res => {
+    console.log(res.data);
+    return res.data;});
 }

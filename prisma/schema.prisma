@@ -41,8 +41,9 @@ model Tournament {
 }
 
 model Event {
-  id             Int             @id @default(autoincrement()) 
-  tournaments    TournamentEvent[]
+  id             Int                @id @default(autoincrement()) 
+  tournaments    TournamentEvent[]  @relation("EventToTournamentEvent")
+  divisions      EventDivision[]    @relation("EventToEventDivision")
 
   @@map("event")
 }
@@ -62,13 +63,14 @@ model Division {
 model EventDivision {
   id             Int          @id @default(autoincrement())
   eventId        Int          @map("event_id")
-  event          Event        @relation(fields: [eventId], references: [id])
+  event          Event        @relation("EventToEventDivision", fields: [eventId], references: [id])
   divisionId     Int          @map("division_id")
   division       Division     @relation(fields: [divisionId], references: [id])
   registrations  Registration[]
   displayName    String?      @map("display_name")
-  genderId       Int       @map("gender_id")
-  eventGender    EventGender   @relation(fields:[genderId], references:[id])
+  genderId       Int          @map("gender_id")
+  eventGender    EventGender  @relation(fields:[genderId], references:[id])
+
   @@map("event_division")
 }
 
@@ -102,7 +104,7 @@ model TournamentEvent {
   tournamentId  Int        @map("tournament_id")
   tournament    Tournament @relation(fields: [tournamentId], references: [id])
   eventId       Int        @map("event_id")
-  event         Event      @relation(fields: [eventId], references: [id])
+  event         Event      @relation("EventToTournamentEvent", fields: [eventId], references: [id])
   scheduledAt   DateTime?  @map("scheduled_at")
   bracketType   String?    @map("bracket_type")
 

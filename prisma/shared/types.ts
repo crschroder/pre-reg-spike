@@ -23,5 +23,5 @@ export interface TournamentInput {
   name: string;
   date: string;
   location: string;
-  organizerId: string;
+  organizerId: number;
 }
