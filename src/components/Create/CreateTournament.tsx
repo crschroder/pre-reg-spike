@@ -28,7 +28,7 @@ export default function CreateTournament ({tournamentId}:Props) {
   const navigate = useNavigate();
 
   const isEdit = Boolean(tournamentId);
-
+  console.log("isEdit:", isEdit); 
     // Load tournament only when editing
     const { data, isLoading } = useQuery({
       queryKey: ["tournament", tournamentId],
@@ -86,8 +86,12 @@ export default function CreateTournament ({tournamentId}:Props) {
 
 
    const handleNext = () => {
-    if (activeStep < 3) {
-      setActiveStep(prev => prev + 1);
+    // TODO, change this to handle save and proceed    
+    if (tournamentId) {
+      navigate({
+        to: "/tournament/events/$tournamentId",
+        params: { tournamentId: tournamentId },
+      });
     }
   };
 
@@ -182,9 +186,9 @@ export default function CreateTournament ({tournamentId}:Props) {
 
         <button
           onClick={handleNext}
-          disabled={activeStep === 3}
+          disabled={!isEdit}
           className={`px-4 py-2 rounded ${
-            activeStep === 3
+            !isEdit
               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
               : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
           }`}
