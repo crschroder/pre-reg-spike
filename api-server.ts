@@ -150,31 +150,33 @@ app.get('/api/event-types', async (req: Request, res: Response, next: NextFuncti
 });
 
 app.get('/api/event/:eventId/allowed-divisions', async (req: Request, res: Response, next: NextFunction) => {
-try {
-   const eventIdNum = Number(req.params.eventId);
+  try {
+    const eventIdNum = Number(req.params.eventId);
 
-      if (isNaN(eventIdNum)) {
-        return res.status(400).json({ error: "Invalid eventId" });
-      }
+    if (isNaN(eventIdNum)) {
+      return res.status(400).json({ error: "Invalid eventId" });
+    }
 
-      // Prisma query
-      const allowedDivisions = await prisma.eventAllowedDivision.findMany({
-        where: {
-          eventId: eventIdNum,
+    // Prisma query
+    const allowedDivisions = await prisma.eventAllowedDivision.findMany({
+      where: { eventId: eventIdNum },
+      include: {
+        division: {
+          include: {
+            beltRank: true,   // <-- this pulls belt color / rank name
+          },
         },
-        include: {
-          division: true, // pulls full division details
-        },
-        orderBy: {
-          divisionId: 'asc',
-        },
-      });
+      },
+      orderBy: {
+        divisionId: "asc",
+      },
+    });
 
-      // Return only the division objects (cleaner for UI)
-      const divisions = allowedDivisions.map(ad => ad.division);
+    // Return only the division objects (cleaner for UI)
+    const divisions = allowedDivisions.map(ad => ad.division);
 
-      res.json(divisions);
-} catch (err) {
+    res.json(divisions);
+  } catch (err) {
     next(err); // delegate to error handler
   }
 });

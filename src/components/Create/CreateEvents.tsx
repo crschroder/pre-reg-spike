@@ -30,7 +30,9 @@ export default function CreateEvents({tournamentId} : Props){
 ) : (
   eventTypes?.map((et: EventType) => (
     <Accordion key={et.id} title={et.name}>
+      <div className="max-h-64 overflow-y-auto pr-2">
       <AllowedDivisions eventId={et.id} />
+      </div>
     </Accordion>
   ))
 )}
@@ -47,15 +49,15 @@ function AllowedDivisions({ eventId }: { eventId: number }) {
   if (error) return <div>Error loading divisions</div>;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="grid grid-cols-3 gap-3">
       {divisions.map((division: any) => (
-        <label key={division.id} className="flex items-center gap-2">
+        <label key={division.id} className="flex items-center gap-2 bg-gray-800 px-3 py-2 rounded">
           <input
             type="checkbox"
             value={division.id}
             // You’ll wire this up later to create EventDivision
           />
-          <span>{division.name}</span>
+          <span>{division.name} — {division.beltRank?.beltColor}</span>
         </label>
       ))}
     </div>
