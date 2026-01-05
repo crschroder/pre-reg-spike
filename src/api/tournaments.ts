@@ -31,3 +31,8 @@ export function getEventTypes() {
 
       return res.data;});
 }
+
+export function getDivisionsByEventType(eventTypeId: number) {
+  return api.get(`/api/event/${eventTypeId}/allowed-divisions`)
+    .then(res => res.data);
+}

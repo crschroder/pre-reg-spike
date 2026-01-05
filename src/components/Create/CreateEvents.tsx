@@ -1,6 +1,7 @@
 import { getEventTypes } from "@/api/tournaments";
 import { useQuery } from "@tanstack/react-query";
 import { Accordion } from "../Custom/Accordian";
+import { useAllowedDivisions } from "@/hooks/useAllowedDivisions";
 
 type Props = { tournamentId?: string };
 
@@ -29,9 +30,7 @@ export default function CreateEvents({tournamentId} : Props){
 ) : (
   eventTypes?.map((et: EventType) => (
     <Accordion key={et.id} title={et.name}>
-      <div className="text-gray-600">
-        Divisions will appear here once they are available.
-      </div>
+      <AllowedDivisions eventId={et.id} />
     </Accordion>
   ))
 )}
@@ -41,3 +40,24 @@ export default function CreateEvents({tournamentId} : Props){
     )
 } 
 
+function AllowedDivisions({ eventId }: { eventId: number }) {
+  const { data: divisions, isLoading, error } = useAllowedDivisions(eventId);
+
+  if (isLoading) return <div>Loading divisions...</div>;
+  if (error) return <div>Error loading divisions</div>;
+
+  return (
+    <div className="flex flex-col gap-2">
+      {divisions.map((division: any) => (
+        <label key={division.id} className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            value={division.id}
+            // You’ll wire this up later to create EventDivision
+          />
+          <span>{division.name}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
