@@ -23,3 +23,11 @@ export function getTournamentById(id: string) {
     console.log(res.data);
     return res.data;});
 }
+
+export function getEventTypes() {
+  return api.get("/api/event-types")
+    .then(res => {
+      console.log("Fetched event types:", res.data);
+
+      return res.data;});
+}

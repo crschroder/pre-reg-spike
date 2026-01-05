@@ -42,9 +42,10 @@ model Tournament {
 
 model Event {
   id          Int               @id @default(autoincrement())
+  name        String
   tournaments TournamentEvent[] @relation("EventToTournamentEvent")
   divisions   EventDivision[]   @relation("EventToEventDivision")
-
+  allowedDivisions EventAllowedDivision[] 
   @@map("event")
 }
 
@@ -56,6 +57,7 @@ model Division {
   beltRankId     Int?            @map("belt_rank_id")
   beltRank       BeltRank?       @relation(fields: [beltRankId], references: [id])
   eventDivisions EventDivision[]
+  allowedEvents EventAllowedDivision[]
 
   @@map("division")
 }
@@ -136,4 +138,15 @@ model EventGender {
   eventDivisions EventDivision[]
 
   @@map("event_gender")
+}
+
+model EventAllowedDivision {
+  id         Int       @id @default(autoincrement())
+  eventId    Int       @map("event_id")
+  divisionId Int       @map("division_id")
+  event      Event     @relation(fields: [eventId], references: [id])
+  division   Division  @relation(fields: [divisionId], references: [id])
+
+  @@unique([eventId, divisionId])
+  @@map("event_allowed_division")
 }

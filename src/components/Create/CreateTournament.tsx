@@ -47,7 +47,6 @@ export default function CreateTournament ({tournamentId}:Props) {
       // Prefill when editing
   useEffect(() => {
     if (data) {
-      debugger;
       setForm({
         name: data.name,
         date: data.date.slice(0, 10),
