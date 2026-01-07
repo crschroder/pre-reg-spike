@@ -2,6 +2,9 @@ import { getEventTypes } from "@/api/tournaments";
 import { useQuery } from "@tanstack/react-query";
 import { Accordion } from "../Custom/Accordian";
 import { useAllowedDivisions } from "@/hooks/useAllowedDivisions";
+import { useState } from "react";
+import { Division } from "prisma/shared/division";
+import { Toggle } from "../Custom/Toggle";
 
 type Props = { tournamentId?: string };
 
@@ -17,6 +20,15 @@ export default function CreateEvents({tournamentId} : Props){
       queryFn: () => getEventTypes(),
     });
 
+    const [divisionSettings, setDivisionSettings] = useState<Record<number, boolean>>({});
+
+  function toggleCoed(divisionId: number) {
+    setDivisionSettings(prev => ({
+      ...prev,
+      [divisionId]: !prev[divisionId]
+    }));
+  }
+
     return (
       <div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
         <div></div>
@@ -31,7 +43,7 @@ export default function CreateEvents({tournamentId} : Props){
   eventTypes?.map((et: EventType) => (
     <Accordion key={et.id} title={et.name}>
       <div className="max-h-64 overflow-y-auto pr-2">
-      <AllowedDivisions eventId={et.id} />
+      <AllowedDivisions eventId={et.id} divisionSettings={divisionSettings} toggleCoed={toggleCoed} />
       </div>
     </Accordion>
   ))
@@ -42,23 +54,37 @@ export default function CreateEvents({tournamentId} : Props){
     )
 } 
 
-function AllowedDivisions({ eventId }: { eventId: number }) {
-  const { data: divisions, isLoading, error } = useAllowedDivisions(eventId);
+export interface AllowedDivisionsProps {
+  eventId: number;
+  divisionSettings: Record<number, boolean>; // divisionId → coed true/false
+  toggleCoed: (divisionId: number) => void;
+}
 
-  if (isLoading) return <div>Loading divisions...</div>;
-  if (error) return <div>Error loading divisions</div>;
+function AllowedDivisions({ eventId, divisionSettings, toggleCoed }: AllowedDivisionsProps) {
+  const { data: divisions =[], isLoading, error } = useAllowedDivisions(eventId);
+
+  if (isLoading) return <p className="text-gray-400">Loading divisions...</p>;
+  if (error) return <p className="text-red-400">Error loading divisions</p>;
 
   return (
-    <div className="grid grid-cols-3 gap-3">
-      {divisions.map((division: any) => (
-        <label key={division.id} className="flex items-center gap-2 bg-gray-800 px-3 py-2 rounded">
-          <input
-            type="checkbox"
-            value={division.id}
-            // You’ll wire this up later to create EventDivision
-          />
-          <span>{division.name} — {division.beltRank?.beltColor}</span>
-        </label>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+      {divisions.map((division: Division) => (
+        <div
+          key={division.id}
+          className="bg-gray-800 p-3 rounded flex flex-col gap-2"
+        >
+          <div className="text-sm font-medium text-gray-100">
+            {division.name} — {division.beltRank?.color || "No Color"}
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <Toggle
+              checked={divisionSettings[division.id] ?? false}
+              onChange={() => toggleCoed(division.id)}
+            />
+            <span>Male/Female Combined</span>
+          </label>
+        </div>
       ))}
     </div>
   );

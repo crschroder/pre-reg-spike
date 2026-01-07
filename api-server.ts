@@ -1,12 +1,24 @@
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express'
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { safeParse } from 'valibot';
 import { TournamentSchema } from './validations/TournamentSchema.ts';
 import { errorHandler, HttpError } from './errors/HttpError.ts';
 import cors from "cors";
+import { mapDivisions } from "./prisma/mappers/divisionMapper.ts";
 
 const prisma = new PrismaClient();
+
+type EventAllowedDivisionWithDivision =
+  Prisma.EventAllowedDivisionGetPayload<{
+    include: {
+      division: {
+        include: {
+          beltRank: true
+        }
+      }
+    }
+  }>;
 
 const app = express()
 app.use(
@@ -158,24 +170,25 @@ app.get('/api/event/:eventId/allowed-divisions', async (req: Request, res: Respo
     }
 
     // Prisma query
-    const allowedDivisions = await prisma.eventAllowedDivision.findMany({
-      where: { eventId: eventIdNum },
-      include: {
-        division: {
-          include: {
-            beltRank: true,   // <-- this pulls belt color / rank name
+    const allowedDivisions: EventAllowedDivisionWithDivision[] =
+      await prisma.eventAllowedDivision.findMany({
+        where: { eventId: eventIdNum },
+        include: {
+          division: {
+            include: {
+              beltRank: true,   // <-- this pulls belt color / rank name
+            },
           },
         },
-      },
-      orderBy: {
-        divisionId: "asc",
-      },
-    });
+        orderBy: {
+          divisionId: "asc",
+        },
+      });
 
     // Return only the division objects (cleaner for UI)
     const divisions = allowedDivisions.map(ad => ad.division);
 
-    res.json(divisions);
+    res.json(mapDivisions(divisions));
   } catch (err) {
     next(err); // delegate to error handler
   }
