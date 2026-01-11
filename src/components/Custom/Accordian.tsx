@@ -33,3 +33,4 @@ export function Accordion({ title, children }: AccordionProps) {
     </div>
   );
 }
+
