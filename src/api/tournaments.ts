@@ -1,6 +1,6 @@
 // src/api/tournaments.ts
 import  api  from "./axios";
-import { TournamentInput } from "../../prisma/shared/types";
+import { TournamentEventPayload, TournamentInput } from "prisma/shared";
 
 export function getTournaments() {
   return api.get("/tournament/api/tournment/events")
@@ -36,3 +36,27 @@ export function getDivisionsByEventType(eventTypeId: number) {
   return api.get(`/api/event/${eventTypeId}/allowed-divisions`)
     .then(res => res.data);
 }
+
+export function createTournamentEvents(
+  tournamentId: number,
+  data: TournamentEventPayload
+) {
+  return api
+    .post(`/api/tournaments/${tournamentId}/tournamentEvents`, data)
+    .then(res => res.data);
+}
+export function updateTournamentEvents(
+  tournamentId: number,
+  data: TournamentEventPayload
+) {
+  return api
+    .put(`/api/tournaments/${tournamentId}/tournamentEvents`, data)
+    .then(res => res.data);
+}
+
+export function getTournamentEvents(tournamentId: number) {
+  return api
+    .get(`/api/tournaments/${tournamentId}/tournamentEvents`)
+    .then(res => res.data);
+}
+

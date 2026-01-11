@@ -1,24 +1,28 @@
-import { getEventTypes } from "@/api/tournaments";
+import { getEventTypes, getTournamentEvents } from "@/api/tournaments";
 import { useQuery } from "@tanstack/react-query";
 import { Accordion } from "../Custom/Accordian";
 import { useAllowedDivisions } from "@/hooks/useAllowedDivisions";
 import { useState } from "react";
-import { Division } from "prisma/shared/division";
+import { Division,EventType } from "prisma/shared";
 
 
 type Props = { tournamentId?: string };
 
-interface EventType {
-  id: number;
-  name: string;
-}
+
 
 export default function CreateEvents({tournamentId} : Props){
 
+     const numericId = Number(tournamentId);
     const { data: eventTypes, isLoading: isLoadingEventTypes } = useQuery<EventType[]>({
       queryKey: ["eventTypes"],
       queryFn: () => getEventTypes(),
     });
+
+    const { data: tournamentEvents, isLoading: isLoadingTournamentEvents } = useQuery({
+    queryKey: ["tournamentEvents", numericId],
+    queryFn: () => getTournamentEvents(numericId),
+    enabled: !!tournamentId,
+  });
 
     const [divisionSettings, setDivisionSettings] = useState<DivisionSettings>({});
 
@@ -30,7 +34,13 @@ export default function CreateEvents({tournamentId} : Props){
     [divisionId]: mode
   }
   }));
+  console.log(divisionSettings);
 }
+const selectedEventIds =
+    tournamentEvents?.map(te => te.eventId) ?? [];
+
+  const filteredEventTypes =
+    eventTypes?.filter(et => selectedEventIds.includes(et.id)) ?? [];
 
     return (
       <div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
@@ -43,7 +53,7 @@ export default function CreateEvents({tournamentId} : Props){
        {isLoadingEventTypes ? (
   <p>Loading event types...</p>
 ) : (
-  eventTypes?.map((et: EventType) => (
+  filteredEventTypes?.map((et: EventType) => (
     <Accordion key={et.id} title={et.name}>
       <div className="max-h-64 overflow-y-auto pr-2">
       <AllowedDivisions eventId={et.id} divisionSettings={divisionSettings[et.id]|| {}} setDivisionMode={setDivisionMode} />

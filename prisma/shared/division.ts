@@ -1,4 +1,4 @@
-console.log("Loaded division.ts from:", import.meta.url);
+
 
 import { BeltRank } from "./beltRank.ts";
 

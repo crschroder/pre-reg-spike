@@ -2,15 +2,18 @@ import {  getRouteApi, useParams, useMatch } from '@tanstack/react-router'
 import { useState, useEffect } from "react";
 import {Stepper, Step} from '../Custom/Stepper'
 import api from '@/api/axios';
-
+import { getEventTypes, getTournamentEvents } from "@/api/tournaments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   getTournamentById,
   createTournament,
-  updateTournament
+  updateTournament,
+  createTournamentEvents,
+  updateTournamentEvents
 } from "@/api/tournaments";
-import { TournamentInput } from '../../../prisma/shared/types';
+
 import { useNavigate } from "@tanstack/react-router";
+import { EventType,TournamentInput } from 'prisma/shared';
 
 type Props = { tournamentId?: string };
 
@@ -35,6 +38,27 @@ export default function CreateTournament ({tournamentId}:Props) {
       queryFn: () => getTournamentById(tournamentId!),
       enabled: isEdit, // only fetch when editing
     });
+
+  const { data: existingTournamentEvents } = useQuery({
+    queryKey: ["tournamentEvents", tournamentId],
+    queryFn: () => getTournamentEvents(+tournamentId!),
+    enabled: isEdit, // only fetch when editing
+  });
+
+  // get event types
+  const { data: eventTypesData, isLoading: isLoadingEventTypes } = useQuery<EventType[]>({
+        queryKey: ["eventTypes"],
+        queryFn: () => getEventTypes(),
+      });
+  const eventTypes = Array.isArray(eventTypesData) ? eventTypesData : [];
+  const [selectedEvents, setSelectedEvents] = useState<number[]>([]);
+
+  useEffect(() => {
+  if (isEdit && existingTournamentEvents) {
+    const ids = existingTournamentEvents.map(te => te.eventId);
+    setSelectedEvents(ids);
+  }
+}, [isEdit, existingTournamentEvents]);
 
 
   const [form, setForm] = useState({
@@ -63,7 +87,13 @@ export default function CreateTournament ({tournamentId}:Props) {
       ? updateTournament(tournamentId!, payload)
       : createTournament(payload),
 
-  onSuccess: (result) => {
+  onSuccess: async (result) => {
+    if (isEdit) {
+      await updateTournamentEvents(+tournamentId!, { eventIds: selectedEvents });
+    } else {
+      await createTournamentEvents(result.id, { eventIds: selectedEvents });
+    }
+
     if (!isEdit) {
       // After creating, go to the edit page
       navigate({
@@ -76,6 +106,9 @@ export default function CreateTournament ({tournamentId}:Props) {
     }
   },
 });
+ function handleSave() {
+    mutation.mutate(form);
+  }
   
   if (tournamentId) {
     // edit mode → fetch tournament by id
@@ -100,9 +133,7 @@ export default function CreateTournament ({tournamentId}:Props) {
     }
   };
 
-   function handleSave() {
-    mutation.mutate(form);
-  }
+  
 
 
     return (
@@ -161,6 +192,30 @@ export default function CreateTournament ({tournamentId}:Props) {
             placeholder="Enter tournament location"
           />
         </div>
+        <div>
+  <label className="block text-sm font-medium text-gray-200 mb-2">
+    Events to Include
+  </label>
+
+  <div className="flex flex-col gap-2 bg-gray-800 p-3 rounded border border-gray-700">
+    {eventTypes.map((et: any) => (
+      <label key={et.id} className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={selectedEvents.includes(et.id)}
+          onChange={() => {
+            setSelectedEvents(prev =>
+              prev.includes(et.id)
+                ? prev.filter(id => id !== et.id)
+                : [...prev, et.id]
+            );
+          }}
+        />
+        <span>{et.name}</span>
+      </label>
+    ))}
+  </div>
+</div>
       </div>
 
       {/* Navigation buttons */}
@@ -202,9 +257,3 @@ export default function CreateTournament ({tournamentId}:Props) {
 
 
 
-export function Tournament()
-{
-  return (
-    <div>External component for Step 1</div>
-  )
-}

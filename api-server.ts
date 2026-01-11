@@ -6,6 +6,7 @@ import { TournamentSchema } from './validations/TournamentSchema.ts';
 import { errorHandler, HttpError } from './errors/HttpError.ts';
 import cors from "cors";
 import { mapDivisions } from "./prisma/mappers/divisionMapper.ts";
+import { TournamentEventPayload } from 'prisma/shared';
 
 const prisma = new PrismaClient();
 
@@ -71,7 +72,6 @@ app.get('/tournament/api/tournment/events', async (req: Request, res: Response, 
 })
 
 // Create a new tournament
-// Create a new tournament
 app.post('/api/tournaments', async (req, res, next) => {
   try {
     const { name, date, location, organizerId } = req.body;
@@ -83,8 +83,6 @@ app.post('/api/tournaments', async (req, res, next) => {
       (err as any).status = 400;
       return next(err);
     }
-
-
 
     // ✅ Step 1: Verify organizer exists
     const organizer = await prisma.user.findUnique({
@@ -108,6 +106,109 @@ app.post('/api/tournaments', async (req, res, next) => {
     res.status(201).json(tournament);
   } catch (error) {
     next(error); // 👈 Pass to centralized error handler
+  }
+});
+
+app.post('/api/tournaments/:id/tournamentEvents', async (req: Request<{ id: string }, any, TournamentEventPayload>,
+    res: Response,
+    next: NextFunction) => {
+      try{
+      const tournamentId = Number(req.params.id);
+      const { eventIds } = req.body;
+      if (!Array.isArray(eventIds) || eventIds.length === 0) {
+        return res.status(400).json({ error: "eventIds must be a non-empty array" });
+      }
+
+      // Insert multiple TournamentEvent rows
+      await prisma.tournamentEvent.createMany({
+        data: eventIds.map(eventId => ({
+          tournamentId,
+          eventId,
+        })),
+        skipDuplicates: true, // optional but helpful
+      });
+      const created = await prisma.tournamentEvent.findMany({
+        where: { tournamentId }
+      });
+      res.json(created);   
+
+    } catch (error) {
+      next(error);
+    }
+});
+
+app.put(
+  "/api/tournaments/:id/tournamentEvents",
+  async (
+    req: Request<{ id: string }, any, TournamentEventPayload>,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const tournamentId = Number(req.params.id);
+      const { eventIds } = req.body;
+
+      if (!Array.isArray(eventIds)) {
+        return res.status(400).json({ error: "eventIds must be an array" });
+      }
+
+      // 1. Fetch existing TournamentEvent rows
+      const existing = await prisma.tournamentEvent.findMany({
+        where: { tournamentId },
+      });
+
+      const existingIds = existing.map(te => te.eventId);
+
+      // 2. Determine which eventIds to add
+      const toAdd = eventIds.filter(id => !existingIds.includes(id));
+
+      // 3. Determine which eventIds to remove
+      const toRemove = existingIds.filter(id => !eventIds.includes(id));
+
+      // 4. Insert new TournamentEvent rows
+      if (toAdd.length > 0) {
+        await prisma.tournamentEvent.createMany({
+          data: toAdd.map(eventId => ({
+            tournamentId,
+            eventId,
+          })),
+        });
+      }
+
+      // 5. Delete removed TournamentEvent rows
+      if (toRemove.length > 0) {
+        await prisma.tournamentEvent.deleteMany({
+          where: {
+            tournamentId,
+            eventId: { in: toRemove },
+          },
+        });
+      }
+
+      res.json({
+        success: true,
+        added: toAdd,
+        removed: toRemove,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+app.get('/api/tournaments/:id/tournamentEvents', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const tournamentId = Number(id);
+
+    const tournamentEvents = await prisma.tournamentEvent.findMany({
+      where: { tournamentId },
+      include: { event: true }
+    });
+
+    res.json(tournamentEvents);
+  } catch (error) {
+    next(error);
   }
 });
 
@@ -193,6 +294,8 @@ app.get('/api/event/:eventId/allowed-divisions', async (req: Request, res: Respo
     next(err); // delegate to error handler
   }
 });
+
+
 
 app.use(errorHandler);
 
