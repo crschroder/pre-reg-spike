@@ -17,6 +17,8 @@ type SaveDivisionVars = {
 
 export default function CreateEvents({tournamentId} : Props){
 
+    const [savedIndicator, setSavedIndicator] = useState<Record<number, boolean>>({});
+
      const numericId = Number(tournamentId);
     const { data: eventTypes, isLoading: isLoadingEventTypes } = useQuery<EventType[]>({
       queryKey: ["eventTypes"],
@@ -30,10 +32,19 @@ export default function CreateEvents({tournamentId} : Props){
   });
   const mutation = useMutation({
   mutationFn: ({ eventId, divisions }: SaveDivisionVars) =>
-    saveTournamentEventDivisions(numericId, eventId, divisions)
+    saveTournamentEventDivisions(numericId, eventId, divisions), 
+   onSuccess: (_, { eventId }) => {
+    console.log("Saved divisions for event ID:", eventId);
+    setSavedIndicator(prev => ({ ...prev, [eventId]: true }));
+    setTimeout(() => {
+      setSavedIndicator(prev => ({ ...prev, [eventId]: false }));
+    }, 1500);
+  }
+
 });
 
     const [divisionSettings, setDivisionSettings] = useState<DivisionSettings>({});
+    
 
   function setDivisionMode(eventId: number, divisionId: number, mode: DivisionMode) {
   setDivisionSettings(prev => ({
@@ -89,9 +100,17 @@ const selectedEventIds =
                       divisionSettings={divisionSettings[et.id] || {}}
                       setDivisionMode={setDivisionMode}
                     />
-                    <div>
+                    <div className="sticky bottom-0 bg-white py-3 border-t flex justify-end">
+                      {/* Saved indicator */}
+                      {savedIndicator[et.id] && (
+                        <span className="text-green-600 font-semibold animate-fade mr-4
+                        ">
+                          Saved!
+                        </span>
+                      )}
+
                       <button
-                        className="mt-4 px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+                        className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
                         onClick={() => saveEventDivisions(et.id)}
                       >
                         Save Divisions

@@ -26,7 +26,7 @@ export function Accordion({ title, children }: AccordionProps) {
     open ? "max-h-[50rem] opacity-100" : "max-h-0 opacity-0"
   }`}
 >
-  <div className="px-4 py-3 border-t bg-white border border-red-500">
+  <div className="px-4 py-3 border-t bg-white ">
     {children}
   </div>
 </div>
