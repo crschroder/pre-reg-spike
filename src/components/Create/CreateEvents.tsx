@@ -1,13 +1,18 @@
-import { getEventTypes, getTournamentEvents } from "@/api/tournaments";
-import { useQuery } from "@tanstack/react-query";
+import { getEventTypes, getTournamentEventDivisions, getTournamentEvents, saveTournamentEventDivisions } from "@/api/tournaments";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Accordion } from "../Custom/Accordian";
 import { useAllowedDivisions } from "@/hooks/useAllowedDivisions";
-import { useState } from "react";
-import { Division,EventType } from "prisma/shared";
+import { useEffect, useState } from "react";
+import { Division,DivisionPayload,EventType } from "prisma/shared";
+import { S } from "@faker-js/faker/dist/airline-DF6RqYmq";
 
 
 type Props = { tournamentId?: string };
 
+type SaveDivisionVars = {
+  eventId: number;
+  divisions: { divisionId: number; genderId: number }[];
+};
 
 
 export default function CreateEvents({tournamentId} : Props){
@@ -23,6 +28,10 @@ export default function CreateEvents({tournamentId} : Props){
     queryFn: () => getTournamentEvents(numericId),
     enabled: !!tournamentId,
   });
+  const mutation = useMutation({
+  mutationFn: ({ eventId, divisions }: SaveDivisionVars) =>
+    saveTournamentEventDivisions(numericId, eventId, divisions)
+});
 
     const [divisionSettings, setDivisionSettings] = useState<DivisionSettings>({});
 
@@ -36,6 +45,24 @@ export default function CreateEvents({tournamentId} : Props){
   }));
   console.log(divisionSettings);
 }
+
+function saveEventDivisions(eventId: number) {
+  const settings = divisionSettings[eventId];
+  if (!settings) return;
+
+  const rows = Object.entries(settings).flatMap(([divisionId, mode]) => {
+    const out = [];
+
+    if (mode.male) out.push({ divisionId: Number(divisionId), genderId: 1 });
+    if (mode.female) out.push({ divisionId: Number(divisionId), genderId: 2 });
+    if (mode.coed) out.push({ divisionId: Number(divisionId), genderId: 3 });
+
+    return out;
+  });
+
+  mutation.mutate({ eventId, divisions: rows });
+}
+
 const selectedEventIds =
     tournamentEvents?.map(te => te.eventId) ?? [];
 
@@ -50,17 +77,30 @@ const selectedEventIds =
             Create Events for tournament ID: {tournamentId}
           </h1>
           <div className="space-y-6">
-       {isLoadingEventTypes ? (
-  <p>Loading event types...</p>
-) : (
-  filteredEventTypes?.map((et: EventType) => (
-    <Accordion key={et.id} title={et.name}>
-      <div className="max-h-64 overflow-y-auto pr-2">
-      <AllowedDivisions eventId={et.id} divisionSettings={divisionSettings[et.id]|| {}} setDivisionMode={setDivisionMode} />
-      </div>
-    </Accordion>
-  ))
-)}
+            {isLoadingEventTypes ? (
+              <p>Loading event types...</p>
+            ) : (
+              filteredEventTypes?.map((et: EventType) => (
+                <Accordion key={et.id} title={et.name}>
+                  <div className="max-h-96 overflow-y-auto pr-2">
+                    <AllowedDivisions
+                      tournamentId={numericId}
+                      eventId={et.id}
+                      divisionSettings={divisionSettings[et.id] || {}}
+                      setDivisionMode={setDivisionMode}
+                    />
+                    <div>
+                      <button
+                        className="mt-4 px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+                        onClick={() => saveEventDivisions(et.id)}
+                      >
+                        Save Divisions
+                      </button>
+                    </div>
+                  </div>
+                </Accordion>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -68,13 +108,38 @@ const selectedEventIds =
 } 
 
 export interface AllowedDivisionsProps {
+  tournamentId: number;
   eventId: number;
   divisionSettings: Record<number, DivisionMode>; // divisionId → female true/false
   setDivisionMode: (eventId: number, divisionId: number, mode: DivisionMode) => void;
 }
 
-function AllowedDivisions({ eventId, divisionSettings, setDivisionMode }: AllowedDivisionsProps) {
+function AllowedDivisions({ tournamentId, eventId, divisionSettings, setDivisionMode }: AllowedDivisionsProps) {
   const { data: divisions = [], isLoading, error } = useAllowedDivisions(eventId);
+
+   const { data: saved = [] } = useQuery({
+     queryKey: ['savedDivisions', eventId, tournamentId],
+     queryFn: () => getTournamentEventDivisions(tournamentId, eventId),
+     enabled: !!tournamentId,
+   })
+
+   useEffect(() => {
+     if (!saved.length) return
+      // Only apply saved settings if divisionSettings is empty for this event
+      if (Object.keys(divisionSettings).length > 0) return;
+
+
+     saved.forEach((row : DivisionPayload) => {
+       const mode = {
+         male: row.genderId === 1,
+         female: row.genderId === 2,
+         coed: row.genderId === 3,
+       }
+
+       setDivisionMode(eventId, row.divisionId, mode)
+     })
+   }, [saved])
+
 
   if (isLoading) return <p className="text-gray-400">Loading divisions...</p>;
   if (error) return <p className="text-red-400">Error loading divisions</p>;
@@ -154,7 +219,8 @@ type DivisionMode = {
   coed: boolean;
 };
 
-type DivisionSettings = Record<number, DivisionMode>;
+type DivisionSettings = Record<number, Record<number, DivisionMode>>;
+
 
 
 interface DivisionModeToggleProps {

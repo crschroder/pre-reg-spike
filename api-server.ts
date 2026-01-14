@@ -6,7 +6,7 @@ import { TournamentSchema } from './validations/TournamentSchema.ts';
 import { errorHandler, HttpError } from './errors/HttpError.ts';
 import cors from "cors";
 import { mapDivisions } from "./prisma/mappers/divisionMapper.ts";
-import { TournamentEventPayload } from 'prisma/shared';
+import { DivisionPayload, TournamentEventDivisionRow, TournamentEventPayload } from 'prisma/shared';
 
 const prisma = new PrismaClient();
 
@@ -294,6 +294,94 @@ app.get('/api/event/:eventId/allowed-divisions', async (req: Request, res: Respo
     next(err); // delegate to error handler
   }
 });
+
+app.get(
+  "/api/tournaments/:tournamentId/events/:eventId/divisions",
+  async (req, res, next) => {
+    try {
+      const tournamentId = Number(req.params.tournamentId);
+      const eventId = Number(req.params.eventId);
+
+      // 1. Find the TournamentEvent row
+      const tournamentEvent = await prisma.tournamentEvent.findFirst({
+        where: { tournamentId, eventId },
+      });
+
+      if (!tournamentEvent) {
+        return res.status(400).json({ error: "TournamentEvent not found" });
+      }
+
+      // 2. Fetch existing divisions
+      const rows = await prisma.tournamentEventDivision.findMany({
+        where: { tournamentEventId: tournamentEvent.id },
+        select: {
+          divisionId: true,
+          genderId: true,
+        },
+      });
+
+      return res.status(200).json(rows);
+    } catch (err) {
+      console.error(err);
+      next(err);
+    }
+  }
+);
+
+
+
+
+
+app.post(
+  "/api/tournaments/:tournamentId/events/:eventId/divisions",
+  async (req, res, next) => {
+    try {
+      const tournamentId = Number(req.params.tournamentId);
+      const eventId = Number(req.params.eventId);
+
+      const divisions = req.body.divisions as DivisionPayload[];
+
+      if (!Array.isArray(divisions)) {
+        return res.status(400).json({ error: "Invalid payload: divisions must be an array" });
+      }
+
+      // 1. Find the TournamentEvent row
+      const tournamentEvent = await prisma.tournamentEvent.findFirst({
+        where: { tournamentId, eventId },
+      });
+
+      if (!tournamentEvent) {
+        return res.status(400).json({ error: "TournamentEvent not found" });
+      }
+
+      // 2. Delete existing rows
+      await prisma.tournamentEventDivision.deleteMany({
+        where: { tournamentEventId: tournamentEvent.id },
+      });
+
+      // 3. Build typed rows for Prisma
+      const rows: TournamentEventDivisionRow[] = divisions.map((d) => ({
+        tournamentEventId: tournamentEvent.id,
+        divisionId: d.divisionId,
+        genderId: d.genderId,
+      }));
+
+      // 4. Insert new rows
+      const created = await prisma.tournamentEventDivision.createMany({
+        data: rows,
+      });
+
+      return res.status(200).json({ count: created.count });
+    } catch (err) {
+      console.error(err);
+      next(err);
+    }
+  }
+);
+
+
+
+
 
 app.get('/api/tournaments/:id/divisions', async (req: Request, res: Response, next: NextFunction) => {
   

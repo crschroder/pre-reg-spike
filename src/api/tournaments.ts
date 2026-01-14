@@ -60,3 +60,20 @@ export function getTournamentEvents(tournamentId: number) {
     .then(res => res.data);
 }
 
+export function getTournamentEventDivisions(tournamentId: number, eventId: number) {
+  return api
+    .get(`/api/tournaments/${tournamentId}/events/${eventId}/divisions`)
+    .then(res => res.data);
+}
+
+export function saveTournamentEventDivisions(
+  tournamentId: number,
+  eventId: number,
+  divisions: { divisionId: number; genderId: number }[]
+) {
+  return api
+    .post(`/api/tournaments/${tournamentId}/events/${eventId}/divisions`, {
+      divisions
+    })
+    .then(res => res.data);
+}
