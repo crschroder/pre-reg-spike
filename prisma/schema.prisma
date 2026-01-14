@@ -55,13 +55,13 @@ model Division {
   maxAge         Int?            @map("max_age")
   beltRankId     Int?            @map("belt_rank_id")
   beltRank       BeltRank?       @relation(fields: [beltRankId], references: [id])
-  eventDivisions EventDivision[]
+  tournamentEventDivisions TournamentEventDivision[]
   allowedEvents EventAllowedDivision[]
 
   @@map("division")
 }
 
-model EventDivision {
+model TournamentEventDivision {
   id                 Int              @id @default(autoincrement())
   tournamentEventId  Int              @map("tournament_event_id")
   tournamentEvent    TournamentEvent  @relation(fields: [tournamentEventId], references: [id])
@@ -72,7 +72,7 @@ model EventDivision {
   displayName        String?          @map("display_name")
   registrations      Registration[]
 
-  @@map("event_division")
+  @@map("tournament_event_division")
 }
 
 model Participant {
@@ -95,7 +95,7 @@ model Registration {
   participantId   Int           @map("participant_id")
   participant     Participant   @relation(fields: [participantId], references: [id])
   eventDivisionId Int           @map("event_division_id")
-  eventDivision   EventDivision @relation(fields: [eventDivisionId], references: [id])
+  tournamentEventDivision   TournamentEventDivision @relation(fields: [eventDivisionId], references: [id])
 
   @@map("registration")
 }
@@ -107,7 +107,7 @@ model TournamentEvent {
   eventId      Int        @map("event_id")
   event        Event      @relation("EventToTournamentEvent", fields: [eventId], references: [id])
   bracketType  String?    @map("bracket_type")
-  eventDivisions EventDivision[]
+  tournamentEventDivisions TournamentEventDivision[]
   @@map("tournament_event")
 }
 
@@ -133,7 +133,7 @@ model Disipline {
 model EventGender {
   id             Int             @id @default(autoincrement())
   description    String
-  eventDivisions EventDivision[]
+  tournamentEventDivisions TournamentEventDivision[]
 
   @@map("event_gender")
 }

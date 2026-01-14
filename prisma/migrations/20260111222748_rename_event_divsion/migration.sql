@@ -1,0 +1,1 @@
+ALTER TABLE "event_division" RENAME TO "tournament_event_division";

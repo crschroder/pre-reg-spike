@@ -295,7 +295,11 @@ app.get('/api/event/:eventId/allowed-divisions', async (req: Request, res: Respo
   }
 });
 
+app.get('/api/tournaments/:id/divisions', async (req: Request, res: Response, next: NextFunction) => {
+  
 
+
+});
 
 app.use(errorHandler);
 
