@@ -7,7 +7,7 @@ import { Division,DivisionPayload,EventType } from "prisma/shared";
 import { S } from "@faker-js/faker/dist/airline-DF6RqYmq";
 
 
-type Props = { tournamentId?: string };
+type Props = { tournamentId: number };
 
 type SaveDivisionVars = {
   eventId: number;
@@ -25,15 +25,16 @@ export default function CreateEvents({tournamentId} : Props){
       queryFn: () => getEventTypes(),
     });
 
-    const { data: tournamentEvents, isLoading: isLoadingTournamentEvents } = useQuery({
-    queryKey: ["tournamentEvents", numericId],
-    queryFn: () => getTournamentEvents(numericId),
+  const { data: tournamentEvents, isLoading: isLoadingTournamentEvents } = useQuery({
+    queryKey: ["tournamentEvents", tournamentId],
+    queryFn: () => getTournamentEvents(tournamentId!),
     enabled: !!tournamentId,
   });
   const mutation = useMutation({
   mutationFn: ({ eventId, divisions }: SaveDivisionVars) =>
-    saveTournamentEventDivisions(numericId, eventId, divisions), 
+    saveTournamentEventDivisions(tournamentId, eventId, divisions), 
    onSuccess: (_, { eventId }) => {
+    setUnsavedChanges(prev => ({ ...prev, [eventId]: false }));
     console.log("Saved divisions for event ID:", eventId);
     setSavedIndicator(prev => ({ ...prev, [eventId]: true }));
     setTimeout(() => {
@@ -44,9 +45,10 @@ export default function CreateEvents({tournamentId} : Props){
 });
 
     const [divisionSettings, setDivisionSettings] = useState<DivisionSettings>({});
+    const [unsavedChanges, setUnsavedChanges] = useState<Record<number, boolean>>({});
     
 
-  function setDivisionMode(eventId: number, divisionId: number, mode: DivisionMode) {
+  function setDivisionMode(eventId: number, divisionId: number, mode: DivisionMode, markDirty = true) {
   setDivisionSettings(prev => ({
     ...prev,
      [eventId]: {
@@ -54,6 +56,9 @@ export default function CreateEvents({tournamentId} : Props){
     [divisionId]: mode
   }
   }));
+   if (markDirty) {
+    setUnsavedChanges(prev => ({ ...prev, [eventId]: true }));
+  }
   console.log(divisionSettings);
 }
 
@@ -75,10 +80,13 @@ function saveEventDivisions(eventId: number) {
 }
 
 const selectedEventIds =
-    tournamentEvents?.map(te => te.eventId) ?? [];
+    tournamentEvents?.map((te: { eventId: any; }) => te.eventId) ?? [];
 
   const filteredEventTypes =
     eventTypes?.filter(et => selectedEventIds.includes(et.id)) ?? [];
+
+    
+
 
     return (
       <div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
@@ -92,7 +100,7 @@ const selectedEventIds =
               <p>Loading event types...</p>
             ) : (
               filteredEventTypes?.map((et: EventType) => (
-                <Accordion key={et.id} title={et.name}>
+                <Accordion key={et.id} title={et.name} dirty={unsavedChanges[et.id]=== true}> 
                   <div className="max-h-96 overflow-y-auto pr-2">
                     <AllowedDivisions
                       tournamentId={numericId}
@@ -101,6 +109,11 @@ const selectedEventIds =
                       setDivisionMode={setDivisionMode}
                     />
                     <div className="sticky bottom-0 bg-white py-3 border-t flex justify-end">
+                      {unsavedChanges[et.id] && (
+                        <span className="text-yellow-600 font-medium">
+                          Unsaved changes…
+                        </span>
+                      )}
                       {/* Saved indicator */}
                       {savedIndicator[et.id] && (
                         <span className="text-green-600 font-semibold animate-fade mr-4
@@ -130,7 +143,7 @@ export interface AllowedDivisionsProps {
   tournamentId: number;
   eventId: number;
   divisionSettings: Record<number, DivisionMode>; // divisionId → female true/false
-  setDivisionMode: (eventId: number, divisionId: number, mode: DivisionMode) => void;
+  setDivisionMode: (eventId: number, divisionId: number, mode: DivisionMode,markDirty?: boolean) => void;
 }
 
 function AllowedDivisions({ tournamentId, eventId, divisionSettings, setDivisionMode }: AllowedDivisionsProps) {
@@ -155,7 +168,7 @@ function AllowedDivisions({ tournamentId, eventId, divisionSettings, setDivision
          coed: row.genderId === 3,
        }
 
-       setDivisionMode(eventId, row.divisionId, mode)
+       applyInitialDivisionMode(eventId, row.divisionId, mode);
      })
    }, [saved])
 
@@ -168,7 +181,7 @@ function AllowedDivisions({ tournamentId, eventId, divisionSettings, setDivision
   const handleSetAllMale = () => {
   divisions.forEach((division: Division) => {
     const prev = divisionSettings[division.id] ?? defaultMode;
-    setDivisionMode(eventId, division.id, {
+    updateDivisionMode(eventId, division.id, {
       male: true,
       female: prev.female,
       coed: false
@@ -179,10 +192,26 @@ function AllowedDivisions({ tournamentId, eventId, divisionSettings, setDivision
   const handleSetAllFemale = () => {
     divisions.forEach((division: Division) => {
        const prev = divisionSettings[division.id] ?? defaultMode;
-      setDivisionMode(eventId,division.id, 
+      updateDivisionMode(eventId,division.id, 
         { male: prev.male, female: true, coed: false });
     });
   };  
+
+  function applyInitialDivisionMode(
+  eventId: number,
+  divisionId: number,
+  mode: DivisionMode
+) {
+  setDivisionMode(eventId, divisionId, mode, false);
+}
+
+function updateDivisionMode(
+  eventId: number,
+  divisionId: number,
+  mode: DivisionMode
+) {
+  setDivisionMode(eventId, divisionId, mode, true);
+}
   return (
     
     <div className="flex flex-col gap-3">
