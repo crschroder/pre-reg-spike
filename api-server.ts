@@ -6,7 +6,7 @@ import { TournamentSchema } from './validations/TournamentSchema.ts';
 import { errorHandler, HttpError } from './errors/HttpError.ts';
 import cors from "cors";
 import { mapDivisions } from "./prisma/mappers/divisionMapper.ts";
-import { DivisionPayload, TournamentEventDivisionRow, TournamentEventPayload } from 'prisma/shared';
+import { DivisionPayload, TournamentEventDivisionRow, TournamentEventPayload, TournamentStatus, TournamentStatusType, validStatuses } from 'prisma/shared';
 
 const prisma = new PrismaClient();
 
@@ -55,6 +55,57 @@ app.get('/api/tournaments/:id', async (req, res, next) => {
     next(error);
   }
 });
+
+app.get(
+  "/api/tournaments",
+  async (req: Request<{}, {}, {}, { status?: TournamentStatusType }>, res, next) => {
+    try {
+      const { status } = req.query;
+
+      if (status && !validStatuses.includes(status)) {
+        return res.status(400).json({ error: "Invalid status filter" });
+      }
+
+      const now = new Date();
+      let where: any = {};
+
+      switch (status) {
+        case TournamentStatus.Upcoming:
+         where = {date: { gt: now }};
+          break;
+
+        case TournamentStatus.Past:
+          where = {date: { lt: now }};
+          break;
+
+        case TournamentStatus.Open:
+          where = {
+            preregOpenDate: { lte: now },
+            preregCloseDate: { gte: now },
+          };
+          break;
+
+        case TournamentStatus.Closed:
+          where = {
+            preregCloseDate: { lt: now },
+            startDate: { gt: now },
+          };
+          break;
+      }
+
+      const tournaments = await prisma.tournament.findMany({
+        where,
+        orderBy: { date: "asc" },
+      });
+
+      res.json(tournaments);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+
 
 
 
@@ -384,7 +435,7 @@ app.post(
 
 
 app.get('/api/tournaments/:id/divisions', async (req: Request, res: Response, next: NextFunction) => {
-  
+
 
 
 });

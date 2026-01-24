@@ -3,7 +3,7 @@ import CreateTournament from "@/components/Create/CreateTournament";
 import { createFileRoute } from "@tanstack/react-router";
 
 
-export const Route = createFileRoute("/tournament/create")({
+export const Route = createFileRoute("/tournament/organizer/create")({
   component: TournamentCreatePage,
 });
 

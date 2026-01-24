@@ -15,7 +15,7 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { EventType,TournamentInput } from 'prisma/shared';
 
-type Props = { tournamentId?: string };
+type Props = { tournamentId?: number | undefined };
 
 export default function CreateTournament ({tournamentId}:Props) {
       const steps = [
@@ -55,7 +55,7 @@ export default function CreateTournament ({tournamentId}:Props) {
 
   useEffect(() => {
   if (isEdit && existingTournamentEvents) {
-    const ids = existingTournamentEvents.map(te => te.eventId);
+    const ids = existingTournamentEvents.map((te: { eventId: any; }) => te.eventId);
     setSelectedEvents(ids);
   }
 }, [isEdit, existingTournamentEvents]);
@@ -97,8 +97,8 @@ export default function CreateTournament ({tournamentId}:Props) {
     if (!isEdit) {
       // After creating, go to the edit page
       navigate({
-        to: "/tournament/created/$tournamentId",
-        params: { tournamentId: result.id.toString() },
+        to: "/tournament/organizer/created/$id",
+        params: { id: result.id.toString() },
       });
     } else {
       // After editing, refresh the list
@@ -121,7 +121,7 @@ export default function CreateTournament ({tournamentId}:Props) {
     // TODO, change this to handle save and proceed    
     if (tournamentId) {
       navigate({
-        to: "/tournament/events/$tournamentId",
+        to: "/tournament/organizer/events/$tournamentId",
         params: { tournamentId: tournamentId },
       });
     }

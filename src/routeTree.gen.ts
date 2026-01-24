@@ -10,15 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TournamentCreateRouteImport } from './routes/tournament/create'
 import { Route as DemoTableRouteImport } from './routes/demo/table'
 import { Route as DemoNeonRouteImport } from './routes/demo/neon'
-import { Route as TournamentEventsTournamentIdRouteImport } from './routes/tournament/events.$tournamentId'
-import { Route as TournamentCreatedTournamentIdRouteImport } from './routes/tournament/created.$tournamentId'
+import { Route as TournamentParticipantIndexRouteImport } from './routes/tournament/participant/index'
+import { Route as TournamentOrganizerCreateRouteImport } from './routes/tournament/organizer/create'
 import { Route as DemoStartServerFuncsRouteImport } from './routes/demo/start.server-funcs'
 import { Route as DemoStartApiRequestRouteImport } from './routes/demo/start.api-request'
 import { Route as DemoApiNamesRouteImport } from './routes/demo/api.names'
 import { Route as DemoStartSsrIndexRouteImport } from './routes/demo/start.ssr.index'
+import { Route as TournamentParticipantRegisterIdRouteImport } from './routes/tournament/participant/register.$id'
+import { Route as TournamentOrganizerEventsTournamentIdRouteImport } from './routes/tournament/organizer/events.$tournamentId'
+import { Route as TournamentOrganizerCreatedIdRouteImport } from './routes/tournament/organizer/created.$id'
 import { Route as TournamentApiTournmentEventsRouteImport } from './routes/tournament/api.tournment.events'
 import { Route as DemoStartSsrSpaModeRouteImport } from './routes/demo/start.ssr.spa-mode'
 import { Route as DemoStartSsrFullSsrRouteImport } from './routes/demo/start.ssr.full-ssr'
@@ -27,11 +29,6 @@ import { Route as DemoStartSsrDataOnlyRouteImport } from './routes/demo/start.ss
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TournamentCreateRoute = TournamentCreateRouteImport.update({
-  id: '/tournament/create',
-  path: '/tournament/create',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoTableRoute = DemoTableRouteImport.update({
@@ -44,16 +41,16 @@ const DemoNeonRoute = DemoNeonRouteImport.update({
   path: '/demo/neon',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TournamentEventsTournamentIdRoute =
-  TournamentEventsTournamentIdRouteImport.update({
-    id: '/tournament/events/$tournamentId',
-    path: '/tournament/events/$tournamentId',
+const TournamentParticipantIndexRoute =
+  TournamentParticipantIndexRouteImport.update({
+    id: '/tournament/participant/',
+    path: '/tournament/participant/',
     getParentRoute: () => rootRouteImport,
   } as any)
-const TournamentCreatedTournamentIdRoute =
-  TournamentCreatedTournamentIdRouteImport.update({
-    id: '/tournament/created/$tournamentId',
-    path: '/tournament/created/$tournamentId',
+const TournamentOrganizerCreateRoute =
+  TournamentOrganizerCreateRouteImport.update({
+    id: '/tournament/organizer/create',
+    path: '/tournament/organizer/create',
     getParentRoute: () => rootRouteImport,
   } as any)
 const DemoStartServerFuncsRoute = DemoStartServerFuncsRouteImport.update({
@@ -76,6 +73,24 @@ const DemoStartSsrIndexRoute = DemoStartSsrIndexRouteImport.update({
   path: '/demo/start/ssr/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TournamentParticipantRegisterIdRoute =
+  TournamentParticipantRegisterIdRouteImport.update({
+    id: '/tournament/participant/register/$id',
+    path: '/tournament/participant/register/$id',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const TournamentOrganizerEventsTournamentIdRoute =
+  TournamentOrganizerEventsTournamentIdRouteImport.update({
+    id: '/tournament/organizer/events/$tournamentId',
+    path: '/tournament/organizer/events/$tournamentId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const TournamentOrganizerCreatedIdRoute =
+  TournamentOrganizerCreatedIdRouteImport.update({
+    id: '/tournament/organizer/created/$id',
+    path: '/tournament/organizer/created/$id',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const TournamentApiTournmentEventsRoute =
   TournamentApiTournmentEventsRouteImport.update({
     id: '/tournament/api/tournment/events',
@@ -102,32 +117,36 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/demo/neon': typeof DemoNeonRoute
   '/demo/table': typeof DemoTableRoute
-  '/tournament/create': typeof TournamentCreateRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
-  '/tournament/created/$tournamentId': typeof TournamentCreatedTournamentIdRoute
-  '/tournament/events/$tournamentId': typeof TournamentEventsTournamentIdRoute
+  '/tournament/organizer/create': typeof TournamentOrganizerCreateRoute
+  '/tournament/participant': typeof TournamentParticipantIndexRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
   '/tournament/api/tournment/events': typeof TournamentApiTournmentEventsRoute
+  '/tournament/organizer/created/$id': typeof TournamentOrganizerCreatedIdRoute
+  '/tournament/organizer/events/$tournamentId': typeof TournamentOrganizerEventsTournamentIdRoute
+  '/tournament/participant/register/$id': typeof TournamentParticipantRegisterIdRoute
   '/demo/start/ssr': typeof DemoStartSsrIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/demo/neon': typeof DemoNeonRoute
   '/demo/table': typeof DemoTableRoute
-  '/tournament/create': typeof TournamentCreateRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
-  '/tournament/created/$tournamentId': typeof TournamentCreatedTournamentIdRoute
-  '/tournament/events/$tournamentId': typeof TournamentEventsTournamentIdRoute
+  '/tournament/organizer/create': typeof TournamentOrganizerCreateRoute
+  '/tournament/participant': typeof TournamentParticipantIndexRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
   '/tournament/api/tournment/events': typeof TournamentApiTournmentEventsRoute
+  '/tournament/organizer/created/$id': typeof TournamentOrganizerCreatedIdRoute
+  '/tournament/organizer/events/$tournamentId': typeof TournamentOrganizerEventsTournamentIdRoute
+  '/tournament/participant/register/$id': typeof TournamentParticipantRegisterIdRoute
   '/demo/start/ssr': typeof DemoStartSsrIndexRoute
 }
 export interface FileRoutesById {
@@ -135,16 +154,18 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/demo/neon': typeof DemoNeonRoute
   '/demo/table': typeof DemoTableRoute
-  '/tournament/create': typeof TournamentCreateRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
-  '/tournament/created/$tournamentId': typeof TournamentCreatedTournamentIdRoute
-  '/tournament/events/$tournamentId': typeof TournamentEventsTournamentIdRoute
+  '/tournament/organizer/create': typeof TournamentOrganizerCreateRoute
+  '/tournament/participant/': typeof TournamentParticipantIndexRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
   '/tournament/api/tournment/events': typeof TournamentApiTournmentEventsRoute
+  '/tournament/organizer/created/$id': typeof TournamentOrganizerCreatedIdRoute
+  '/tournament/organizer/events/$tournamentId': typeof TournamentOrganizerEventsTournamentIdRoute
+  '/tournament/participant/register/$id': typeof TournamentParticipantRegisterIdRoute
   '/demo/start/ssr/': typeof DemoStartSsrIndexRoute
 }
 export interface FileRouteTypes {
@@ -153,48 +174,54 @@ export interface FileRouteTypes {
     | '/'
     | '/demo/neon'
     | '/demo/table'
-    | '/tournament/create'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
-    | '/tournament/created/$tournamentId'
-    | '/tournament/events/$tournamentId'
+    | '/tournament/organizer/create'
+    | '/tournament/participant'
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
     | '/tournament/api/tournment/events'
+    | '/tournament/organizer/created/$id'
+    | '/tournament/organizer/events/$tournamentId'
+    | '/tournament/participant/register/$id'
     | '/demo/start/ssr'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/demo/neon'
     | '/demo/table'
-    | '/tournament/create'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
-    | '/tournament/created/$tournamentId'
-    | '/tournament/events/$tournamentId'
+    | '/tournament/organizer/create'
+    | '/tournament/participant'
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
     | '/tournament/api/tournment/events'
+    | '/tournament/organizer/created/$id'
+    | '/tournament/organizer/events/$tournamentId'
+    | '/tournament/participant/register/$id'
     | '/demo/start/ssr'
   id:
     | '__root__'
     | '/'
     | '/demo/neon'
     | '/demo/table'
-    | '/tournament/create'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
-    | '/tournament/created/$tournamentId'
-    | '/tournament/events/$tournamentId'
+    | '/tournament/organizer/create'
+    | '/tournament/participant/'
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
     | '/tournament/api/tournment/events'
+    | '/tournament/organizer/created/$id'
+    | '/tournament/organizer/events/$tournamentId'
+    | '/tournament/participant/register/$id'
     | '/demo/start/ssr/'
   fileRoutesById: FileRoutesById
 }
@@ -202,16 +229,18 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DemoNeonRoute: typeof DemoNeonRoute
   DemoTableRoute: typeof DemoTableRoute
-  TournamentCreateRoute: typeof TournamentCreateRoute
   DemoApiNamesRoute: typeof DemoApiNamesRoute
   DemoStartApiRequestRoute: typeof DemoStartApiRequestRoute
   DemoStartServerFuncsRoute: typeof DemoStartServerFuncsRoute
-  TournamentCreatedTournamentIdRoute: typeof TournamentCreatedTournamentIdRoute
-  TournamentEventsTournamentIdRoute: typeof TournamentEventsTournamentIdRoute
+  TournamentOrganizerCreateRoute: typeof TournamentOrganizerCreateRoute
+  TournamentParticipantIndexRoute: typeof TournamentParticipantIndexRoute
   DemoStartSsrDataOnlyRoute: typeof DemoStartSsrDataOnlyRoute
   DemoStartSsrFullSsrRoute: typeof DemoStartSsrFullSsrRoute
   DemoStartSsrSpaModeRoute: typeof DemoStartSsrSpaModeRoute
   TournamentApiTournmentEventsRoute: typeof TournamentApiTournmentEventsRoute
+  TournamentOrganizerCreatedIdRoute: typeof TournamentOrganizerCreatedIdRoute
+  TournamentOrganizerEventsTournamentIdRoute: typeof TournamentOrganizerEventsTournamentIdRoute
+  TournamentParticipantRegisterIdRoute: typeof TournamentParticipantRegisterIdRoute
   DemoStartSsrIndexRoute: typeof DemoStartSsrIndexRoute
 }
 
@@ -222,13 +251,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tournament/create': {
-      id: '/tournament/create'
-      path: '/tournament/create'
-      fullPath: '/tournament/create'
-      preLoaderRoute: typeof TournamentCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/table': {
@@ -245,18 +267,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoNeonRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tournament/events/$tournamentId': {
-      id: '/tournament/events/$tournamentId'
-      path: '/tournament/events/$tournamentId'
-      fullPath: '/tournament/events/$tournamentId'
-      preLoaderRoute: typeof TournamentEventsTournamentIdRouteImport
+    '/tournament/participant/': {
+      id: '/tournament/participant/'
+      path: '/tournament/participant'
+      fullPath: '/tournament/participant'
+      preLoaderRoute: typeof TournamentParticipantIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tournament/created/$tournamentId': {
-      id: '/tournament/created/$tournamentId'
-      path: '/tournament/created/$tournamentId'
-      fullPath: '/tournament/created/$tournamentId'
-      preLoaderRoute: typeof TournamentCreatedTournamentIdRouteImport
+    '/tournament/organizer/create': {
+      id: '/tournament/organizer/create'
+      path: '/tournament/organizer/create'
+      fullPath: '/tournament/organizer/create'
+      preLoaderRoute: typeof TournamentOrganizerCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/start/server-funcs': {
@@ -285,6 +307,27 @@ declare module '@tanstack/react-router' {
       path: '/demo/start/ssr'
       fullPath: '/demo/start/ssr'
       preLoaderRoute: typeof DemoStartSsrIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tournament/participant/register/$id': {
+      id: '/tournament/participant/register/$id'
+      path: '/tournament/participant/register/$id'
+      fullPath: '/tournament/participant/register/$id'
+      preLoaderRoute: typeof TournamentParticipantRegisterIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tournament/organizer/events/$tournamentId': {
+      id: '/tournament/organizer/events/$tournamentId'
+      path: '/tournament/organizer/events/$tournamentId'
+      fullPath: '/tournament/organizer/events/$tournamentId'
+      preLoaderRoute: typeof TournamentOrganizerEventsTournamentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tournament/organizer/created/$id': {
+      id: '/tournament/organizer/created/$id'
+      path: '/tournament/organizer/created/$id'
+      fullPath: '/tournament/organizer/created/$id'
+      preLoaderRoute: typeof TournamentOrganizerCreatedIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tournament/api/tournment/events': {
@@ -322,16 +365,19 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DemoNeonRoute: DemoNeonRoute,
   DemoTableRoute: DemoTableRoute,
-  TournamentCreateRoute: TournamentCreateRoute,
   DemoApiNamesRoute: DemoApiNamesRoute,
   DemoStartApiRequestRoute: DemoStartApiRequestRoute,
   DemoStartServerFuncsRoute: DemoStartServerFuncsRoute,
-  TournamentCreatedTournamentIdRoute: TournamentCreatedTournamentIdRoute,
-  TournamentEventsTournamentIdRoute: TournamentEventsTournamentIdRoute,
+  TournamentOrganizerCreateRoute: TournamentOrganizerCreateRoute,
+  TournamentParticipantIndexRoute: TournamentParticipantIndexRoute,
   DemoStartSsrDataOnlyRoute: DemoStartSsrDataOnlyRoute,
   DemoStartSsrFullSsrRoute: DemoStartSsrFullSsrRoute,
   DemoStartSsrSpaModeRoute: DemoStartSsrSpaModeRoute,
   TournamentApiTournmentEventsRoute: TournamentApiTournmentEventsRoute,
+  TournamentOrganizerCreatedIdRoute: TournamentOrganizerCreatedIdRoute,
+  TournamentOrganizerEventsTournamentIdRoute:
+    TournamentOrganizerEventsTournamentIdRoute,
+  TournamentParticipantRegisterIdRoute: TournamentParticipantRegisterIdRoute,
   DemoStartSsrIndexRoute: DemoStartSsrIndexRoute,
 }
 export const routeTree = rootRouteImport

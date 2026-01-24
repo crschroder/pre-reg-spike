@@ -2,12 +2,13 @@ import { useState, ReactNode } from "react";
 
 interface AccordionProps {
   title: string;
+  dirty?: boolean;
   children: ReactNode;
 }
 
 
 
-export function Accordion({ title, children }: AccordionProps) {
+export function Accordion({ title,dirty, children }: AccordionProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -17,7 +18,13 @@ export function Accordion({ title, children }: AccordionProps) {
         className="w-full flex justify-between items-center px-4 py-2 text-left 
                    font-medium text-gray-800 bg-gray-100 hover:bg-gray-200"
       >
-        <span>{title}</span>
+       <span className="flex items-center gap-2">
+    {title}
+    {dirty && (
+      <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
+    )}
+  </span>
+
         <span className="text-xl">{open ? "−" : "+"}</span>
       </button>
 

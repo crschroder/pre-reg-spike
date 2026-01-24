@@ -1,6 +1,6 @@
 // src/api/tournaments.ts
 import  api  from "./axios";
-import { TournamentEventPayload, TournamentInput } from "prisma/shared";
+import { TournamentEventPayload, TournamentInput, TournamentStatus, TournamentStatusType } from "prisma/shared";
 
 export function getTournaments() {
   return api.get("/tournament/api/tournment/events")
@@ -12,13 +12,13 @@ export function createTournament(data: TournamentInput) {
     .then(res => res.data);
 }
 
-export function updateTournament(id: string, data: TournamentInput) {
+export function updateTournament(id: number, data: TournamentInput) {
   return api.put(`/api/tournaments/${id}`, data)
     .then(res => res.data);
 }
 
 
-export function getTournamentById(id: string) {
+export function getTournamentById(id: number) {
   return api.get(`/api/tournaments/${id}`).then(res => {
     console.log(res.data);
     return res.data;});
@@ -77,3 +77,9 @@ export function saveTournamentEventDivisions(
     })
     .then(res => res.data);
 }
+
+export function getUpcomingTournaments(status?: TournamentStatusType) {
+  return api.get("/api/tournaments?status=" + (status || 'upcoming'))
+    .then(res => res.data);
+}
+
