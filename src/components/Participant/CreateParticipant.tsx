@@ -1,15 +1,36 @@
 import { getTournamentById } from "@/api/tournaments";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 
 
 type props = {tournamentId: number;};
 
-export function RegisterTournament({tournamentId}: props){
+export function CreateParticipant({tournamentId}: props){
     const { data, isLoading } = useQuery({
       queryKey: ["tournament", tournamentId],
       queryFn: () => getTournamentById(tournamentId!),
         enabled: !!tournamentId,
     });
+    const navigate = useNavigate();
+    const isEdit = true;
+    const handleNext = () => {
+    // TODO, change this to handle save and proceed    
+    if (tournamentId) {
+      navigate({
+        to: `/tournament/participant/register/$id/select-events`,
+        params: { id: String(tournamentId) },
+      });
+    }
+  };
+
+  const handleBack = () => {
+    console.log("Going back to participant dashboard");
+    navigate({
+      to: `/tournament/participant`,
+     
+    });
+  };
+
 
     return (  <div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
          <div className="p-8 w-full max-w-6xl">
@@ -59,5 +80,25 @@ export function RegisterTournament({tournamentId}: props){
          </div>
 
          </div>
+         <div className="mt-8 flex gap-4 justify-center">
+        <button
+           onClick={handleBack}
+          //disabled={true}
+          className={`px-4 py-2 rounded 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
+          }`}
+        >
+          Back
+        </button>
+    
+
+        <button
+           onClick={handleNext}
+          disabled={!isEdit}
+          className={`px-4 py-2 rounded 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
+          }`}
+        >
+          Next
+        </button>
+      </div>
     </div>)
 }

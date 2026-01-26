@@ -1,0 +1,20 @@
+@baseUrl = http://localhost:4000
+@tournamentId = 7
+POST {{baseUrl}}/api/tournaments/{{tournamentId}}/registrations
+Content-Type: application/json
+
+{
+  "userId": 2,
+  "participant": {
+    "firstName": "Chris",
+    "lastName": "Tester",
+    "age": 12,
+    "genderId": 1,
+    "beltRankId": 3,
+    "notes": "Testing registration"
+  },
+  "events": ["kata", "kumite"]
+}
+
+### Get all registrations for the tournament
+GET {{baseUrl}}/api/tournaments/{{tournamentId}}/participants

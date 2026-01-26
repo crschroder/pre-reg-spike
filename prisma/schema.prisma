@@ -80,12 +80,19 @@ model Participant {
   firstName     String         @map("first_name")
   lastName      String         @map("last_name")
   age           Int
+  genderId Int @map("gender_id")
+  gender   EventGender @relation(fields: [genderId], references: [id])
   tournamentId  Int            @map("tournament_id")
   tournament    Tournament     @relation(fields: [tournamentId], references: [id])
   userId        Int            @map("user_id")
   user          User           @relation(fields: [userId], references: [id])
+  beltRankId Int    @map("belt_rank_id")
+  rank          BeltRank @relation(fields: [beltRankId], references:[id])
   registrations Registration[]
   notes         String?
+  paid          Boolean        @default (false)
+  
+
 
   @@map("participant")
 }
@@ -118,6 +125,7 @@ model BeltRank {
   disiplineId Int        @map("disipline_id")
   disipline   Disipline  @relation(fields: [disiplineId], references: [id])
   divisions   Division[]
+  participants Participant[]
 
   @@map("belt_rank")
 }
@@ -134,6 +142,7 @@ model EventGender {
   id             Int             @id @default(autoincrement())
   description    String
   tournamentEventDivisions TournamentEventDivision[]
+  participants   Participant[]  
 
   @@map("event_gender")
 }

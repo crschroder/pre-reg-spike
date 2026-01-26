@@ -6,7 +6,7 @@ import { TournamentSchema } from './validations/TournamentSchema.ts';
 import { errorHandler, HttpError } from './errors/HttpError.ts';
 import cors from "cors";
 import { mapDivisions } from "./prisma/mappers/divisionMapper.ts";
-import { DivisionPayload, TournamentEventDivisionRow, TournamentEventPayload, TournamentStatus, TournamentStatusType, validStatuses } from 'prisma/shared';
+import { CreateRegistrationPayload, DivisionPayload, EventSelection, TournamentEventDivisionRow, TournamentEventPayload, TournamentStatus, TournamentStatusType, validStatuses } from 'prisma/shared';
 
 const prisma = new PrismaClient();
 
@@ -430,15 +430,184 @@ app.post(
   }
 );
 
+app.post('/api/tournaments/:id/registrations', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tournamentId = Number(req.params.id);
+    const payload = req.body as CreateRegistrationPayload;
+    if (!tournamentId || isNaN(tournamentId)) {
+  return res.status(400).json({ error: "Invalid tournament ID" });
+}
+
+if (!payload?.participant || !payload?.events) {
+  return res.status(400).json({ error: "Invalid payload" });
+}
+const {
+  userId,
+  participant: {
+    firstName,
+    lastName,
+    age,
+    genderId,
+    beltRankId,
+    notes
+  },
+  events
+} = payload;
+
+const divisions = await prisma.tournamentEventDivision.findMany({
+  where: {
+    tournamentEvent: {
+      tournamentId
+    },
+    genderId: genderId,
+    division: {
+      minAge: { lte: age },
+      maxAge: { gte: age },
+      beltRankId
+    }
+  },
+  include: {
+    tournamentEvent: {
+      include: { event: true }
+    }
+  }
+});
+const selectedDivisionIds = divisions
+  .filter(d => events.includes(d.tournamentEvent.event.name.toLowerCase() as EventSelection))
+  .map(d => d.id);
+
+  const result = await prisma.$transaction(async (tx) => {
+  const participant = await tx.participant.create({
+    data: {
+      firstName,
+      lastName,
+      age,
+      genderId,
+      beltRankId,
+      tournamentId,
+      userId,
+      notes,
+      paid: false
+    }
+  });
+
+  await tx.registration.createMany({
+    data: selectedDivisionIds.map((divisionId) => ({
+      participantId: participant.id,
+      eventDivisionId: divisionId
+    }))
+  });
+
+  return participant;
+});
+return res.status(201).json({
+  message: "Registration created",
+  participant: result,
+  events: selectedDivisionIds
+});
 
 
 
 
-app.get('/api/tournaments/:id/divisions', async (req: Request, res: Response, next: NextFunction) => {
 
+  } catch (error) {
+    next(error);
+  }
 
 
 });
+
+
+
+
+
+
+  app.get('/api/participant/:id', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const participantId = Number(req.params.id);
+      if (!participantId || isNaN(participantId)) {
+        return res.status(400).json({ error: "Invalid participant ID" });
+      }
+
+      const participant = await prisma.participant.findUnique({
+        where: { id: participantId },
+        include: {
+          gender: true,
+          rank: true,
+          registrations: {
+            include: {
+              tournamentEventDivision: {
+                include: {
+                  division: {
+                    include: {
+                      beltRank: true // <-- add this
+                    }
+                  },
+                  tournamentEvent: {
+                    include: {
+                      event: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+      if (!participant) {
+        return res.status(404).json({ error: "Participant not found" });
+      }
+
+      return res.json(participant);
+
+
+    } catch (err) {
+      next(err);
+    }
+
+  });
+
+  app.get('/api/tournaments/:id/participants', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const tournamentId = Number(req.params.id);
+      if (!tournamentId || isNaN(tournamentId)) {
+        return res.status(400).json({ error: "Invalid tournament ID" });
+      }
+
+      const participants = await prisma.participant.findMany({
+        where: { tournamentId },
+        include: {
+          gender: true,
+          rank: true,
+          registrations: {
+            include: {
+              tournamentEventDivision: {
+                include: {
+                  division: {
+                    include: {
+                      beltRank: true // <-- add this
+                    }
+                  },
+                  tournamentEvent: {
+                    include: {
+                      event: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+      return res.json(participants);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+// app.get('/api/tournaments/:id/divisions', async (req: Request, res: Response, next: NextFunction) => {
+// });
+
 
 app.use(errorHandler);
 

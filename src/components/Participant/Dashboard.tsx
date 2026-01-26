@@ -39,7 +39,7 @@ export function Dashboard() {
   });
 
   function handleSelectTournament(id: number) {
-    navigate({ to: `/tournament/participant/register/${id}` });
+    navigate({ to: `/tournament/participant/register/${id}/create-participant` });
   }
 
   return (<div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">

@@ -3,6 +3,11 @@ import { createRouter } from '@tanstack/react-router'
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'
 
+
+
+
+
+
 // Create a new router instance
 export const getRouter = () => {
   const router = createRouter({
@@ -10,6 +15,8 @@ export const getRouter = () => {
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
   })
-
+ console.log(
+  Object.keys(router.routesById).sort().join('\n')
+);
   return router
 }

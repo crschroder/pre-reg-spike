@@ -7,6 +7,7 @@ import Header from '../components/Header'
 
 import appCss from '../styles.css?url'
 
+
 const queryClient = new QueryClient();
 
 export const Route = createRootRoute({
@@ -20,7 +21,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'Kyuoku Kai Tournament Manager',
       },
     ],
     links: [
