@@ -26,7 +26,7 @@ const tournaments = [
   },
 ];
 
-export function Dashboard() {
+export function ParticipantDashboard() {
   
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const status = TournamentStatus.Upcoming;

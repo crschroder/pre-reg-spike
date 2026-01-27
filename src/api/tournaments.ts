@@ -83,3 +83,7 @@ export function getUpcomingTournaments(status?: TournamentStatusType) {
     .then(res => res.data);
 }
 
+export function getTournamentRegistrations(tournamentId: number) {
+  return api.get(`/api/tournaments/${tournamentId}/participants`)
+    .then(res => res.data);
+}

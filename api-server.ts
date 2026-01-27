@@ -8,7 +8,10 @@ import cors from "cors";
 import { mapDivisions } from "./prisma/mappers/divisionMapper.ts";
 import { CreateRegistrationPayload, DivisionPayload, EventSelection, TournamentEventDivisionRow, TournamentEventPayload, TournamentStatus, TournamentStatusType, validStatuses } from 'prisma/shared';
 
-const prisma = new PrismaClient();
+export const prisma = new PrismaClient({
+  log: ['query', 'info', 'warn', 'error']
+});
+
 
 type EventAllowedDivisionWithDivision =
   Prisma.EventAllowedDivisionGetPayload<{
@@ -583,6 +586,7 @@ return res.status(201).json({
             include: {
               tournamentEventDivision: {
                 include: {
+                  eventGender: true,
                   division: {
                     include: {
                       beltRank: true // <-- add this

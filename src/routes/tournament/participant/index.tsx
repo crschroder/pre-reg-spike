@@ -1,4 +1,4 @@
-import { Dashboard } from '@/components/Participant/Dashboard';
+import { ParticipantDashboard } from '@/components/Participant/Dashboard';
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/tournament/participant/')({
@@ -6,5 +6,5 @@ export const Route = createFileRoute('/tournament/participant/')({
 })
 
 function RouteComponent() {
-  return <Dashboard />;
+  return <ParticipantDashboard />;
 }

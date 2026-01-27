@@ -43,7 +43,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <Header />
-        <QueryClientProvider client={new QueryClient}>
+        <QueryClientProvider client={queryClient}>
         <Outlet/>
         </QueryClientProvider>
         <TanStackDevtools

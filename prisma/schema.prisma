@@ -124,6 +124,7 @@ model BeltRank {
   beltColor   String     @map("belt_color")
   disiplineId Int        @map("disipline_id")
   disipline   Disipline  @relation(fields: [disiplineId], references: [id])
+  sortOrder   Int           @map("sort_order") @default(0)
   divisions   Division[]
   participants Participant[]
 
