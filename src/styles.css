@@ -14,3 +14,26 @@ code {
     monospace;
 }
 
+/* Additional global styles can be added here */
+/* this is just here temporarily */
+/* table {
+  border: 1px solid lightgray;
+}
+
+tbody {
+  border-bottom: 1px solid lightgray;
+}
+
+th {
+  border-bottom: 1px solid lightgray;
+  border-right: 1px solid lightgray;
+  padding: 2px 4px;
+}
+
+tfoot {
+  color: gray;
+}
+
+tfoot th {
+  font-weight: normal;
+} */

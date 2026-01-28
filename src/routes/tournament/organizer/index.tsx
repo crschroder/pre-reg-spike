@@ -1,4 +1,4 @@
-import { OrganizerDashboard } from '@/components/Organizer/DashBoard';
+import { OrganizerDashboard } from '@/components/Organizer/Dashboard';
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/tournament/organizer/')({
