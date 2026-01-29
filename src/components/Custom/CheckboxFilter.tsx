@@ -25,7 +25,7 @@ export function CheckboxFilter<T extends Primitive>({
   }
 
   return (
-    <div className="mt-2 flex flex-col gap-1 text-xs">
+    <div className="mt-2 flex flex-col gap-1 text-xs text-white">
       {options.map(option => {
         const checked = selected.includes(option)
         const key = String(option)

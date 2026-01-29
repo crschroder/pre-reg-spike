@@ -167,6 +167,48 @@ export function ManageParticipants({ tournamentId }: { tournamentId: number }) {
     <div className="min-h-screen bg-gray-900 p-6">
     <div>
       <h2 className="text-3xl font-semibold mb-6 text-white">Manage Participants for Tournament ID: {tournamentId}</h2>
+      <div className="mb-4 flex flex-wrap gap-4" text-white>
+  <CheckboxFilter
+    column={table.getColumn("divisionName")}
+    options={['junior', 'adult', 'masters', 'senior', 'pee-wee', 'youth']}
+  />
+
+  <CheckboxFilter
+    column={table.getColumn("eventName")}
+    options={['Kumite', 'Kata']}
+  />
+
+  <CheckboxFilter
+    column={table.getColumn("divisionRank")}
+    options={['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Brown', 'Black']}
+  />
+
+  <CheckboxFilter
+    column={table.getColumn("participantGender")}
+    options={['Male', 'Female', 'Coed']}
+  />
+
+  <CheckboxFilter
+    column={table.getColumn("isPaid")}
+    options={[true, false]}
+    labels={{ true: "Paid", false: "Unpaid" }}
+  />
+</div>
+
+{table.getState().columnFilters.length > 0 && (
+  <div className="flex flex-wrap gap-2 mb-4">
+    {table.getState().columnFilters.map(f => (
+      <span
+        key={f.id}
+        className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full"
+      >
+        {f.id}: {JSON.stringify(f.value)}
+      </span>
+    ))}
+  </div>
+)}
+
+
        <div className="overflow-x-auto overflow-y-visible rounded-lg border border-gray-700 min-h-[200px]">
                   <div className="flex items-center justify-end gap-3 mb-2">
                       {table.getState().columnFilters.length > 0 && (
@@ -203,42 +245,7 @@ export function ManageParticipants({ tournamentId }: { tournamentId: number }) {
                                     <div className="flex items-center gap-2">
                                         {flexRender(header.column.columnDef.header, header.getContext())}
 
-                                        {header.column.id === 'divisionName' && (
-                                            <CheckboxFilterPopover
-                                                column={header.column}
-                                                options={['junior', 'adult', 'masters', 'senior', 'pee-wee', 'youth']}
-                                            />
-                                        )}
-                                         {header.column.id === 'eventName' && (
-                                            <CheckboxFilterPopover
-                                                column={header.column}
-                                                options={['Kumite', 'Kata']}
-                                            />
-                                        )}
-                                        {header.column.id === 'divisionRank' && (
-                                            
-                                                <CheckboxFilterPopover
-                                                column={header.column}
-                                                options={['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Brown', 'Black']}
-                                            />
                                         
-                                        )}
-                                        {header.column.id === 'participantGender' && (
-                                            <CheckboxFilterPopover
-                                                column={header.column}
-                                                options={['Male', 'Female', 'Coed']}
-                                            />
-                                        )}
-                                        {header.column.id === 'isPaid' && (
-                                            <CheckboxFilterPopover
-                                                column={header.column}
-                                                options={[true, false]}
-                                                labels={{
-                                                    true: "Paid",
-                                                    false: "Unpaid"
-                                                }}
-                                            />
-                                        )}
                                     </div>
                                 )}
                             </th>
@@ -280,5 +287,22 @@ export function ManageParticipants({ tournamentId }: { tournamentId: number }) {
   );
 }
 
+function FilterBar({ table }) {
+  return (
+    <div className="flex flex-wrap gap-4 mb-4">
+      <CheckboxFilter
+        column={table.getColumn("divisionRank")}
+        options={["White", "Yellow", "Orange", "Green", "Blue", "Brown", "Black"]}
+      />
 
+      <CheckboxFilter
+        column={table.getColumn("isPaid")}
+        options={[true, false]}
+        labels={{ true: "Paid", false: "Unpaid" }}
+      />
+
+      {/* Add more filters here */}
+    </div>
+  )
+}
 
