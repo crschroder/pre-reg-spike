@@ -174,12 +174,7 @@ export function ManageParticipants({ tournamentId }: { tournamentId: number }) {
                               Filters active
                           </span>
                       )}
-                      <button
-                          onClick={() => setShowFilters(v => !v)}
-                          className="px-3 py-1 bg-gray-700 text-gray-200 rounded hover:bg-gray-600 transition"
-                      >
-                          {showFilters ? "Hide Filters" : "Show Filters"}
-                      </button>
+                      
 
                       <button
                           onClick={() => table.resetColumnFilters()}
@@ -272,7 +267,7 @@ export function ManageParticipants({ tournamentId }: { tournamentId: number }) {
             </tbody>
         </table>
 ) : (
-  <p>Loading participants...</p>
+  <p className="text-white">Loading participants...</p>
 )}
          </div>
     </div>
