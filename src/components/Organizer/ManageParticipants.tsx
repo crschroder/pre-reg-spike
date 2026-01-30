@@ -6,7 +6,8 @@ import {
   getCoreRowModel,
   useReactTable,
   getFilteredRowModel,
-  Column
+  Column,
+  Table
 } from "@tanstack/react-table";
 
 // import { RankingInfo, rankItem } from "@tanstack/match-sorter-utils";
@@ -168,31 +169,7 @@ export function ManageParticipants({ tournamentId }: { tournamentId: number }) {
     <div>
       <h2 className="text-3xl font-semibold mb-6 text-white">Manage Participants for Tournament ID: {tournamentId}</h2>
       <div className="mb-4 flex flex-wrap gap-4" text-white>
-  <CheckboxFilter
-    column={table.getColumn("divisionName")}
-    options={['junior', 'adult', 'masters', 'senior', 'pee-wee', 'youth']}
-  />
-
-  <CheckboxFilter
-    column={table.getColumn("eventName")}
-    options={['Kumite', 'Kata']}
-  />
-
-  <CheckboxFilter
-    column={table.getColumn("divisionRank")}
-    options={['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Brown', 'Black']}
-  />
-
-  <CheckboxFilter
-    column={table.getColumn("participantGender")}
-    options={['Male', 'Female', 'Coed']}
-  />
-
-  <CheckboxFilter
-    column={table.getColumn("isPaid")}
-    options={[true, false]}
-    labels={{ true: "Paid", false: "Unpaid" }}
-  />
+  
 </div>
 
 {table.getState().columnFilters.length > 0 && (
@@ -308,19 +285,41 @@ export function ManageParticipants({ tournamentId }: { tournamentId: number }) {
   );
 }
 
-function FilterBar({ table }) {
+
+
+
+type FilterBarProps = {
+  table: Table<any>
+}
+
+function FilterBar({ table }: FilterBarProps) {
   return (
     <div className="flex flex-wrap gap-4 mb-4">
       <CheckboxFilter
-        column={table.getColumn("divisionRank")}
-        options={["White", "Yellow", "Orange", "Green", "Blue", "Brown", "Black"]}
-      />
+    column={table.getColumn("divisionName")}
+    options={['junior', 'adult', 'masters', 'senior', 'pee-wee', 'youth']}
+  />
 
-      <CheckboxFilter
-        column={table.getColumn("isPaid")}
-        options={[true, false]}
-        labels={{ true: "Paid", false: "Unpaid" }}
-      />
+  <CheckboxFilter
+    column={table.getColumn("eventName")}
+    options={['Kumite', 'Kata']}
+  />
+
+  <CheckboxFilter
+    column={table.getColumn("divisionRank")}
+    options={['White', 'Yellow', 'Orange', 'Green', 'Blue', 'Brown', 'Black']}
+  />
+
+  <CheckboxFilter
+    column={table.getColumn("participantGender")}
+    options={['Male', 'Female', 'Coed']}
+  />
+
+  <CheckboxFilter
+    column={table.getColumn("isPaid")}
+    options={[true, false]}
+    labels={{ true: "Paid", false: "Unpaid" }}
+  />
 
       {/* Add more filters here */}
     </div>
