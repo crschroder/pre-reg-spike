@@ -197,17 +197,38 @@ export function ManageParticipants({ tournamentId }: { tournamentId: number }) {
 
 {table.getState().columnFilters.length > 0 && (
   <div className="flex flex-wrap gap-2 mb-4">
-    {table.getState().columnFilters.map(f => (
-      <span
-        key={f.id}
-        className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full"
-      >
-        {f.id}: {JSON.stringify(f.value)}
-      </span>
-    ))}
+    {table.getState().columnFilters.flatMap(filter => {
+      const column = table.getColumn(filter.id)
+      const values = Array.isArray(filter.value) ? filter.value : [filter.value]
+
+      return values.map(v => (
+        <span
+          key={`${filter.id}-${v}`}
+          className="flex items-center gap-1 text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full"
+        >
+          {String(v)}
+
+          <button
+            onClick={() => {
+              // Remove just this one value
+              if (column) {
+                const newValues = values.filter(val => val !== v)
+                if (newValues.length === 0) {
+                  column.setFilterValue(undefined)
+                } else {
+                  column.setFilterValue(newValues)
+                }
+              }
+            }}
+            className="text-white hover:text-gray-200"
+          >
+            ✕
+          </button>
+        </span>
+      ))
+    })}
   </div>
 )}
-
 
        <div className="overflow-x-auto overflow-y-visible rounded-lg border border-gray-700 min-h-[200px]">
                   <div className="flex items-center justify-end gap-3 mb-2">
