@@ -6,6 +6,6 @@ export function mapBeltRank(br: PrismaBeltRank): BeltRank {
   return {
     id: br.id,
     name: br.rank,
-    color: br.beltColor ?? undefined,
+    BeltColor: br.beltColor ?? undefined,
   };
 }

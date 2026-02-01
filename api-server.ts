@@ -16,10 +16,10 @@ export const prisma = new PrismaClient({
 type EventAllowedDivisionWithDivision =
   Prisma.EventAllowedDivisionGetPayload<{
     include: {
-      division: {
+      divisionType: {
         include: {
-          beltRank: true
-        }
+          divisions: { include: { beltRank: true } }
+        },
       }
     }
   }>;
@@ -318,7 +318,8 @@ app.get('/api/event-types', async (req: Request, res: Response, next: NextFuncti
 
 app.get('/api/event/:eventId/allowed-divisions', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const eventIdNum = Number(req.params.eventId);
+    const eventIdNum =  
+    Number(req.params.eventId);
 
     if (isNaN(eventIdNum)) {
       return res.status(400).json({ error: "Invalid eventId" });
@@ -329,21 +330,23 @@ app.get('/api/event/:eventId/allowed-divisions', async (req: Request, res: Respo
       await prisma.eventAllowedDivision.findMany({
         where: { eventId: eventIdNum },
         include: {
-          division: {
+          divisionType: {
             include: {
-              beltRank: true,   // <-- this pulls belt color / rank name
+              divisions: { include: { beltRank: true } }
             },
-          },
+          },    
         },
         orderBy: {
-          divisionId: "asc",
+          divisionType: {minAge: 'asc'}
         },
       });
 
     // Return only the division objects (cleaner for UI)
-    const divisions = allowedDivisions.map(ad => ad.division);
+    //const divisions = allowedDivisions.map(ad => ad.divisionType.divisions).flat();
 
-    res.json(mapDivisions(divisions));
+    //res.json(mapDivisions(divisions));
+     res.json(allowedDivisions.map(a => a.divisionType));
+
   } catch (err) {
     next(err); // delegate to error handler
   }
@@ -462,22 +465,59 @@ const divisions = await prisma.tournamentEventDivision.findMany({
     tournamentEvent: {
       tournamentId
     },
-    genderId: genderId,
+    genderId: {
+      in: [genderId, 3]   // competitor gender OR coed
+    },
     division: {
-      minAge: { lte: age },
-      maxAge: { gte: age },
-      beltRankId
+      beltRankId: beltRankId,
+      divisionType: {
+        minAge: { lte: age },
+        maxAge: { gte: age }
+      }
     }
   },
   include: {
     tournamentEvent: {
       include: { event: true }
+    },
+    division: {
+      include: {
+        divisionType: true,
+        beltRank: true
+      }
     }
   }
 });
-const selectedDivisionIds = divisions
-  .filter(d => events.includes(d.tournamentEvent.event.name.toLowerCase() as EventSelection))
-  .map(d => d.id);
+
+const selectedDivisionIds: number[] = [];
+
+events.forEach(event => {
+  const eventName = String(event).toLowerCase();
+  
+  const genderMatches = divisions.filter(
+    d =>
+      d.tournamentEvent.event.name.toLowerCase() === eventName &&
+      d.genderId === genderId
+  );
+
+  const matches =
+    genderMatches.length > 0
+      ? genderMatches
+      : divisions.filter(
+          d =>
+            d.tournamentEvent.event.name.toLowerCase() === eventName &&
+            d.genderId === 3
+        );
+
+  selectedDivisionIds.push(...matches.map(d => d.id));
+});
+
+
+
+
+// const selectedDivisionIds = divisions
+//   .filter(d => events.includes(d.tournamentEvent.event.name.toLowerCase() as EventSelection))
+//   .map(d => d.id);
 
   const result = await prisma.$transaction(async (tx) => {
   const participant = await tx.participant.create({
@@ -543,9 +583,11 @@ return res.status(201).json({
                 include: {
                   division: {
                     include: {
-                      beltRank: true // <-- add this
+                      divisionType: true,
+                      beltRank: true
                     }
-                  },
+                  }
+                  ,
                   tournamentEvent: {
                     include: {
                       event: true
@@ -570,39 +612,41 @@ return res.status(201).json({
 
   });
 
-  app.get('/api/tournaments/:id/participants', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const tournamentId = Number(req.params.id);
-      if (!tournamentId || isNaN(tournamentId)) {
-        return res.status(400).json({ error: "Invalid tournament ID" });
-      }
+app.get('/api/tournaments/:id/participants', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tournamentId = Number(req.params.id);
+    if (!tournamentId || isNaN(tournamentId)) {
+      return res.status(400).json({ error: "Invalid tournament ID" });
+    }
 
-      const participants = await prisma.participant.findMany({
-        where: { tournamentId },
-        include: {
-          gender: true,
-          rank: true,
-          registrations: {
-            include: {
-              tournamentEventDivision: {
-                include: {
-                  eventGender: true,
-                  division: {
-                    include: {
-                      beltRank: true // <-- add this
-                    }
-                  },
-                  tournamentEvent: {
-                    include: {
-                      event: true
-                    }
+    const participants = await prisma.participant.findMany({
+      where: { tournamentId },
+      include: {
+        gender: true,
+        rank: true,
+        registrations: {
+          include: {
+            tournamentEventDivision: {
+              include: {
+                eventGender: true,
+                division: {
+                  include: {
+                    divisionType: true,
+                    beltRank: true
+                  }
+                }
+                ,
+                tournamentEvent: {
+                  include: {
+                    event: true
                   }
                 }
               }
             }
           }
         }
-      });
+      }
+    });
       return res.json(participants);
     } catch (err) {
       next(err);

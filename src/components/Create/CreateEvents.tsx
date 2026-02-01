@@ -35,7 +35,7 @@ export default function CreateEvents({tournamentId} : Props){
     saveTournamentEventDivisions(tournamentId, eventId, divisions), 
    onSuccess: (_, { eventId }) => {
     setUnsavedChanges(prev => ({ ...prev, [eventId]: false }));
-    console.log("Saved divisions for event ID:", eventId);
+    
     setSavedIndicator(prev => ({ ...prev, [eventId]: true }));
     setTimeout(() => {
       setSavedIndicator(prev => ({ ...prev, [eventId]: false }));
@@ -48,19 +48,29 @@ export default function CreateEvents({tournamentId} : Props){
     const [unsavedChanges, setUnsavedChanges] = useState<Record<number, boolean>>({});
     
 
-  function setDivisionMode(eventId: number, divisionId: number, mode: DivisionMode, markDirty = true) {
-  setDivisionSettings(prev => ({
-    ...prev,
-     [eventId]: {
-    ...(prev[eventId] || {}),
-    [divisionId]: mode
-  }
-  }));
-   if (markDirty) {
+  function setDivisionMode(eventId: number, divisionId: number, modeOrFn: DivisionModeUpdater, markDirty = true) {
+  setDivisionSettings(prev => {
+    const prevMode = prev[eventId]?.[divisionId];
+
+    const newMode =
+      typeof modeOrFn === "function"
+        ? modeOrFn(prevMode)
+        : modeOrFn;
+
+    return {
+      ...prev,
+      [eventId]: {
+        ...(prev[eventId] || {}),
+        [divisionId]: newMode
+      }
+    };
+  });
+
+  if (markDirty) {
     setUnsavedChanges(prev => ({ ...prev, [eventId]: true }));
   }
-  console.log(divisionSettings);
 }
+
 
 function saveEventDivisions(eventId: number) {
   const settings = divisionSettings[eventId];
@@ -143,11 +153,15 @@ export interface AllowedDivisionsProps {
   tournamentId: number;
   eventId: number;
   divisionSettings: Record<number, DivisionMode>; // divisionId → female true/false
-  setDivisionMode: (eventId: number, divisionId: number, mode: DivisionMode,markDirty?: boolean) => void;
+  setDivisionMode: (eventId: number, divisionId: number, mode: DivisionModeUpdater, markDirty?: boolean) => void;
 }
 
 function AllowedDivisions({ tournamentId, eventId, divisionSettings, setDivisionMode }: AllowedDivisionsProps) {
   const { data: divisions = [], isLoading, error } = useAllowedDivisions(eventId);
+
+  if (!isLoading || divisions.length > 0) {
+    console.log("divisions:", JSON.stringify(divisions));
+  }
 
    const { data: saved = [] } = useQuery({
      queryKey: ['savedDivisions', eventId, tournamentId],
@@ -162,13 +176,12 @@ function AllowedDivisions({ tournamentId, eventId, divisionSettings, setDivision
 
 
      saved.forEach((row : DivisionPayload) => {
-       const mode = {
-         male: row.genderId === 1,
-         female: row.genderId === 2,
-         coed: row.genderId === 3,
-       }
+       applyInitialDivisionMode(eventId, row.divisionId, prev => ({
+  male: prev?.male || row.genderId === 1,
+  female: prev?.female || row.genderId === 2,
+  coed: prev?.coed || row.genderId === 3,
+}));
 
-       applyInitialDivisionMode(eventId, row.divisionId, mode);
      })
    }, [saved])
 
@@ -200,10 +213,11 @@ function AllowedDivisions({ tournamentId, eventId, divisionSettings, setDivision
   function applyInitialDivisionMode(
   eventId: number,
   divisionId: number,
-  mode: DivisionMode
+  updater: DivisionMode | ((prev: DivisionMode | undefined) => DivisionMode)
 ) {
-  setDivisionMode(eventId, divisionId, mode, false);
+  setDivisionMode(eventId, divisionId, updater, false);
 }
+
 
 function updateDivisionMode(
   eventId: number,
@@ -235,14 +249,14 @@ function updateDivisionMode(
     <div className="grid grid-cols-1 md:grid-cols- lg:grid-cols-3 gap-3">
       {divisions.map((division: Division) => {
          const currentMode = divisionSettings[division.id] ?? defaultMode;
-
+        console.log("division:", division);
         return (
           <div
             key={division.id}
             className="bg-gray-800 p-4 rounded flex flex-col gap-3"
           >
             <div className="text-sm font-medium text-gray-100">
-              {division.name} — {division.beltRank?.color || "No Color"}
+              {division.name} — {division.beltRank?.beltColor || "No Color"}
             </div>
 
             <div className="flex items-center gap-2 text-sm">
@@ -269,6 +283,9 @@ type DivisionMode = {
 
 type DivisionSettings = Record<number, Record<number, DivisionMode>>;
 
+type DivisionModeUpdater =
+  | DivisionMode
+  | ((prev: DivisionMode | undefined) => DivisionMode);
 
 
 interface DivisionModeToggleProps {

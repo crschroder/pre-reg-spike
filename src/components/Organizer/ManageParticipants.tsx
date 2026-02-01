@@ -13,7 +13,7 @@ import {
 // import { RankingInfo, rankItem } from "@tanstack/match-sorter-utils";
 import { useEffect, useMemo, useState } from "react";
 import { CheckboxFilter } from "../Custom/CheckboxFilter";
-import { CheckboxFilterPopover } from "../Custom/CheckBoxFilterPopover";
+//import { CheckboxFilterPopover } from "../Custom/CheckBoxFilterPopover";
 import { ListFilterPlus } from "lucide-react";
 
 const beltColors = {
@@ -145,6 +145,14 @@ export function ManageParticipants({ tournamentId }: { tournamentId: number }) {
           },
         },
         {
+          header: 'Division Gender',
+          accessorKey: 'divisionGender',
+          filterFn: (row, columnId, filterValue) => {
+            if (!filterValue || filterValue.length === 0) return true
+            return filterValue.includes(row.getValue(columnId))
+          },
+        },
+        {
           header: 'Paid',
           accessorKey: 'isPaid',
           cell: ({ getValue }) => {
@@ -173,11 +181,11 @@ export function ManageParticipants({ tournamentId }: { tournamentId: number }) {
       isPaid: p.paid,
 
       divisionGender: r.tournamentEventDivision.eventGender.description,
-      divisionName: r.tournamentEventDivision.division.name,
+      divisionName: r.tournamentEventDivision.division.divisionType.name,
       divisionRank: r.tournamentEventDivision.division.beltRank.beltColor,
       divisionBeltOrder: r.tournamentEventDivision.division.beltRank.sortOrder,
-      minAge: r.tournamentEventDivision.division.minAge,
-      maxAge: r.tournamentEventDivision.division.maxAge,
+      minAge: r.tournamentEventDivision.division.divisionType.minAge,
+      maxAge: r.tournamentEventDivision.division.divisionType.maxAge,
 
       eventName: r.tournamentEventDivision.tournamentEvent.event.name
     }))
@@ -514,11 +522,18 @@ export function PillButton({
     >
       <span>{children}</span>
 
-      <button
+          <button
         type="button"
         onClick={onRemove}
-        className="ml-1 text-white hover:text-gray-200 focus:outline-none flex items-center"
+        className="
+          ml-1 p-0.5 rounded-full
+          text-white
+          hover:bg-white/20
+          focus:outline-none
+          flex items-center justify-center
+        "
       >
+
         <X size={12} strokeWidth={2} />
       </button>
     </span>

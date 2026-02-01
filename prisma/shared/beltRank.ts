@@ -1,5 +1,5 @@
 export interface BeltRank {
   id: number;
   name: string;
-  color?: string; // optional if you store belt color
+  beltColor?: string; // optional if you store belt color
 }
