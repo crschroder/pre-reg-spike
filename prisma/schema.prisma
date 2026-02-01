@@ -50,15 +50,23 @@ model Event {
 
 model Division {
   id             Int             @id @default(autoincrement())
+  divisionTypeId Int             @map("division_type_id")  
+  beltRankId     Int?            @map("belt_rank_id")
+  beltRank       BeltRank?       @relation(fields: [beltRankId], references: [id])
+  divisionType   DivisionType     @relation(fields: [divisionTypeId], references: [id])
+  tournamentEventDivisions TournamentEventDivision[]
+ 
+  @@map("division")
+}
+
+model DivisionType{
+  id             Int             @id @default(autoincrement())
   name           String
   minAge         Int?            @map("min_age")
   maxAge         Int?            @map("max_age")
-  beltRankId     Int?            @map("belt_rank_id")
-  beltRank       BeltRank?       @relation(fields: [beltRankId], references: [id])
-  tournamentEventDivisions TournamentEventDivision[]
+  divisions      Division[]
   allowedEvents EventAllowedDivision[]
-
-  @@map("division")
+  @@map("division_type")
 }
 
 model TournamentEventDivision {
@@ -149,12 +157,13 @@ model EventGender {
 }
 
 model EventAllowedDivision {
-  id         Int       @id @default(autoincrement())
-  eventId    Int       @map("event_id")
-  divisionId Int       @map("division_id")
-  event      Event     @relation(fields: [eventId], references: [id])
-  division   Division  @relation(fields: [divisionId], references: [id])
+  id              Int       @id @default(autoincrement())
+  eventId         Int       @map("event_id")
+  divisionTypeId  Int       @map("division_type_id")
 
-  @@unique([eventId, divisionId])
+  event           Event         @relation(fields: [eventId], references: [id])
+  divisionType    DivisionType  @relation(fields: [divisionTypeId], references: [id])
+
+  @@unique([eventId, divisionTypeId])
   @@map("event_allowed_division")
 }

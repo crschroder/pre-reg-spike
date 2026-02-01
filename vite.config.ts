@@ -5,6 +5,8 @@ import viteReact from '@vitejs/plugin-react'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
 import neon from './neon-vite-plugin.ts'
+import path from 'path'
+
 
 const config = defineConfig({
   plugins: [
@@ -12,14 +14,21 @@ const config = defineConfig({
     neon,
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
-      projects: ['./tsconfig.json'],
+      projects: ['./tsconfig.frontend.json'],
     }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
   ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@shared': path.resolve(__dirname, './shared'),
+    },
+  },
    ssr: {
     external: ['@prisma/client'],
+    noExternal: ['@prisma/client'],
   },
   optimizeDeps: {
     exclude: ['@prisma/client'],

@@ -1,5 +1,13 @@
 {
-  "include": ["**/*.ts", "**/*.tsx", "eslint.config.js", "prettier.config.js", "vite.config.js"],
+  // "include": ["**/*.ts", "**/*.tsx", "eslint.config.js", "prettier.config.js", "vite.config.js"],
+  "include": [
+  "api-server.ts",
+  "shared/**/*",
+  "eslint.config.js",
+  "prettier.config.js",
+  "vite.config.js"
+],
+"exclude": [],
   
   "compilerOptions": {
     "target": "ES2022",
@@ -7,6 +15,7 @@
     "module": "commonjs",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
+    
 
     /* Bundler mode */
     "moduleResolution": "node",
@@ -30,7 +39,8 @@
       "@/*": ["./src/*"],
       "@prisma/client": ["../generated/prisma/client"],
       "validations/*": ["validations/*"],
-      "errors/*": ["errors/*"]
+      "errors/*": ["errors/*"],
+      "@shared/*": ["./shared/*"],
 
 
     },
