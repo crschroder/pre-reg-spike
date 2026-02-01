@@ -1,7 +1,7 @@
-import { getUpcomingTournaments } from "@/api/tournaments";
+import { getUpcomingTournaments } from "../../api/tournaments";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { TournamentStatus } from "prisma/shared";
+import { TournamentStatus } from "../../../shared";
 import { useState } from "react";
 import { format } from 'date-fns';
 

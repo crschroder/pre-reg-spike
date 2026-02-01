@@ -1,10 +1,11 @@
-import { getEventTypes, getTournamentEventDivisions, getTournamentEvents, saveTournamentEventDivisions } from "@/api/tournaments";
+import { getEventTypes, getTournamentEventDivisions, 
+  getTournamentEvents, saveTournamentEventDivisions } from "../../api/tournaments";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Accordion } from "../Custom/Accordian";
 import { useAllowedDivisions } from "@/hooks/useAllowedDivisions";
 import { useEffect, useState } from "react";
-import { Division,DivisionPayload,EventType } from "prisma/shared";
-import { S } from "@faker-js/faker/dist/airline-DF6RqYmq";
+import { Division,DivisionPayload,EventType } from "@shared";
+//import { S } from "@faker-js/faker/dist/airline-DF6RqYmq";
 
 
 type Props = { tournamentId: number };

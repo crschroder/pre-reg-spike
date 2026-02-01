@@ -5,9 +5,10 @@ import { safeParse } from 'valibot';
 import { TournamentSchema } from './validations/TournamentSchema.ts';
 import { errorHandler, HttpError } from './errors/HttpError.ts';
 import cors from "cors";
-import { mapDivisions } from "./prisma/mappers/divisionMapper.ts";
-import { CreateRegistrationPayload, DivisionPayload, EventSelection, TournamentEventDivisionRow, TournamentEventPayload, TournamentStatus, TournamentStatusType, validStatuses } from 'prisma/shared';
+import { CreateRegistrationPayload, DivisionPayload, TournamentEventDivisionRow, TournamentEventPayload, TournamentStatus, TournamentStatusType, validStatuses } from 'shared';
 
+import dotenv from 'dotenv';
+dotenv.config();
 export const prisma = new PrismaClient({
   log: ['query', 'info', 'warn', 'error']
 });
@@ -24,6 +25,9 @@ type EventAllowedDivisionWithDivision =
     }
   }>;
 
+
+
+  
 const app = express()
 app.use(
   cors({
@@ -32,6 +36,15 @@ app.use(
   })
 );
 app.use(express.json());
+app.use((req, res, next) => {
+  const apiKey = req.headers['x-api-key'];
+
+  if (!apiKey || apiKey !== process.env.API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  next();
+});
 
 // Health check endpoint
 app.get('/ping', (req: Request, res: Response) => {
@@ -107,11 +120,6 @@ app.get(
     }
   }
 );
-
-
-
-
-
 
 app.get('/tournament/api/tournment/events', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -384,11 +392,6 @@ app.get(
     }
   }
 );
-
-
-
-
-
 app.post(
   "/api/tournaments/:tournamentId/events/:eventId/divisions",
   async (req, res, next) => {
@@ -548,22 +551,10 @@ return res.status(201).json({
   participant: result,
   events: selectedDivisionIds
 });
-
-
-
-
-
   } catch (error) {
     next(error);
   }
-
-
 });
-
-
-
-
-
 
   app.get('/api/participant/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {

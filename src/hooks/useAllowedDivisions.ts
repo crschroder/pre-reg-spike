@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   getDivisionsByEventType,
   
-} from "@/api/tournaments";
-import { Division } from "prisma/shared/division";
+} from "../api/tournaments";
+import { Division } from "../../shared/index";
 
 
 export function useAllowedDivisions(eventId: number) {

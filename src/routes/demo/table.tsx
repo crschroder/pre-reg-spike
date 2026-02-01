@@ -11,7 +11,7 @@ import {
 } from '@tanstack/react-table'
 import { compareItems, rankItem } from '@tanstack/match-sorter-utils'
 
-import { makeData } from '@/data/demo-table-data'
+import { makeData } from '../../data/demo-table-data'
 
 import type {
   Column,

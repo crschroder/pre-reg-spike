@@ -1,6 +1,6 @@
 // prisma/mappers/divisionMapper.ts
 import { BeltRank as PrismaBeltRank } from "@prisma/client";
-import { Division as DomainDivision } from "../shared/division.ts";
+import { Division as DomainDivision } from "../division.ts";
 import { mapBeltRank } from "./beltRankMapper.ts";
 
 // This matches what your API actually returns for `ad.division`

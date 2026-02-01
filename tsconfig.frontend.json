@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".", 
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx","paths": {
+  "@/*": ["./src/*"],
+ "@shared/*": ["./shared/*"]
+}
+  },
+  "include": ["src", "shared"]
+}

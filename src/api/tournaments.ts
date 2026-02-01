@@ -1,6 +1,8 @@
 // src/api/tournaments.ts
 import  api  from "./axios";
-import { TournamentEventPayload, TournamentInput, TournamentStatus, TournamentStatusType } from "prisma/shared";
+import { TournamentEventPayload, TournamentInput, 
+  TournamentStatus, 
+  TournamentStatusType } from "../../shared/index";
 
 export function getTournaments() {
   return api.get("/tournament/api/tournment/events")
