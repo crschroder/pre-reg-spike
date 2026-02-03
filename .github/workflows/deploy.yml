@@ -93,7 +93,7 @@ jobs:
       - name: Configure API App Settings
         run: |
           az webapp config appsettings set \
-            --resource-group pre-reg-spike-rg \
+            --resource-group pre-reg-spike-api_group \
             --name pre-reg-spike-api \
             --settings \
             DATABASE_URL="${{ secrets.DATABASE_URL }}" \
@@ -101,4 +101,4 @@ jobs:
             VITE_API_KEY="${{ secrets.VITE_API_KEY }}" \
             CORS_ORIGINS="https://pre-reg-spike-ui-f3hghrcse9gme5ge.canadacentral-01.azurewebsites.net"
           
-          az webapp config set --resource-group pre-reg-spike-rg --name pre-reg-spike-api --startup-file "node dist/api-server.js"
+          az webapp config set --resource-group pre-reg-spike-api_group --name pre-reg-spike-api --startup-file "node dist/api-server.js"
