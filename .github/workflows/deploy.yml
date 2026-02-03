@@ -57,6 +57,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          auth-type: 'client-secret'
 
       - name: Deploy UI to Azure App Service
         uses: azure/webapps-deploy@v3
@@ -95,6 +96,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          auth-type: 'client-secret'
 
       - name: Deploy API to Azure App Service
         uses: azure/webapps-deploy@v3
