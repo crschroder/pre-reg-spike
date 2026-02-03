@@ -6,61 +6,58 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // Import the TanStack Start server handler
 import(`file://${__dirname}/dist/server/server.js`).then(async (module) => {
-  const serverHandler = module.default
+  const { default: server } = module
 
-  // Create HTTP server that wraps the fetch handler
+  if (!server || !server.fetch) {
+    throw new Error('Server does not have a fetch method')
+  }
+
+  // Create HTTP server
   const httpServer = createServer(async (req, res) => {
     try {
-      // Construct full URL from request
+      // Construct URL
       const protocol = req.headers['x-forwarded-proto'] || 'http'
-      const host = req.headers.host || 'localhost'
-      const url = new URL(`${protocol}://${host}${req.url}`)
+      const host = req.headers['host'] || 'localhost'
+      const url = `${protocol}://${host}${req.url}`
 
-      // Convert Node request to Web Request
-      let body = undefined
-      if (!['GET', 'HEAD'].includes(req.method)) {
+      // Build request headers (remove host to avoid conflicts)
+      const headers = { ...req.headers }
+      delete headers['host']
+
+      // Build fetch request
+      let body = null
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
         const chunks = []
         for await (const chunk of req) {
           chunks.push(chunk)
         }
-        body = Buffer.concat(chunks)
+        body = Buffer.concat(chunks).toString()
       }
 
-      const requestInit = {
+      const fetchRequest = new Request(url, {
         method: req.method,
-        headers: Object.fromEntries(
-          Object.entries(req.headers).filter(([key]) => key !== 'host')
-        ),
+        headers,
         body,
-      }
+      })
 
-      // Call the fetch handler
-      const response = await serverHandler.fetch(new Request(url, requestInit))
+      console.log(`${req.method} ${req.url}`)
 
-      // Send response headers
-      const headers = Object.fromEntries(response.headers)
-      res.writeHead(response.status, headers)
+      // Call the server handler
+      const response = await server.fetch(fetchRequest)
 
-      // Send response body
+      // Write response
+      res.writeHead(response.status, Object.fromEntries(response.headers.entries()))
+
+      // Send body
       if (response.body) {
-        const reader = response.body.getReader()
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            res.write(new Uint8Array(value))
-          }
-        } finally {
-          reader.releaseLock()
-        }
+        res.write(await response.text())
       }
+
       res.end()
-    } catch (err) {
-      console.error('Error handling request:', err)
-      if (!res.headersSent) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' })
-      }
-      res.end('Internal Server Error')
+    } catch (error) {
+      console.error('Request error:', error)
+      res.writeHead(500, { 'Content-Type': 'text/plain' })
+      res.end(`Error: ${error.message}`)
     }
   })
 
@@ -69,14 +66,13 @@ import(`file://${__dirname}/dist/server/server.js`).then(async (module) => {
     console.log(`✓ Server listening on http://0.0.0.0:${port}`)
   })
 
-  // Handle graceful shutdown
   process.on('SIGTERM', () => {
-    console.log('SIGTERM received, closing server...')
+    console.log('SIGTERM signal received')
     httpServer.close(() => {
       process.exit(0)
     })
   })
-}).catch((err) => {
-  console.error('Failed to start server:', err)
+}).catch((error) => {
+  console.error('Failed to import server:', error)
   process.exit(1)
 })
