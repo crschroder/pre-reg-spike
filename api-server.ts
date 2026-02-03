@@ -29,12 +29,23 @@ type EventAllowedDivisionWithDivision =
 
   
 const app = express()
+const allowedOrigins = process.env.CORS_ORIGINS?.split(',') ?? []
+
 app.use(
   cors({
-    origin: "http://localhost:3001",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, mobile apps, server-to-server)
+      if (!origin) return callback(null, true)
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true)
+      }
+
+      return callback(new Error('Not allowed by CORS'))
+    },
     credentials: true,
   })
-);
+)
 app.use(express.json());
 app.use((req, res, next) => {
   const apiKey = req.headers['x-api-key'];
