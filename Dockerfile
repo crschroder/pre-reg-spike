@@ -6,6 +6,7 @@ WORKDIR /app
 COPY dist/ ./dist/
 COPY package.json package-lock.json ./
 COPY server-wrapper.js ./
+COPY test-server.js ./
 
 # Install production dependencies only
 RUN npm ci --only=production --legacy-peer-deps
