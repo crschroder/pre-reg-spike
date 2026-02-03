@@ -73,7 +73,7 @@ jobs:
             DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             API_KEY="${{ secrets.API_KEY }}" \
             VITE_API_KEY="${{ secrets.VITE_API_KEY }}" \
-            VITE_API_URL="https://pre-reg-spike-api.azurewebsites.net"
+            VITE_API_URL="https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net"
           
           az webapp config set --resource-group pre-reg-spike-rg --name pre-reg-spike-ui --startup-file "npm start"
 
@@ -111,6 +111,6 @@ jobs:
             DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             API_KEY="${{ secrets.API_KEY }}" \
             VITE_API_KEY="${{ secrets.VITE_API_KEY }}" \
-            CORS_ORIGINS="https://pre-reg-spike-ui.azurewebsites.net"
+            CORS_ORIGINS="https://pre-reg-spike-ui-f3hghrcse9gme5ge.canadacentral-01.azurewebsites.net"
           
           az webapp config set --resource-group pre-reg-spike-rg --name pre-reg-spike-api --startup-file "node dist/api-server.js"
