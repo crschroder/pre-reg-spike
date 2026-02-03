@@ -17,7 +17,7 @@ import(`file://${__dirname}/dist/server/server.js`).then(async (module) => {
       const url = new URL(`${protocol}://${host}${req.url}`)
 
       // Convert Node request to Web Request
-      let body = null
+      let body = undefined
       if (!['GET', 'HEAD'].includes(req.method)) {
         const chunks = []
         for await (const chunk of req) {
@@ -28,27 +28,38 @@ import(`file://${__dirname}/dist/server/server.js`).then(async (module) => {
 
       const requestInit = {
         method: req.method,
-        headers: req.headers,
+        headers: Object.fromEntries(
+          Object.entries(req.headers).filter(([key]) => key !== 'host')
+        ),
         body,
       }
 
       // Call the fetch handler
       const response = await serverHandler.fetch(new Request(url, requestInit))
 
-      // Send response
-      res.writeHead(response.status, Object.fromEntries(response.headers))
+      // Send response headers
+      const headers = Object.fromEntries(response.headers)
+      res.writeHead(response.status, headers)
+
+      // Send response body
       if (response.body) {
         const reader = response.body.getReader()
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          res.write(Buffer.from(value))
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            res.write(new Uint8Array(value))
+          }
+        } finally {
+          reader.releaseLock()
         }
       }
       res.end()
     } catch (err) {
       console.error('Error handling request:', err)
-      res.writeHead(500)
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' })
+      }
       res.end('Internal Server Error')
     }
   })
