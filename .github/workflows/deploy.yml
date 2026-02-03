@@ -64,8 +64,17 @@ jobs:
           app-name: pre-reg-spike-ui
           package: .
 
-      - name: Set UI Startup Command
+      - name: Configure UI App Settings
         run: |
+          az webapp config appsettings set \
+            --resource-group pre-reg-spike-rg \
+            --name pre-reg-spike-ui \
+            --settings \
+            DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            API_KEY="${{ secrets.API_KEY }}" \
+            VITE_API_KEY="${{ secrets.VITE_API_KEY }}" \
+            VITE_API_URL="https://pre-reg-spike-api.azurewebsites.net"
+          
           az webapp config set --resource-group pre-reg-spike-rg --name pre-reg-spike-ui --startup-file "npm start"
 
   deploy-api:
@@ -93,6 +102,15 @@ jobs:
           app-name: pre-reg-spike-api
           package: .
 
-      - name: Set API Startup Command
+      - name: Configure API App Settings
         run: |
+          az webapp config appsettings set \
+            --resource-group pre-reg-spike-rg \
+            --name pre-reg-spike-api \
+            --settings \
+            DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            API_KEY="${{ secrets.API_KEY }}" \
+            VITE_API_KEY="${{ secrets.VITE_API_KEY }}" \
+            CORS_ORIGINS="https://pre-reg-spike-ui.azurewebsites.net"
+          
           az webapp config set --resource-group pre-reg-spike-rg --name pre-reg-spike-api --startup-file "node dist/api-server.js"
