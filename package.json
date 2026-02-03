@@ -10,7 +10,7 @@
     "lint": "eslint",
     "format": "prettier",
     "check": "prettier --write . && eslint --fix",
-    "start": "node dist/server/server.js"
+    "start": "node server-wrapper.js"
   },
   "dependencies": {
     "@faker-js/faker": "^10.0.0",
