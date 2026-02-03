@@ -1,7 +1,7 @@
 import { createServer } from 'http'
 import { fileURLToPath } from 'url'
-import { dirname } from 'path'
-import { writeFileSync, appendFileSync } from 'fs'
+import { dirname, join } from 'path'
+import { readFileSync, existsSync, appendFileSync } from 'fs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const logFile = '/tmp/server.log'
@@ -39,6 +39,35 @@ import(`file://${__dirname}/dist/server/server.js`).then(async (module) => {
       const host = req.headers['host'] || 'localhost'
       const url = `${protocol}://${host}${req.url}`
       
+      // Try to serve static files first
+      if (req.method === 'GET' && req.url.startsWith('/assets/')) {
+        const filePath = join(__dirname, 'dist/client', req.url)
+        
+        if (existsSync(filePath)) {
+          try {
+            const content = readFileSync(filePath)
+            const ext = filePath.split('.').pop()
+            const mimeTypes = {
+              js: 'application/javascript',
+              css: 'text/css',
+              json: 'application/json',
+              png: 'image/png',
+              jpg: 'image/jpeg',
+              gif: 'image/gif',
+              svg: 'image/svg+xml',
+            }
+            const mimeType = mimeTypes[ext] || 'application/octet-stream'
+            
+            log(`Serving static asset: ${req.url}`)
+            res.writeHead(200, { 'Content-Type': mimeType })
+            res.end(content)
+            return
+          } catch (e) {
+            log(`Error reading static file: ${e.message}`)
+          }
+        }
+      }
+
       log(`URL: ${url}`)
 
       const headers = { ...req.headers }
