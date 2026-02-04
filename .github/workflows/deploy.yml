@@ -23,8 +23,8 @@ jobs:
       - name: Build UI and API
         run: |
           npm run build
-          # Compile API server for Azure deployment
-          npx tsc api-server.ts --module commonjs --target es2020 --esModuleInterop --skipLibCheck --moduleResolution node --lib es2020 --outDir .
+          # Compile API server for Azure deployment using tsconfig
+          npx tsc --noEmit false --skipLibCheck --outDir .
         env:
           VITE_API_URL: https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
