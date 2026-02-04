@@ -5,6 +5,7 @@ import { readFileSync, existsSync, appendFileSync } from 'fs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const logFile = '/tmp/server.log'
+const API_SERVER = process.env.API_SERVER || 'http://localhost:4000'
 
 function log(msg) {
   const timestamp = new Date().toISOString()
@@ -65,6 +66,51 @@ import(`file://${__dirname}/dist/server/server.js`).then(async (module) => {
           } catch (e) {
             log(`Error reading static file: ${e.message}`)
           }
+        }
+      }
+
+      // Proxy API requests to the backend API server
+      if (req.url.startsWith('/api/')) {
+        log(`Proxying API request to backend: ${req.url}`)
+        const apiUrl = `${API_SERVER}${req.url}`
+        
+        let body = null
+        if (req.method !== 'GET' && req.method !== 'HEAD') {
+          const chunks = []
+          for await (const chunk of req) {
+            chunks.push(chunk)
+          }
+          body = chunks.length > 0 ? Buffer.concat(chunks) : null
+        }
+
+        const headers = { ...req.headers }
+        delete headers['host']
+
+        try {
+          const fetchRequest = new Request(apiUrl, {
+            method: req.method,
+            headers,
+            body,
+          })
+
+          const response = await fetch(fetchRequest)
+          const responseBody = await response.arrayBuffer()
+
+          log(`API response status: ${response.status}`)
+
+          const responseHeaders = {}
+          response.headers.forEach((value, key) => {
+            responseHeaders[key] = value
+          })
+
+          res.writeHead(response.status, responseHeaders)
+          res.end(Buffer.from(responseBody))
+          return
+        } catch (e) {
+          log(`API proxy error: ${e.message}`)
+          res.writeHead(502, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'Bad Gateway', details: e.message }))
+          return
         }
       }
 

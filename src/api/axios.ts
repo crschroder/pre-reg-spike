@@ -1,15 +1,16 @@
 // src/api/axios.ts
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_URL;// || 'http://localhost:4000';
+// Use relative paths - the server will proxy /api/* requests to the backend
 const api = axios.create({
-  baseURL: baseURL, // adjust if your backend differs
   headers: { 'Content-Type': 'application/json' },
 });
 
 // Attach API key to every request
 api.interceptors.request.use((config) => {
-  config.headers['x-api-key'] = import.meta.env.VITE_API_KEY;
+  const apiKey = import.meta.env.VITE_API_KEY;
+  console.log('API Key from env:', apiKey);
+  config.headers['x-api-key'] = apiKey;
   return config;
 });
 

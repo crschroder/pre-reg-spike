@@ -70,7 +70,8 @@ jobs:
             DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             API_KEY="${{ secrets.API_KEY }}" \
             VITE_API_KEY="${{ secrets.VITE_API_KEY }}" \
-            VITE_API_URL="https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net"
+            VITE_API_URL="https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net" \
+            API_SERVER="https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net"
           
           az webapp config set --resource-group pre-reg-spike-rg --name pre-reg-spike-ui --startup-file "bash /home/site/wwwroot/startup.sh"
 
