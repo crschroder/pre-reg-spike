@@ -20,9 +20,21 @@ import type {
 
 dotenv.config()
 
-export const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error']
-});
+let prismaClient: PrismaClient | undefined
+
+function getPrisma(): PrismaClient {
+  if (prismaClient) return prismaClient
+
+  if (!process.env.DATABASE_URL) {
+    throw new HttpError('DATABASE_URL is not configured', 500)
+  }
+
+  prismaClient = new PrismaClient({
+    log: ['query', 'info', 'warn', 'error'],
+  })
+
+  return prismaClient
+}
 
 
 type EventAllowedDivisionWithDivision =
@@ -65,7 +77,11 @@ app.use(express.json());
 
 // Health check endpoint - NO AUTH REQUIRED
 app.get('/ping', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', message: 'pong' })
+  res.json({
+    status: 'ok',
+    message: 'pong',
+    dbConfigured: Boolean(process.env.DATABASE_URL),
+  })
 })
 
 // API Key auth middleware - applies to all other routes
@@ -90,7 +106,7 @@ app.get('/api/tournaments/:id', async (req, res, next) => {
      const tournamentId = Number(id);
 
 
-    const tournament = await prisma.tournament.findUnique({
+    const tournament = await getPrisma().tournament.findUnique({
       where: { id: tournamentId },
       include: { organizer: true, events: true, participants: true },
     });
@@ -142,7 +158,7 @@ app.get(
           break;
       }
 
-      const tournaments = await prisma.tournament.findMany({
+      const tournaments = await getPrisma().tournament.findMany({
         where,
         orderBy: { date: "asc" },
       });
@@ -156,7 +172,7 @@ app.get(
 
 app.get('/tournament/api/tournment/events', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const tournaments = await prisma.tournament.findMany({
+    const tournaments = await getPrisma().tournament.findMany({
       include: { organizer: true, events: true, participants: true },
     })
     res.json(tournaments)
@@ -180,7 +196,7 @@ app.post('/api/tournaments', async (req, res, next) => {
     }
 
     // ✅ Step 1: Verify organizer exists
-    const organizer = await prisma.user.findUnique({
+    const organizer = await getPrisma().user.findUnique({
       where: { id: organizerId }
     });
 
@@ -189,7 +205,7 @@ app.post('/api/tournaments', async (req, res, next) => {
     }
 
     // ✅ Step 2: Create tournament
-    const tournament = await prisma.tournament.create({
+    const tournament = await getPrisma().tournament.create({
       data: {
         name,
         date: new Date(date),
@@ -215,14 +231,14 @@ app.post('/api/tournaments/:id/tournamentEvents', async (req: Request<{ id: stri
       }
 
       // Insert multiple TournamentEvent rows
-      await prisma.tournamentEvent.createMany({
+      await getPrisma().tournamentEvent.createMany({
         data: eventIds.map(eventId => ({
           tournamentId,
           eventId,
         })),
         skipDuplicates: true, // optional but helpful
       });
-      const created = await prisma.tournamentEvent.findMany({
+      const created = await getPrisma().tournamentEvent.findMany({
         where: { tournamentId }
       });
       res.json(created);   
@@ -248,7 +264,7 @@ app.put(
       }
 
       // 1. Fetch existing TournamentEvent rows
-      const existing = await prisma.tournamentEvent.findMany({
+      const existing = await getPrisma().tournamentEvent.findMany({
         where: { tournamentId },
       });
 
@@ -262,7 +278,7 @@ app.put(
 
       // 4. Insert new TournamentEvent rows
       if (toAdd.length > 0) {
-        await prisma.tournamentEvent.createMany({
+        await getPrisma().tournamentEvent.createMany({
           data: toAdd.map(eventId => ({
             tournamentId,
             eventId,
@@ -272,7 +288,7 @@ app.put(
 
       // 5. Delete removed TournamentEvent rows
       if (toRemove.length > 0) {
-        await prisma.tournamentEvent.deleteMany({
+        await getPrisma().tournamentEvent.deleteMany({
           where: {
             tournamentId,
             eventId: { in: toRemove },
@@ -296,7 +312,7 @@ app.get('/api/tournaments/:id/tournamentEvents', async (req, res, next) => {
     const { id } = req.params;
     const tournamentId = Number(id);
 
-    const tournamentEvents = await prisma.tournamentEvent.findMany({
+    const tournamentEvents = await getPrisma().tournamentEvent.findMany({
       where: { tournamentId },
       include: { event: true }
     });
@@ -324,7 +340,7 @@ app.put('/api/tournaments/:id', async (req, res, next) => {
     }
 
     // ✅ Verify organizer exists
-    const organizer = await prisma.user.findUnique({
+    const organizer = await getPrisma().user.findUnique({
       where: { id: organizerId }
     });
     if (!organizer) {
@@ -332,7 +348,7 @@ app.put('/api/tournaments/:id', async (req, res, next) => {
     }
 
     // ✅ Update tournament
-    const tournament = await prisma.tournament.update({
+    const tournament = await getPrisma().tournament.update({
       where: { id: tournamentId },
       data: {
         name,
@@ -350,7 +366,7 @@ app.put('/api/tournaments/:id', async (req, res, next) => {
 // Get the list of possible events 
 app.get('/api/event-types', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const eventTypes = await prisma.event.findMany();
+    const eventTypes = await getPrisma().event.findMany();
     res.json(eventTypes);
   } catch (err) {
     next(err); // delegate to error handler
@@ -368,7 +384,7 @@ app.get('/api/event/:eventId/allowed-divisions', async (req: Request, res: Respo
 
     // Prisma query
     const allowedDivisions: EventAllowedDivisionWithDivision[] =
-      await prisma.eventAllowedDivision.findMany({
+      await getPrisma().eventAllowedDivision.findMany({
         where: { eventId: eventIdNum },
         include: {
           divisionType: {
@@ -401,7 +417,7 @@ app.get(
       const eventId = Number(req.params.eventId);
 
       // 1. Find the TournamentEvent row
-      const tournamentEvent = await prisma.tournamentEvent.findFirst({
+      const tournamentEvent = await getPrisma().tournamentEvent.findFirst({
         where: { tournamentId, eventId },
       });
 
@@ -410,7 +426,7 @@ app.get(
       }
 
       // 2. Fetch existing divisions
-      const rows = await prisma.tournamentEventDivision.findMany({
+      const rows = await getPrisma().tournamentEventDivision.findMany({
         where: { tournamentEventId: tournamentEvent.id },
         select: {
           divisionId: true,
@@ -439,7 +455,7 @@ app.post(
       }
 
       // 1. Find the TournamentEvent row
-      const tournamentEvent = await prisma.tournamentEvent.findFirst({
+      const tournamentEvent = await getPrisma().tournamentEvent.findFirst({
         where: { tournamentId, eventId },
       });
 
@@ -448,7 +464,7 @@ app.post(
       }
 
       // 2. Delete existing rows
-      await prisma.tournamentEventDivision.deleteMany({
+      await getPrisma().tournamentEventDivision.deleteMany({
         where: { tournamentEventId: tournamentEvent.id },
       });
 
@@ -460,7 +476,7 @@ app.post(
       }));
 
       // 4. Insert new rows
-      const created = await prisma.tournamentEventDivision.createMany({
+      const created = await getPrisma().tournamentEventDivision.createMany({
         data: rows,
       });
 
@@ -496,7 +512,7 @@ const {
   events
 } = payload;
 
-const divisions = await prisma.tournamentEventDivision.findMany({
+const divisions = await getPrisma().tournamentEventDivision.findMany({
   where: {
     tournamentEvent: {
       tournamentId
@@ -555,7 +571,7 @@ events.forEach(event => {
 //   .filter(d => events.includes(d.tournamentEvent.event.name.toLowerCase() as EventSelection))
 //   .map(d => d.id);
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await getPrisma().$transaction(async (tx) => {
   const participant = await tx.participant.create({
     data: {
       firstName,
@@ -596,7 +612,7 @@ return res.status(201).json({
         return res.status(400).json({ error: "Invalid participant ID" });
       }
 
-      const participant = await prisma.participant.findUnique({
+      const participant = await getPrisma().participant.findUnique({
         where: { id: participantId },
         include: {
           gender: true,
@@ -643,7 +659,7 @@ app.get('/api/tournaments/:id/participants', async (req: Request, res: Response,
       return res.status(400).json({ error: "Invalid tournament ID" });
     }
 
-    const participants = await prisma.participant.findMany({
+    const participants = await getPrisma().participant.findMany({
       where: { tournamentId },
       include: {
         gender: true,
