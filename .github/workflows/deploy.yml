@@ -101,15 +101,16 @@ jobs:
 
       - name: Deploy API from Docker image
         run: |
-          az webapp create --resource-group pre-reg-spike-api_group --plan default --name pre-reg-spike-api --deployment-container-image-name ghcr.io/${{ github.repository_owner }}/pre-reg-api:latest 2>/dev/null || true
+          IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/pre-reg-api:latest"
           
           az webapp config container set \
             --name pre-reg-spike-api \
             --resource-group pre-reg-spike-api_group \
-            --docker-custom-image-name ghcr.io/${{ github.repository_owner }}/pre-reg-api:latest \
+            --docker-custom-image-name "$IMAGE_NAME" \
             --docker-registry-server-url https://ghcr.io \
             --docker-registry-server-user ${{ github.actor }} \
-            --docker-registry-server-password ${{ secrets.GITHUB_TOKEN }}
+            --docker-registry-server-password ${{ secrets.GITHUB_TOKEN }} \
+            --enable-app-service-storage false
 
       - name: Configure API App Settings
         run: |
