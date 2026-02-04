@@ -15,9 +15,9 @@ export class HttpError extends Error {
 // Centralized Express error handler
 export function errorHandler(
   err: unknown,
-  req: Request,
+  _req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) {
   if (err instanceof HttpError) {
     res.status(err.status).json({ error: err.message });

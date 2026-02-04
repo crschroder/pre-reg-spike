@@ -58,7 +58,7 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoint
-app.get('/ping', (req: Request, res: Response) => {
+app.get('/ping', (_req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'pong' })
 })
 
@@ -132,7 +132,7 @@ app.get(
   }
 );
 
-app.get('/tournament/api/tournment/events', async (req: Request, res: Response, next: NextFunction) => {
+app.get('/tournament/api/tournment/events', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const tournaments = await prisma.tournament.findMany({
       include: { organizer: true, events: true, participants: true },
@@ -326,7 +326,7 @@ app.put('/api/tournaments/:id', async (req, res, next) => {
   }
 });
 // Get the list of possible events 
-app.get('/api/event-types', async (req: Request, res: Response, next: NextFunction) => {
+app.get('/api/event-types', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const eventTypes = await prisma.event.findMany();
     res.json(eventTypes);
