@@ -7,16 +7,18 @@ services:
       - "8080:8080"
     environment:
       PORT: 8080
-      VITE_API_URL: http://api:3001
+      API_SERVER: http://api:8080
     depends_on:
       - api
 
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.api
     ports:
-      - "3001:3001"
+      - "3001:8080"
     environment:
-      PORT: 3001
+      PORT: 8080
       DATABASE_URL: ${DATABASE_URL}
       API_KEY: ${API_KEY}
-    command: node dist/api-server.js
+      CORS_ORIGINS: "http://localhost:8080,http://ui:8080"
