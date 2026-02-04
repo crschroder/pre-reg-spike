@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "api-server.ts",
+    "shared/**/*",
+    "errors/**/*",
+    "validations/**/*"
+  ],
+  "exclude": [
+    "vite.config.ts",
+    "src/**/*",
+    "**/*.test.*",
+    "**/*.spec.*"
+  ]
+}
