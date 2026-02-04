@@ -1,7 +1,16 @@
-@baseUrl = http://localhost:4000
+@localBaseUrl = http://localhost:4000
+@azureBaseUrl = https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net
+
+# Switch this between {{localBaseUrl}} and {{azureBaseUrl}}
+@baseUrl = {{localBaseUrl}}
+
+@apiKey = 37339cb4-4761-4e5f-91c0-16a5687f3ae6
 @tournamentId = 10
+
+### Create registration (requires API key)
 POST {{baseUrl}}/api/tournaments/{{tournamentId}}/registrations
 Content-Type: application/json
+X-API-Key: {{apiKey}}
 
 {
   "userId": 2,
@@ -16,6 +25,10 @@ Content-Type: application/json
   "events": ["kumite"]
 }
 
+### Ping the server
+GET {{baseUrl}}/ping
+
 ### Get all registrations for the tournament
 GET {{baseUrl}}/api/tournaments/{{tournamentId}}/participants
-X-API-Key: 37339cb4-4761-4e5f-91c0-16a5687f3ae6
+X-API-Key: {{apiKey}}
+

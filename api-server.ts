@@ -1,14 +1,25 @@
-import express from 'express';
-import type { NextFunction, Request, Response } from 'express'
-import { PrismaClient, Prisma } from '@prisma/client';
-import { safeParse } from 'valibot';
-import { TournamentSchema } from './validations/TournamentSchema';
-import { errorHandler, HttpError } from './errors/HttpError';
-import cors from "cors";
-import { CreateRegistrationPayload, DivisionPayload, TournamentEventDivisionRow, TournamentEventPayload, TournamentStatus, TournamentStatusType, validStatuses } from './shared';
+import cors from 'cors'
+import dotenv from 'dotenv'
+import express from 'express'
+import { PrismaClient } from '@prisma/client'
+import { safeParse } from 'valibot'
 
-import dotenv from 'dotenv';
-dotenv.config();
+import { HttpError, errorHandler } from './errors/HttpError'
+import { TournamentStatus, validStatuses } from './shared'
+import { TournamentSchema } from './validations/TournamentSchema'
+
+import type { Prisma } from '@prisma/client'
+import type { NextFunction, Request, Response } from 'express'
+import type {
+  CreateRegistrationPayload,
+  DivisionPayload,
+  TournamentEventDivisionRow,
+  TournamentEventPayload,
+  TournamentStatusType,
+} from './shared'
+
+dotenv.config()
+
 export const prisma = new PrismaClient({
   log: ['query', 'info', 'warn', 'error']
 });
@@ -29,23 +40,27 @@ type EventAllowedDivisionWithDivision =
 
   
 const app = express()
-const allowedOrigins = process.env.CORS_ORIGINS?.split(',') ?? []
+const allowedOrigins = (process.env.CORS_ORIGINS?.split(',') ?? []).map((origin) => origin.trim())
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, mobile apps, server-to-server)
+    if (!origin) return callback(null, true)
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true)
+    }
+
+    return callback(new Error('Not allowed by CORS'))
+  },
+  credentials: true,
+}
 
 app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (curl, mobile apps, server-to-server)
-      if (!origin) return callback(null, true)
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true)
-      }
-
-      return callback(new Error('Not allowed by CORS'))
-    },
-    credentials: true,
-  })
+  cors(corsOptions)
 )
+// Explicitly handle CORS preflight before auth middleware
+app.options(/.*/, cors(corsOptions))
 app.use(express.json());
 
 // Health check endpoint - NO AUTH REQUIRED
@@ -55,6 +70,11 @@ app.get('/ping', (_req: Request, res: Response) => {
 
 // API Key auth middleware - applies to all other routes
 app.use((req, res, next) => {
+  // Never require auth for health checks or CORS preflight
+  if (req.method === 'OPTIONS' || req.path === '/ping') {
+    return next()
+  }
+
   const apiKey = req.headers['x-api-key'];
 
   if (!apiKey || apiKey !== process.env.API_KEY) {
@@ -663,7 +683,7 @@ app.get('/api/tournaments/:id/participants', async (req: Request, res: Response,
 
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.PORT ?? process.env.WEBSITES_PORT ?? 4000);
 
 app.listen(PORT, () => {
   console.log(`API server running on http://localhost:${PORT}`)

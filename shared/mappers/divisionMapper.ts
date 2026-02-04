@@ -1,7 +1,7 @@
 // prisma/mappers/divisionMapper.ts
-import { BeltRank as PrismaBeltRank } from "@prisma/client";
-import { Division as DomainDivision } from "../division";
 import { mapBeltRank } from "./beltRankMapper";
+import type { BeltRank as PrismaBeltRank } from "@prisma/client";
+import type { Division as DomainDivision } from "../division";
 
 // This matches what your API actually returns for `ad.division`
 type DivisionWithPrismaBeltRank = {
@@ -24,6 +24,8 @@ export function mapDivision(d: DivisionWithPrismaBeltRank): DomainDivision {
   };
 }
 
-export function mapDivisions(divisions: DivisionWithPrismaBeltRank[]): DomainDivision[] {
+export function mapDivisions(
+  divisions: Array<DivisionWithPrismaBeltRank>,
+): Array<DomainDivision> {
   return divisions.map(mapDivision);
 }

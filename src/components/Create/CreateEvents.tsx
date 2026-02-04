@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Accordion } from "../Custom/Accordian";
 import { useAllowedDivisions } from "@/hooks/useAllowedDivisions";
 import { useEffect, useState } from "react";
-import { Division,DivisionPayload,EventType } from "@shared";
+import type { Division, DivisionPayload, EventType } from "@shared";
 //import { S } from "@faker-js/faker/dist/airline-DF6RqYmq";
 
 

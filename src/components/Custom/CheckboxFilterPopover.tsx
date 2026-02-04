@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Column } from '@tanstack/react-table'
+import { useState } from 'react'
+import type { Column } from '@tanstack/react-table'
 
 import { ChevronDown } from 'lucide-react' // or any icon you prefer
 import { CheckboxFilter } from './CheckboxFilter'

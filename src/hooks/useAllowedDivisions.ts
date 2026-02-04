@@ -3,7 +3,7 @@ import {
   getDivisionsByEventType,
   
 } from "../api/tournaments";
-import { Division } from "../../shared/index";
+import type { Division } from "../../shared/index";
 
 
 export function useAllowedDivisions(eventId: number) {

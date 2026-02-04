@@ -1,8 +1,11 @@
 // src/api/tournaments.ts some comment 
 import  api  from "./axios";
-import { TournamentEventPayload, TournamentInput, 
-  TournamentStatus, 
-  TournamentStatusType } from "../../shared/index";
+import type {
+  TournamentEventPayload,
+  TournamentInput,
+  TournamentStatus,
+  TournamentStatusType,
+} from "../../shared/index";
 
 export function getTournaments() {
   return api.get("/tournament/api/tournment/events")

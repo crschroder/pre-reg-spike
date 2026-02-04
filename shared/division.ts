@@ -1,6 +1,4 @@
-
-
-import { BeltRank } from "./beltRank";
+import type { BeltRank } from "./beltRank";
 
 export interface Division {
   id: number;

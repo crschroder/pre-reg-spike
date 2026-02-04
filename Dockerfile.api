@@ -22,6 +22,10 @@ RUN DATABASE_URL="postgresql://dummy@localhost/dummy" npx prisma generate
 # Compile TypeScript
 RUN npx tsc --skipLibCheck --outDir . --noImplicitAny false -p tsconfig.json --noEmit false
 
+# The repo's package.json is "type": "module", but the compiled output here is CommonJS.
+# Force CommonJS for the runtime inside this container.
+RUN node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8')); p.type='commonjs'; fs.writeFileSync('package.json', JSON.stringify(p, null, 2));"
+
 # Expose port
 EXPOSE 8080
 
