@@ -41,6 +41,9 @@ jobs:
           path: |
             dist/
             api-server.js
+            shared/
+            errors/
+            validations/
             package.json
             package-lock.json
             server-wrapper.js
