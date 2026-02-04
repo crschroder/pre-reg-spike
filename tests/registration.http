@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:4000
-@tournamentId = 7
+@tournamentId = 10
 POST {{baseUrl}}/api/tournaments/{{tournamentId}}/registrations
 Content-Type: application/json
 

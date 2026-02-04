@@ -2,10 +2,10 @@ import express from 'express';
 import type { NextFunction, Request, Response } from 'express'
 import { PrismaClient, Prisma } from '@prisma/client';
 import { safeParse } from 'valibot';
-import { TournamentSchema } from './validations/TournamentSchema.js';
-import { errorHandler, HttpError } from './errors/HttpError.js';
+import { TournamentSchema } from './validations/TournamentSchema';
+import { errorHandler, HttpError } from './errors/HttpError';
 import cors from "cors";
-import { CreateRegistrationPayload, DivisionPayload, TournamentEventDivisionRow, TournamentEventPayload, TournamentStatus, TournamentStatusType, validStatuses } from './shared/index.js';
+import { CreateRegistrationPayload, DivisionPayload, TournamentEventDivisionRow, TournamentEventPayload, TournamentStatus, TournamentStatusType, validStatuses } from './shared';
 
 import dotenv from 'dotenv';
 dotenv.config();

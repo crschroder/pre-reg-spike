@@ -1,6 +1,6 @@
 // prisma/mappers/beltRankMapper.ts
 import { BeltRank as PrismaBeltRank } from "@prisma/client";
-import { BeltRank } from "../beltRank.js";
+import { BeltRank } from "../beltRank";
 
 export function mapBeltRank(br: PrismaBeltRank): BeltRank {
   return {
