@@ -35,19 +35,23 @@ jobs:
 
   build-api-docker:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Azure Login
-        uses: azure/login@v1
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          creds: ${{ format('{{"clientId":"{0}","clientSecret":"{1}","subscriptionId":"{2}","tenantId":"{3}"}}', secrets.AZURE_CLIENT_ID, secrets.AZURE_CLIENT_SECRET, secrets.AZURE_SUBSCRIPTION_ID, secrets.AZURE_TENANT_ID) }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image to ACR
+      - name: Build and push Docker image to ghcr.io
         run: |
-          az acr login --name preregspike
-          docker build -f Dockerfile.api -t preregspike.azurecr.io/api:latest .
-          docker push preregspike.azurecr.io/api:latest
+          docker build -f Dockerfile.api -t ghcr.io/${{ github.repository_owner }}/pre-reg-api:latest .
+          docker push ghcr.io/${{ github.repository_owner }}/pre-reg-api:latest
 
   deploy-ui:
     needs: build-ui
@@ -97,15 +101,15 @@ jobs:
 
       - name: Deploy API from Docker image
         run: |
-          az webapp create --resource-group pre-reg-spike-api_group --plan default --name pre-reg-spike-api --deployment-container-image-name preregspike.azurecr.io/api:latest 2>/dev/null || true
+          az webapp create --resource-group pre-reg-spike-api_group --plan default --name pre-reg-spike-api --deployment-container-image-name ghcr.io/${{ github.repository_owner }}/pre-reg-api:latest 2>/dev/null || true
           
           az webapp config container set \
             --name pre-reg-spike-api \
             --resource-group pre-reg-spike-api_group \
-            --docker-custom-image-name preregspike.azurecr.io/api:latest \
-            --docker-registry-server-url https://preregspike.azurecr.io \
-            --docker-registry-server-user ${{ secrets.AZURE_REGISTRY_USERNAME }} \
-            --docker-registry-server-password ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+            --docker-custom-image-name ghcr.io/${{ github.repository_owner }}/pre-reg-api:latest \
+            --docker-registry-server-url https://ghcr.io \
+            --docker-registry-server-user ${{ github.actor }} \
+            --docker-registry-server-password ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure API App Settings
         run: |
