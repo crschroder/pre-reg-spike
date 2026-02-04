@@ -310,3 +310,31 @@ jobs:
             --resource-group pre-reg-spike-api_group \
             --name pre-reg-spike-api \
             --startup-file "bash /home/site/wwwroot/startup.sh"
+
+      - name: Enable Always On + health check
+        run: |
+          az webapp config set \
+            --resource-group pre-reg-spike-api_group \
+            --name pre-reg-spike-api \
+            --always-on true
+
+          # Health check path may not be available on all SKUs; don't fail deploy if unsupported
+          az webapp config set \
+            --resource-group pre-reg-spike-api_group \
+            --name pre-reg-spike-api \
+            --health-check-path "/ping" || true
+
+      - name: Warm up API (/ping)
+        run: |
+          HOST=$(az webapp show --resource-group pre-reg-spike-api_group --name pre-reg-spike-api --query defaultHostName -o tsv)
+          echo "Warming up https://${HOST}/ping"
+          for i in $(seq 1 36); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://${HOST}/ping" || true)
+            echo "Attempt ${i}: HTTP ${CODE}"
+            if [ "${CODE}" = "200" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Warmup failed"
+          exit 1
