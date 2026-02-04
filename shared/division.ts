@@ -1,6 +1,6 @@
 
 
-import { BeltRank } from "./beltRank";
+import { BeltRank } from "./beltRank.js";
 
 export interface Division {
   id: number;

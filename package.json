@@ -1,7 +1,6 @@
 {
   "name": "pre-reg-spike",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "vite dev --port 3001",
     "build": "vite build",
