@@ -28,8 +28,8 @@ jobs:
       - name: Build UI and API
         run: |
           npm run build
-          # Compile API server - disable allowImportingTsExtensions since we're emitting
-          npx tsc --skipLibCheck --outDir . --noImplicitAny false -p tsconfig.json
+          # Compile API server - override noEmit setting
+          npx tsc --noEmit false --skipLibCheck --outDir . --noImplicitAny false -p tsconfig.json
         env:
           VITE_API_URL: https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
