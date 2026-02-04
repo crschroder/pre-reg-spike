@@ -94,6 +94,8 @@ jobs:
         with:
           app-name: pre-reg-spike-ui
           package: dist/
+          clean: true
+          type: zip
 
       - name: Configure UI App Settings
         run: |
