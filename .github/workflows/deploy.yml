@@ -33,25 +33,37 @@ jobs:
           path: dist/
           retention-days: 1
 
-  build-api-docker:
+  build-api:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          node-version: '22'
+          cache: 'npm'
 
-      - name: Build and push Docker image to ghcr.io
-        run: |
-          docker build -f Dockerfile.api -t ghcr.io/${{ github.repository_owner }}/pre-reg-api:latest .
-          docker push ghcr.io/${{ github.repository_owner }}/pre-reg-api:latest
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Compile API
+        run: npx tsc --noEmit false
+
+      - name: Upload API artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-build
+          path: |
+            *.js
+            shared/
+            errors/
+            validations/
+            prisma/
+            node_modules/
+            package.json
+            package-lock.json
+          retention-days: 1
 
   deploy-ui:
     needs: build-ui
@@ -89,25 +101,37 @@ jobs:
           az webapp config set --resource-group pre-reg-spike-rg --name pre-reg-spike-ui --startup-file "bash /home/site/wwwroot/startup.sh"
 
   deploy-api:
-    needs: build-api-docker
+    needs: build-api
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download API artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: api-build
+          path: ./api-deploy
+
+      - name: Create startup script
+        run: |
+          mkdir -p ./api-deploy
+          cat > ./api-deploy/startup.sh << 'EOF'
+          #!/bin/bash
+          export PORT=${WEBSITES_PORT:-8080}
+          node api-server.js
+          EOF
+          chmod +x ./api-deploy/startup.sh
 
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ format('{{"clientId":"{0}","clientSecret":"{1}","subscriptionId":"{2}","tenantId":"{3}"}}', secrets.AZURE_CLIENT_ID, secrets.AZURE_CLIENT_SECRET, secrets.AZURE_SUBSCRIPTION_ID, secrets.AZURE_TENANT_ID) }}
 
-      - name: Deploy API from Docker image
-        run: |
-          IMAGE_NAME="ghcr.io/${{ github.repository_owner }}/pre-reg-api:latest"
-          
-          az webapp config container set \
-            --name pre-reg-spike-api \
-            --resource-group pre-reg-spike-api_group \
-            --docker-custom-image-name "$IMAGE_NAME" \
-            --docker-registry-server-url https://ghcr.io
+      - name: Deploy API to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: pre-reg-spike-api
+          package: ./api-deploy
 
       - name: Configure API App Settings
         run: |
@@ -119,3 +143,8 @@ jobs:
             API_KEY="${{ secrets.API_KEY }}" \
             CORS_ORIGINS="https://pre-reg-spike-ui-f3hghrcse9gme5ge.canadacentral-01.azurewebsites.net" \
             WEBSITES_PORT=8080
+          
+          az webapp config set \
+            --resource-group pre-reg-spike-api_group \
+            --name pre-reg-spike-api \
+            --startup-file "startup.sh"
