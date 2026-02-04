@@ -1,8 +1,10 @@
 // src/api/axios.ts
 import axios from 'axios';
 
-// Use relative paths - the server will proxy /api/* requests to the backend
+// Use the API URL from environment variables
+const baseURL = import.meta.env.VITE_API_URL;
 const api = axios.create({
+  baseURL: baseURL,
   headers: { 'Content-Type': 'application/json' },
 });
 
