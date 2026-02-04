@@ -47,6 +47,13 @@ app.use(
   })
 )
 app.use(express.json());
+
+// Health check endpoint - NO AUTH REQUIRED
+app.get('/ping', (_req: Request, res: Response) => {
+  res.json({ status: 'ok', message: 'pong' })
+})
+
+// API Key auth middleware - applies to all other routes
 app.use((req, res, next) => {
   const apiKey = req.headers['x-api-key'];
 
@@ -56,11 +63,6 @@ app.use((req, res, next) => {
 
   next();
 });
-
-// Health check endpoint
-app.get('/ping', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', message: 'pong' })
-})
 
 app.get('/api/tournaments/:id', async (req, res, next) => {
   try {
@@ -661,7 +663,8 @@ app.get('/api/tournaments/:id/participants', async (req: Request, res: Response,
 
 app.use(errorHandler);
 
+const PORT = process.env.PORT || 4000;
 
-app.listen(4000, () => {
-  console.log('API server running on http://localhost:4000')
+app.listen(PORT, () => {
+  console.log(`API server running on http://localhost:${PORT}`)
 })
