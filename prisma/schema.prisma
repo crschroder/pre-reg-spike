@@ -1,10 +1,12 @@
 generator client {
   provider = "prisma-client-js"
+  // Prisma ORM 7 requires an explicit output path. Keeping this in node_modules
+  // preserves existing `@prisma/client` imports and current deploy packaging.
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Todos {

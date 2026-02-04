@@ -1,7 +1,9 @@
 import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
+import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@prisma/client'
+import { Pool } from 'pg'
 import { safeParse } from 'valibot'
 
 import { HttpError, errorHandler } from './errors/HttpError'
@@ -29,8 +31,18 @@ function getPrisma(): PrismaClient {
     throw new HttpError('DATABASE_URL is not configured', 500)
   }
 
+  const shouldUseSsl =
+    process.env.PGSSLMODE === 'require' || process.env.DATABASE_URL.includes('sslmode=require')
+
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ...(shouldUseSsl ? { ssl: { rejectUnauthorized: false } } : {}),
+  })
+  const adapter = new PrismaPg(pool)
+
   prismaClient = new PrismaClient({
     log: ['query', 'info', 'warn', 'error'],
+    adapter,
   })
 
   return prismaClient
