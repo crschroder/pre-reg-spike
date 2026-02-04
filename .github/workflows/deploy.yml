@@ -194,11 +194,15 @@ jobs:
 
       - name: Ensure API uses Node runtime (not container)
         run: |
-          az webapp config set \
-            --resource-group pre-reg-spike-api_group \
-            --name pre-reg-spike-api \
-            --linux-fx-version "NODE|22-lts"
-          sleep 20
+          CURRENT=$(az webapp config show --resource-group pre-reg-spike-api_group --name pre-reg-spike-api --query linuxFxVersion -o tsv)
+          echo "Current linuxFxVersion: ${CURRENT}"
+          if [ "${CURRENT}" != "NODE|22-lts" ]; then
+            az webapp config set \
+              --resource-group pre-reg-spike-api_group \
+              --name pre-reg-spike-api \
+              --linux-fx-version "NODE|22-lts"
+            sleep 20
+          fi
 
       - name: Deploy UI to Azure App Service
         uses: azure/webapps-deploy@v3
@@ -296,7 +300,9 @@ jobs:
             DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             API_KEY="${{ secrets.API_KEY }}" \
             CORS_ORIGINS="https://pre-reg-spike-ui-f3hghrcse9gme5ge.canadacentral-01.azurewebsites.net" \
-            WEBSITES_PORT=8080
+            WEBSITES_PORT=8080 \
+            WEBSITE_RUN_FROM_PACKAGE=1 \
+            SCM_DO_BUILD_DURING_DEPLOYMENT=false
 
       - name: Configure API Startup Command
         run: |
