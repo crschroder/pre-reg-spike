@@ -24,6 +24,11 @@ jobs:
         env:
           VITE_API_URL: https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
+          VITE_BUILD_TIME: ${{ github.sha }}
+
+      - name: Write build marker
+        run: |
+          echo "${{ github.sha }}" > dist/client/build-info.txt
 
       - name: Upload UI artifacts
         uses: actions/upload-artifact@v4
@@ -79,6 +84,101 @@ jobs:
           name: ui-build
           path: ./wwwroot
 
+      - name: Create UI startup + static server
+        run: |
+          cat > ./wwwroot/startup.sh << 'EOF'
+          #!/bin/bash
+          set -e
+          export PORT=${PORT:-${WEBSITES_PORT:-8080}}
+          node /home/site/wwwroot/server.mjs
+          EOF
+          chmod +x ./wwwroot/startup.sh
+
+          cat > ./wwwroot/server.mjs << 'EOF'
+          import http from 'node:http'
+          import fs from 'node:fs'
+          import path from 'node:path'
+          import { fileURLToPath } from 'node:url'
+
+          const __filename = fileURLToPath(import.meta.url)
+          const __dirname = path.dirname(__filename)
+          const root = __dirname
+          const port = Number(process.env.PORT || 8080)
+
+          const mime = {
+            '.html': 'text/html; charset=utf-8',
+            '.js': 'text/javascript; charset=utf-8',
+            '.css': 'text/css; charset=utf-8',
+            '.json': 'application/json; charset=utf-8',
+            '.svg': 'image/svg+xml',
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.ico': 'image/x-icon',
+            '.txt': 'text/plain; charset=utf-8',
+            '.map': 'application/json; charset=utf-8',
+            '.woff': 'font/woff',
+            '.woff2': 'font/woff2',
+          }
+
+          function sendFile(res, filePath) {
+            const ext = path.extname(filePath).toLowerCase()
+            res.statusCode = 200
+            res.setHeader('Content-Type', mime[ext] || 'application/octet-stream')
+
+            // Avoid stale HTML causing old hashed assets to be referenced
+            if (ext === '.html') {
+              res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+              res.setHeader('Pragma', 'no-cache')
+              res.setHeader('Expires', '0')
+            } else if (filePath.includes('/assets/')) {
+              // Fingerprinted assets are safe to cache
+              res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+            }
+
+            fs.createReadStream(filePath).pipe(res)
+          }
+
+          const server = http.createServer((req, res) => {
+            const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`)
+            const pathname = decodeURIComponent(url.pathname)
+
+            // Basic hardening
+            if (pathname.includes('..')) {
+              res.statusCode = 400
+              res.end('Bad request')
+              return
+            }
+
+            let filePath = path.join(root, pathname)
+            if (pathname === '/' || pathname === '') {
+              filePath = path.join(root, 'index.html')
+            }
+
+            fs.stat(filePath, (err, stats) => {
+              if (!err && stats.isFile()) {
+                sendFile(res, filePath)
+                return
+              }
+
+              // SPA fallback
+              const indexPath = path.join(root, 'index.html')
+              fs.stat(indexPath, (indexErr, indexStats) => {
+                if (!indexErr && indexStats.isFile()) {
+                  sendFile(res, indexPath)
+                } else {
+                  res.statusCode = 404
+                  res.end('Not found')
+                }
+              })
+            })
+          })
+
+          server.listen(port, '0.0.0.0', () => {
+            console.log(`Static UI server listening on ${port}`)
+          })
+          EOF
+
       - name: Azure Login
         uses: azure/login@v1
         with:
@@ -89,6 +189,7 @@ jobs:
         with:
           app-name: pre-reg-spike-ui
           package: ./wwwroot
+          clean: true
 
       - name: Configure UI App Settings
         run: |
