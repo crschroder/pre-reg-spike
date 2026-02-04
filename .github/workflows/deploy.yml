@@ -78,9 +78,6 @@ jobs:
             errors/
             validations/
             prisma/
-            node_modules/
-            package.json
-            package-lock.json
           retention-days: 1
 
   deploy-ui:
@@ -232,7 +229,20 @@ jobs:
           {
             "name": "pre-reg-spike-api",
             "private": true,
-            "type": "commonjs"
+            "type": "commonjs",
+            "main": "api-server.js",
+            "scripts": {
+              "start": "node api-server.js",
+              "postinstall": "prisma generate --schema prisma/schema.prisma"
+            },
+            "dependencies": {
+              "@prisma/client": "^6.19.0",
+              "cors": "^2.8.5",
+              "dotenv": "^16.4.5",
+              "express": "^5.1.0",
+              "prisma": "^6.19.0",
+              "valibot": "^1.2.0"
+            }
           }
           EOF
 
@@ -252,13 +262,7 @@ jobs:
         with:
           creds: ${{ format('{{"clientId":"{0}","clientSecret":"{1}","subscriptionId":"{2}","tenantId":"{3}"}}', secrets.AZURE_CLIENT_ID, secrets.AZURE_CLIENT_SECRET, secrets.AZURE_SUBSCRIPTION_ID, secrets.AZURE_TENANT_ID) }}
 
-      - name: Deploy API to Azure App Service
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: pre-reg-spike-api
-          package: ./api-deploy
-
-      - name: Configure API App Settings
+      - name: Configure API App Settings (pre-deploy)
         run: |
           az webapp config appsettings set \
             --resource-group pre-reg-spike-api_group \
@@ -267,8 +271,19 @@ jobs:
             DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             API_KEY="${{ secrets.API_KEY }}" \
             CORS_ORIGINS="https://pre-reg-spike-ui-f3hghrcse9gme5ge.canadacentral-01.azurewebsites.net" \
-            WEBSITES_PORT=8080
-          
+            WEBSITES_PORT=8080 \
+            SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+            WEBSITE_RUN_FROM_PACKAGE=1
+
+      - name: Deploy API to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: pre-reg-spike-api
+          package: ./api-deploy
+          clean: true
+
+      - name: Configure API Startup Command
+        run: |
           az webapp config set \
             --resource-group pre-reg-spike-api_group \
             --name pre-reg-spike-api \
