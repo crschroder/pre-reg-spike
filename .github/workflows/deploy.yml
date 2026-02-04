@@ -2,14 +2,36 @@ name: Deploy to Azure App Services
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - '**'
+  pull_request:
+    branches:
+      - '**'
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to build/deploy (branch, tag, or SHA)'
+        required: true
+        default: 'main'
+      deploy:
+        description: 'What to deploy (manual runs only)'
+        required: true
+        type: choice
+        default: 'none'
+        options:
+          - none
+          - ui
+          - api
+          - both
 
 jobs:
   build-ui:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -52,6 +74,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -83,8 +107,13 @@ jobs:
   deploy-ui:
     needs: build-ui
     runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.deploy == 'ui' || inputs.deploy == 'both'))
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Download UI artifacts
         uses: actions/download-artifact@v4
@@ -226,8 +255,13 @@ jobs:
   deploy-api:
     needs: build-api
     runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.deploy == 'api' || inputs.deploy == 'both'))
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
