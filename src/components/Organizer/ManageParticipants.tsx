@@ -225,13 +225,11 @@ const fullNameColumn = table.getColumn("fullName")
   <div className="flex flex-wrap gap-2 mb-4">
     
     {table.getState().columnFilters.flatMap(filter => {
-      debugger;
       const column = table.getColumn(filter.id)
       const values = Array.isArray(filter.value) ? filter.value : [filter.value]
       if (filter.id === "fullName") return null
       
       if (filter.id === "divisionRank") {
-        debugger
       }
       return values.map(v => {
         let color:BeltColor = "Blue"

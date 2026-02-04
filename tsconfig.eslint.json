@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "src/**/*",
+    "shared/**/*",
+    "errors/**/*",
+    "validations/**/*",
+    "prisma.config.ts",
+    "api-server.ts",
+    "vite.config.ts",
+    "tailwind.config.js",
+    "eslint.config.js",
+    "prettier.config.js"
+  ]
+}
