@@ -2,14 +2,24 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Copy everything
-COPY . .
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Copy source files needed for API
+COPY api-server.ts ./
+COPY shared/ ./shared/
+COPY validations/ ./validations/
+COPY errors/ ./errors/
+COPY prisma/ ./prisma/
 
 # Install dependencies
 RUN npm ci --legacy-peer-deps
 
-# Compile TypeScript with explicit flags
-RUN npx tsc api-server.ts --module commonjs --target es2020 --esModuleInterop --skipLibCheck --moduleResolution node --lib es2020
+# Generate Prisma client
+RUN DATABASE_URL="postgresql://dummy@localhost/dummy" npx prisma generate
+
+# Compile TypeScript
+RUN npx tsc --skipLibCheck --outDir . --noImplicitAny false -p tsconfig.json --noEmit false
 
 # Expose port
 EXPOSE 8080
