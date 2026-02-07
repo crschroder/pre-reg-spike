@@ -379,7 +379,7 @@ const fullNameColumn = table.getColumn("fullName")
         </select>
       </div>
       <div className="mt-4 text-gray-400">
-        {table.getPrePaginationRowModel().rows.length} Rows
+        {table.getPrePaginationRowModel().rows.length} Participants
       </div>
     </div>
     </div>
