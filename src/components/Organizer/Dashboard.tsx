@@ -2,12 +2,10 @@ import { getUpcomingTournaments } from "../../api/tournaments";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { TournamentStatus } from "../../../shared";
-import { useState } from "react";
 import { format } from 'date-fns';
 
 export function OrganizerDashboard() {
     const status = TournamentStatus.Upcoming;
-    const [selectedId, setSelectedId] = useState<number | null>(null);
     const navigate = useNavigate();
 
     const { data: upcomingTournaments, isLoading: upcomingIsLoading } = useQuery({
@@ -16,8 +14,12 @@ export function OrganizerDashboard() {
     });
 
 
-    function handleSelectTournament(id: number) {
-        navigate({ to: `/tournament/organizer/manage-participants/${id}` });
+    function handleManageDivisions(id: number) {
+        navigate({ to: `/tournament/organizer/manage-divisions/${id}` });
+    }
+
+    function handleManageRegistrants(id: number) {
+        navigate({ to: `/tournament/organizer/manage-registrants/${id}` });
     }
 
     return (<div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
@@ -29,42 +31,33 @@ export function OrganizerDashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {!upcomingIsLoading && upcomingTournaments.map((t: { id: number; name: string; date: string; location: string }) => {
-                    const isSelected = selectedId === t.id;
-
                     return (
-                        <button
+                        <div
                             key={t.id}
-                            onClick={() => setSelectedId(t.id)}
-                            className={`p-5 rounded-lg border text-left transition 
-                   ${isSelected
-                                    ? "border-blue-500 bg-blue-50"
-                                    : "border-gray-700 bg-gray-800 hover:bg-gray-700"
-                                }`}
+                            className="p-5 rounded-lg border border-gray-700 bg-gray-800"
                         >
                             <h2 className="text-xl font-semibold text-white">{t.name}</h2>
                             <p className="text-gray-300">{format(new Date(t.date), 'MMM d, yyyy')}</p>
                             <p className="text-gray-400">{t.location}</p>
 
-                            {isSelected && (
-                                <p className="text-blue-400 font-medium mt-2">
-                                    Selected
-                                </p>
-                            )}
-                        </button>
+                            <div className="mt-4 flex gap-2">
+                                <button
+                                    onClick={() => handleManageDivisions(t.id)}
+                                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                                >
+                                    Manage Divisions
+                                </button>
+                                <button
+                                    onClick={() => handleManageRegistrants(t.id)}
+                                    className="flex-1 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                                >
+                                    Manage Registrants
+                                </button>
+                            </div>
+                        </div>
                     );
                 })}
             </div>
-
-            {selectedId && (
-                <div className="mt-6">
-                    <button
-                        className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700"
-                        onClick={() => handleSelectTournament(selectedId)}
-                    >
-                        Continue to Manage Participants
-                    </button>
-                </div>
-            )}
         </div>
 
     </div>)

@@ -2,7 +2,7 @@ import { ManageParticipants } from '@/components/Organizer/ManageParticipants';
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute(
-  '/tournament/organizer/manage-participants/$id',
+  '/tournament/organizer/manage-divisions/$id',
 )({
    params: {
     parse: (params) => ({
