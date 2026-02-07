@@ -46,7 +46,8 @@ model Event {
   id          Int               @id @default(autoincrement())
   name        String
   tournaments TournamentEvent[] @relation("EventToTournamentEvent")
-  allowedDivisions EventAllowedDivision[] 
+  allowedDivisions EventAllowedDivision[]
+  participantEvents ParticipantEvent[]
   @@map("event")
 }
 
@@ -103,7 +104,8 @@ model Participant {
   paid          Boolean        @default (false)
   dojoId       Int?            @map("dojo_id")
   dojo          Dojo?           @relation(fields:[dojoId], references:[id])
-  otherDojoName String?        @map("other_dojo_name")     
+  otherDojoName String?        @map("other_dojo_name")   
+  events        ParticipantEvent[]  
   @@map("participant")
 }
 
@@ -176,4 +178,13 @@ model Dojo {
   city          String    
   participant Participant[]
   @@map("dojo")
+}
+
+model ParticipantEvent{
+  id              Int     @id @default(autoincrement())
+  participantId   Int     @map("participant_id") 
+  eventId         Int     @map("event_id")
+  participant     Participant @relation(fields:[participantId] , references:[id])
+  event           Event @relation(fields:[eventId] , references: [id])
+  @@map("participant_event")
 }
