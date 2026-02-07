@@ -13,7 +13,7 @@ Content-Type: application/json
 X-API-Key: {{apiKey}}
 
 {
-  "userId": 2,
+  "email": "michelle.schroder@example.com",
   "participant": {
     "firstName": "Michelle",
     "lastName": "Schroder",
@@ -22,10 +22,28 @@ X-API-Key: {{apiKey}}
     "beltRankId": 7,
     "notes": "From Test harness", 
     "dojoId": 12,
-    
-    "UUID": "123e4567-e89b-12d3-a456-426614174000"
+    "otherDojoName": null
   },
   "events": ["kumite"]
+}
+
+### Create second participant with same email (should reuse user)
+POST {{baseUrl}}/api/tournaments/{{tournamentId}}/registrations
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+
+{
+  "email": "michelle.schroder@example.com",
+  "participant": {
+    "firstName": "John",
+    "lastName": "Schroder",
+    "age": 12,
+    "genderId": 1,
+    "beltRankId": 5,
+    "notes": "Second child registration", 
+    "dojoId": 12
+  },
+  "events": ["kata", "kumite"]
 }
 
 ### Ping the server

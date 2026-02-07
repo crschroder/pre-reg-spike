@@ -312,7 +312,7 @@ const fullNameColumn = table.getColumn("fullName")
             </tbody>
         </table>
 ) : (
-  <p className="text-white-100">Loading participants...</p>
+  <p className="text-white">Loading participants...</p>
 )}
          </div>
           <div className="h-4" />

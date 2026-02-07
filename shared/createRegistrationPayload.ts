@@ -6,7 +6,8 @@ export type EventSelection =
   | number; // TournamentEventDivisionId for Phase Two
 
 export type CreateRegistrationPayload = {
-  userId: number;
+  email: string;
+  userId?: number; // Optional - will be looked up or created by email
   participant: {
     firstName: string;
     lastName: string;

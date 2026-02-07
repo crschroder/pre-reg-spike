@@ -514,26 +514,44 @@ app.post('/api/tournaments/:id/registrations', async (req: Request, res: Respons
   try {
     const tournamentId = Number(req.params.id);
     const payload = req.body as CreateRegistrationPayload;
+    
     if (!tournamentId || isNaN(tournamentId)) {
-  return res.status(400).json({ error: "Invalid tournament ID" });
-}
+      return res.status(400).json({ error: "Invalid tournament ID" });
+    }
 
-if (!payload?.participant || !payload?.events) {
-  return res.status(400).json({ error: "Invalid payload" });
-}
-const {
-  userId,
-  participant: {
-    firstName,
-    lastName,
-    age,
-    genderId,
-    beltRankId,
-    notes, 
-    dojoId
-  },
-  events
-} = payload;
+    if (!payload?.participant || !payload?.events || !payload?.email) {
+      return res.status(400).json({ error: "Invalid payload - email, participant, and events are required" });
+    }
+
+    const {
+      email,
+      participant: {
+        firstName,
+        lastName,
+        age,
+        genderId,
+        beltRankId,
+        notes, 
+        dojoId
+      },
+      events
+    } = payload;
+
+    // Find or create user by email
+    let user = await getPrisma().user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      user = await getPrisma().user.create({
+        data: {
+          email,
+          role: "participant"
+        }
+      });
+    }
+
+    const userId = user.id;
 
 const divisions = await getPrisma().tournamentEventDivision.findMany({
   where: {
@@ -620,9 +638,11 @@ events.forEach(event => {
 
   return participant;
 });
+
 return res.status(201).json({
   message: "Registration created",
   participant: result,
+  user: { id: user.id, email: user.email },
   events: selectedDivisionIds
 });
   } catch (error) {
