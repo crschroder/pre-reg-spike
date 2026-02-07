@@ -6,6 +6,7 @@ import {
   getCoreRowModel,
   useReactTable,
   getFilteredRowModel,
+  getPaginationRowModel,
   Column,
   Table
 } from "@tanstack/react-table";
@@ -14,24 +15,12 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { CheckboxFilter } from "../Custom/CheckboxFilter";
 //import { CheckboxFilterPopover } from "../Custom/CheckBoxFilterPopover";
-import { ListFilterPlus } from "lucide-react";
+import { Filter as FilterIcon, FilterX, X } from "lucide-react";
+import { beltColors, isBeltColor, Pill, sizeClasses } from "../Custom/Pill";
+import type { BeltColor, PillSize } from "../Custom/Pill";
 
-const beltColors = {
-  White: "bg-gray-200 text-black",
-  Yellow: "bg-yellow-400 text-black",
-  Orange: "bg-orange-500 text-white",
-  Green: "bg-green-600 text-white",
-  Purple: "bg-purple-600 text-white",
-  Blue: "bg-blue-600 text-white",
-  Brown: "bg-amber-800 text-white",
-  Black: "bg-black text-white",
-} as const;
 
-type BeltColor = keyof typeof beltColors;
 
-function isBeltColor(value: string): value is BeltColor {
-  return value in beltColors;
-}
 
 
 export type RegistrationRow = {
@@ -48,6 +37,8 @@ export type RegistrationRow = {
   divisionBeltOrder: number
   minAge: number
   maxAge: number | null
+
+  eventName: string
 }
 // declare module '@tanstack/react-table' {
 //   interface FilterFns {
@@ -74,8 +65,7 @@ export type RegistrationRow = {
 
 
 export function ManageParticipants({ tournamentId }: { tournamentId: number }) {
-   
-    const [showFilters, setShowFilters] = useState(true);
+
 
     const { data: registrations, isLoading: participantLoading } = useQuery<any[]>({
         queryKey: ['tournament-registrations', tournamentId],
@@ -200,6 +190,7 @@ if(!participantLoading){
        columns,
        getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
       filterFns: {
     fuzzy: () => true, // placeholder
   },
@@ -237,42 +228,24 @@ const fullNameColumn = table.getColumn("fullName")
           color = v as BeltColor
         }
         return (  
-        <PillButton
-          key={`${filter.id}-${v}`}
-          color={color}
-          onRemove={() => {
-            if (column) {
-              const newValues = values.filter(val => val !== v)
-              if (newValues.length === 0) {
-                column.setFilterValue(undefined)
-              } else {
-                column.setFilterValue(newValues)
+          <PillButton
+            key={`${filter.id}-${v}`}
+            color={color}
+            onRemove={() => {
+              if (column) {
+                const newValues = values.filter(val => val !== v)
+                if (newValues.length === 0) {
+                  column.setFilterValue(undefined)
+                } else {
+                  column.setFilterValue(newValues)
+                }
               }
-            }
-          }}
-        >
-          {String(v)}
-        </PillButton>
-
-        //   <button
-        //     onClick={() => {
-        //       // Remove just this one value
-        //       if (column) {
-        //         const newValues = values.filter(val => val !== v)
-        //         if (newValues.length === 0) {
-        //           column.setFilterValue(undefined)
-        //         } else {
-        //           column.setFilterValue(newValues)
-        //         }
-        //       }
-        //     }}
-        //     className="text-white hover:text-gray-200"
-        //   >
-        //     ✕
-        //   </button>
-        // </span>
-        
-      )})
+            }}
+          >
+            {String(v)}
+          </PillButton>
+        )
+      })
     })}
      <button
                           onClick={() => table.resetColumnFilters()}
@@ -287,7 +260,7 @@ const fullNameColumn = table.getColumn("fullName")
   </div>
 )}
 
-       <div className="overflow-x-auto overflow-y-visible rounded-lg border border-gray-700 min-h-[200px]">
+      <div className="overflow-x-auto overflow-y-auto rounded-lg border border-gray-700 min-h-[200px] max-h-[60vh]">
                   <div className="flex items-center justify-end gap-3 mb-2">
                       
                      
@@ -342,6 +315,72 @@ const fullNameColumn = table.getColumn("fullName")
   <p className="text-white-100">Loading participants...</p>
 )}
          </div>
+          <div className="h-4" />
+      <div className="flex flex-wrap items-center gap-2 text-gray-200">
+        <button
+          className="px-3 py-1 bg-gray-800 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => table.setPageIndex(0)}
+          disabled={!table.getCanPreviousPage()}
+        >
+          {'<<'}
+        </button>
+        <button
+          className="px-3 py-1 bg-gray-800 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          {'<'}
+        </button>
+        <button
+          className="px-3 py-1 bg-gray-800 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          {'>'}
+        </button>
+        <button
+          className="px-3 py-1 bg-gray-800 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+          disabled={!table.getCanNextPage()}
+        >
+          {'>>'}
+        </button>
+        <span className="flex items-center gap-1">
+          <div>Page</div>
+          <strong>
+            {table.getState().pagination.pageIndex + 1} of{' '}
+            {table.getPageCount()}
+          </strong>
+        </span>
+        <span className="flex items-center gap-1">
+          | Go to page:
+          <input
+            type="number"
+            defaultValue={table.getState().pagination.pageIndex + 1}
+            onChange={(e) => {
+              const page = e.target.value ? Number(e.target.value) - 1 : 0
+              table.setPageIndex(page)
+            }}
+            className="w-16 px-2 py-1 bg-gray-800 rounded-md border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+          />
+        </span>
+        <select
+          value={table.getState().pagination.pageSize}
+          onChange={(e) => {
+            table.setPageSize(Number(e.target.value))
+          }}
+          className="px-2 py-1 bg-gray-800 rounded-md border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+        >
+          {[10, 20, 30, 40, 50].map((pageSize) => (
+            <option key={pageSize} value={pageSize}>
+              Show {pageSize}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="mt-4 text-gray-400">
+        {table.getPrePaginationRowModel().rows.length} Rows
+      </div>
     </div>
     </div>
   );
@@ -355,20 +394,26 @@ type FilterBarProps = {
 }
 
 function FilterBar({ table }: FilterBarProps) {
-  const [open, setOpen] = useState(false)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   return (
     <div className="relative">
       {/* This button stays inline with the inputs */}
       <button
-        onClick={() => setOpen(o => !o)}
-        className="text-gray-300 hover:text-white transition"
+        onClick={() => setIsFilterOpen(o => !o)}
+        aria-label={isFilterOpen ? "Close filters" : "Open filters"}
+        aria-expanded={isFilterOpen}
+        className={
+          isFilterOpen
+            ? "text-blue-400 hover:text-blue-300 transition"
+            : "text-gray-300 hover:text-white transition"
+        }
       >
-        <ListFilterPlus size={16} />
+        {isFilterOpen ? <FilterX size={16} /> : <FilterIcon size={16} />}
       </button>
 
       {/* This panel appears BELOW the row, not inline */}
-      {open && (
+      {isFilterOpen && (
         <div className="absolute left-0 mt-2 p-4 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50 w-max">
           <div className="flex flex-wrap gap-4">
             {table.getColumn("divisionName") && (
@@ -465,43 +510,11 @@ function Filter({ column, placeholder }: { column: Column<any, unknown>, placeho
   )
 }
 
-
-const sizeClasses = {
-  sm: "text-xs px-2 py-0.5 gap-1",
-  md: "text-sm px-3 py-1 gap-1",
-  lg: "text-base px-4 py-1.5 gap-2",
-} as const;
-
-
-
-
-type PillProps = {
-  size?: keyof typeof sizeClasses;
-  color: keyof typeof beltColors;
-  children: React.ReactNode;
-};
-
-export function Pill({ size = "md", color, children }: PillProps) {
-  return (
-    <span
-      className={`
-        inlineflex items-center rounded-full
-        ${sizeClasses[size]}
-        ${beltColors[color]}
-      `}
-    >
-      {children}
-    </span>
-  );
-}
-
-import { X } from "lucide-react"
-
 type PillButtonProps = {
   children: React.ReactNode
   onRemove: () => void
-  color?: keyof typeof beltColors
-  size?: keyof typeof sizeClasses
+  color?: BeltColor
+  size?: PillSize
 }
 
 export function PillButton({

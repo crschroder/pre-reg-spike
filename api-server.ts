@@ -40,8 +40,18 @@ function getPrisma(): PrismaClient {
   })
   const adapter = new PrismaPg(pool)
 
+  const isProduction = process.env.NODE_ENV === 'production'
+  const logQueriesEnv = process.env.PRISMA_LOG_QUERIES
+  const logQueries = logQueriesEnv ? logQueriesEnv === 'true' : !isProduction
+  const prismaLog = [
+    ...(isProduction ? ([] as const) : (['info'] as const)),
+    ...(logQueries ? (['query'] as const) : ([] as const)),
+    'warn' as const,
+    'error' as const,
+  ]
+
   prismaClient = new PrismaClient({
-    log: ['query', 'info', 'warn', 'error'],
+    log: prismaLog,
     adapter,
   })
 
@@ -519,7 +529,8 @@ const {
     age,
     genderId,
     beltRankId,
-    notes
+    notes, 
+    dojoId
   },
   events
 } = payload;
@@ -594,7 +605,9 @@ events.forEach(event => {
       tournamentId,
       userId,
       notes,
-      paid: false
+      paid: false, 
+      dojoId,
+      otherDojoName: payload.participant.otherDojoName
     }
   });
 

@@ -101,9 +101,9 @@ model Participant {
   registrations Registration[]
   notes         String?
   paid          Boolean        @default (false)
-  
-
-
+  dojoId       Int?            @map("dojo_id")
+  dojo          Dojo?           @relation(fields:[dojoId], references:[id])
+  otherDojoName String?        @map("other_dojo_name")     
   @@map("participant")
 }
 
@@ -168,4 +168,12 @@ model EventAllowedDivision {
 
   @@unique([eventId, divisionTypeId])
   @@map("event_allowed_division")
+}
+
+model Dojo {
+  id            Int       @id @default(autoincrement())
+  dojoName      String    @map("dojo_name")
+  city          String    
+  participant Participant[]
+  @@map("dojo")
 }

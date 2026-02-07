@@ -14,6 +14,8 @@ export type CreateRegistrationPayload = {
     genderId: number;
     beltRankId: number;
     notes?: string;
+    dojoId?: number;
+    otherDojoName?: string;
   };
   events: EventSelection[];
 };

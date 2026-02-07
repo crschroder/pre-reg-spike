@@ -5,7 +5,7 @@
 @baseUrl = {{localBaseUrl}}
 
 @apiKey = 37339cb4-4761-4e5f-91c0-16a5687f3ae6
-@tournamentId = 10
+@tournamentId = 7
 
 ### Create registration (requires API key)
 POST {{baseUrl}}/api/tournaments/{{tournamentId}}/registrations
@@ -15,12 +15,15 @@ X-API-Key: {{apiKey}}
 {
   "userId": 2,
   "participant": {
-    "firstName": "Avery",
-    "lastName": "Jones",
-    "age": 6,
-    "genderId": 1,
-    "beltRankId": 1,
-    "notes": "Testing registration"
+    "firstName": "Michelle",
+    "lastName": "Schroder",
+    "age": 49,
+    "genderId": 2,
+    "beltRankId": 7,
+    "notes": "From Test harness", 
+    "dojoId": 12,
+    
+    "UUID": "123e4567-e89b-12d3-a456-426614174000"
   },
   "events": ["kumite"]
 }
