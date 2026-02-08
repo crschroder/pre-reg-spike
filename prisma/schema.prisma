@@ -104,7 +104,8 @@ model Participant {
   paid          Boolean        @default (false)
   dojoId       Int?            @map("dojo_id")
   dojo          Dojo?           @relation(fields:[dojoId], references:[id])
-  otherDojoName String?        @map("other_dojo_name")   
+  otherDojoName String?        @map("other_dojo_name") 
+  checkedIn     Boolean        @map("checked_id") @default(false)
   events        ParticipantEvent[]  
   @@map("participant")
 }
