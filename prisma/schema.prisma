@@ -189,3 +189,21 @@ model ParticipantEvent{
   event           Event @relation(fields:[eventId] , references: [id])
   @@map("participant_event")
 }
+
+model ParticipantRegistrationSummary {
+  userEmail              String     @map("user_email")
+  participantId          Int        @map("participant_id")
+  eventId                Int        @map("event_id")
+  firstName              String     @map("first_name")
+  lastName               String     @map("last_name")
+  age                    Int
+  beltColor              String     @map("belt_color")
+  paid                   Boolean
+  checkedIn              Boolean    @map("checked_in")
+  participantDivisionType String    @map("participant_division_type")
+  eventRegistered        String     @map("event_registered")
+  tournamentId           Int        @map("tournament_id")
+
+  @@id([participantId, eventId])
+  @@map("participant_registration_summary")
+}
