@@ -53,3 +53,22 @@ GET {{baseUrl}}/ping
 GET {{baseUrl}}/api/tournaments/{{tournamentId}}/participants
 X-API-Key: {{apiKey}}
 
+### Create another participant Check participant_event table entries are created correctly
+POST {{baseUrl}}/api/tournaments/{{tournamentId}}/registrations
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+
+{
+  "email": "bill.tester@example.com",
+  "participant": {
+    "firstName": "Bill",
+    "lastName": "Tester",
+    "age": 22,
+    "genderId": 1,
+    "beltRankId": 6,
+    "notes": "From Test harness", 
+    "dojoId": 13,
+    "otherDojoName": null
+  },
+  "events": ["kumite","kata"]
+}

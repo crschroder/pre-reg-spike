@@ -64,7 +64,7 @@ export type RegistrationRow = {
 // }
 
 
-export function ManageParticipants({ tournamentId }: { tournamentId: number }) {
+export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
 
 
     const { data: registrations, isLoading: participantLoading } = useQuery<any[]>({

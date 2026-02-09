@@ -1,4 +1,4 @@
-import { ManageParticipants } from '@/components/Organizer/ManageParticipants';
+import { ManageDivisions } from '@/components/Organizer/ManageDivisions';
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute(
@@ -17,5 +17,5 @@ export const Route = createFileRoute(
 
 function RouteComponent() {
   const { id } = Route.useParams();
-  return <ManageParticipants tournamentId={id} />;
+  return <ManageDivisions tournamentId={id} />;
 }

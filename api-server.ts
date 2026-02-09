@@ -583,6 +583,7 @@ const divisions = await getPrisma().tournamentEventDivision.findMany({
 });
 
 const selectedDivisionIds: number[] = [];
+const selectedEventIds: number[] = [];
 
 events.forEach(event => {
   const eventName = String(event).toLowerCase();
@@ -603,6 +604,13 @@ events.forEach(event => {
         );
 
   selectedDivisionIds.push(...matches.map(d => d.id));
+  
+  // Track unique event IDs for ParticipantEvent table
+  matches.forEach(match => {
+    if (!selectedEventIds.includes(match.tournamentEvent.eventId)) {
+      selectedEventIds.push(match.tournamentEvent.eventId);
+    }
+  });
 });
 
 
@@ -633,6 +641,14 @@ events.forEach(event => {
     data: selectedDivisionIds.map((divisionId) => ({
       participantId: participant.id,
       eventDivisionId: divisionId
+    }))
+  });
+
+  // Insert selected events into ParticipantEvent table
+  await tx.participantEvent.createMany({
+    data: selectedEventIds.map((eventId) => ({
+      participantId: participant.id,
+      eventId: eventId
     }))
   });
 
