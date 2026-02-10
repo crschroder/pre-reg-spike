@@ -15,6 +15,7 @@ import { Route as TournamentParticipantIndexRouteImport } from './routes/tournam
 import { Route as TournamentOrganizerIndexRouteImport } from './routes/tournament/organizer/index'
 import { Route as TournamentOrganizerRegistrationSummaryRouteImport } from './routes/tournament/organizer/registration-summary'
 import { Route as TournamentOrganizerCreateRouteImport } from './routes/tournament/organizer/create'
+import { Route as TournamentOrganizerRegistrationStatsIdRouteImport } from './routes/tournament/organizer/registrationStats.$id'
 import { Route as TournamentOrganizerManageRegistrantsIdRouteImport } from './routes/tournament/organizer/manage-registrants.$id'
 import { Route as TournamentOrganizerManageDivisionsIdRouteImport } from './routes/tournament/organizer/manage-divisions.$id'
 import { Route as TournamentOrganizerEventsTournamentIdRouteImport } from './routes/tournament/organizer/events.$tournamentId'
@@ -58,6 +59,12 @@ const TournamentOrganizerCreateRoute =
   TournamentOrganizerCreateRouteImport.update({
     id: '/tournament/organizer/create',
     path: '/tournament/organizer/create',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const TournamentOrganizerRegistrationStatsIdRoute =
+  TournamentOrganizerRegistrationStatsIdRouteImport.update({
+    id: '/tournament/organizer/registrationStats/$id',
+    path: '/tournament/organizer/registrationStats/$id',
     getParentRoute: () => rootRouteImport,
   } as any)
 const TournamentOrganizerManageRegistrantsIdRoute =
@@ -133,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/tournament/organizer/events/$tournamentId': typeof TournamentOrganizerEventsTournamentIdRoute
   '/tournament/organizer/manage-divisions/$id': typeof TournamentOrganizerManageDivisionsIdRoute
   '/tournament/organizer/manage-registrants/$id': typeof TournamentOrganizerManageRegistrantsIdRoute
+  '/tournament/organizer/registrationStats/$id': typeof TournamentOrganizerRegistrationStatsIdRoute
   '/tournament/participant/register/$id/create-participant': typeof TournamentParticipantRegisterIdCreateParticipantRoute
   '/tournament/participant/register/$id/select-events': typeof TournamentParticipantRegisterIdSelectEventsRoute
   '/tournament/participant/register/$id/submit-entry': typeof TournamentParticipantRegisterIdSubmitEntryRoute
@@ -151,6 +159,7 @@ export interface FileRoutesByTo {
   '/tournament/organizer/events/$tournamentId': typeof TournamentOrganizerEventsTournamentIdRoute
   '/tournament/organizer/manage-divisions/$id': typeof TournamentOrganizerManageDivisionsIdRoute
   '/tournament/organizer/manage-registrants/$id': typeof TournamentOrganizerManageRegistrantsIdRoute
+  '/tournament/organizer/registrationStats/$id': typeof TournamentOrganizerRegistrationStatsIdRoute
   '/tournament/participant/register/$id/create-participant': typeof TournamentParticipantRegisterIdCreateParticipantRoute
   '/tournament/participant/register/$id/select-events': typeof TournamentParticipantRegisterIdSelectEventsRoute
   '/tournament/participant/register/$id/submit-entry': typeof TournamentParticipantRegisterIdSubmitEntryRoute
@@ -170,6 +179,7 @@ export interface FileRoutesById {
   '/tournament/organizer/events/$tournamentId': typeof TournamentOrganizerEventsTournamentIdRoute
   '/tournament/organizer/manage-divisions/$id': typeof TournamentOrganizerManageDivisionsIdRoute
   '/tournament/organizer/manage-registrants/$id': typeof TournamentOrganizerManageRegistrantsIdRoute
+  '/tournament/organizer/registrationStats/$id': typeof TournamentOrganizerRegistrationStatsIdRoute
   '/tournament/participant/register/$id/create-participant': typeof TournamentParticipantRegisterIdCreateParticipantRoute
   '/tournament/participant/register/$id/select-events': typeof TournamentParticipantRegisterIdSelectEventsRoute
   '/tournament/participant/register/$id/submit-entry': typeof TournamentParticipantRegisterIdSubmitEntryRoute
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
     | '/tournament/organizer/events/$tournamentId'
     | '/tournament/organizer/manage-divisions/$id'
     | '/tournament/organizer/manage-registrants/$id'
+    | '/tournament/organizer/registrationStats/$id'
     | '/tournament/participant/register/$id/create-participant'
     | '/tournament/participant/register/$id/select-events'
     | '/tournament/participant/register/$id/submit-entry'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '/tournament/organizer/events/$tournamentId'
     | '/tournament/organizer/manage-divisions/$id'
     | '/tournament/organizer/manage-registrants/$id'
+    | '/tournament/organizer/registrationStats/$id'
     | '/tournament/participant/register/$id/create-participant'
     | '/tournament/participant/register/$id/select-events'
     | '/tournament/participant/register/$id/submit-entry'
@@ -226,6 +238,7 @@ export interface FileRouteTypes {
     | '/tournament/organizer/events/$tournamentId'
     | '/tournament/organizer/manage-divisions/$id'
     | '/tournament/organizer/manage-registrants/$id'
+    | '/tournament/organizer/registrationStats/$id'
     | '/tournament/participant/register/$id/create-participant'
     | '/tournament/participant/register/$id/select-events'
     | '/tournament/participant/register/$id/submit-entry'
@@ -245,6 +258,7 @@ export interface RootRouteChildren {
   TournamentOrganizerEventsTournamentIdRoute: typeof TournamentOrganizerEventsTournamentIdRoute
   TournamentOrganizerManageDivisionsIdRoute: typeof TournamentOrganizerManageDivisionsIdRoute
   TournamentOrganizerManageRegistrantsIdRoute: typeof TournamentOrganizerManageRegistrantsIdRoute
+  TournamentOrganizerRegistrationStatsIdRoute: typeof TournamentOrganizerRegistrationStatsIdRoute
   TournamentParticipantRegisterIdCreateParticipantRoute: typeof TournamentParticipantRegisterIdCreateParticipantRoute
   TournamentParticipantRegisterIdSelectEventsRoute: typeof TournamentParticipantRegisterIdSelectEventsRoute
   TournamentParticipantRegisterIdSubmitEntryRoute: typeof TournamentParticipantRegisterIdSubmitEntryRoute
@@ -294,6 +308,13 @@ declare module '@tanstack/react-router' {
       path: '/tournament/organizer/create'
       fullPath: '/tournament/organizer/create'
       preLoaderRoute: typeof TournamentOrganizerCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tournament/organizer/registrationStats/$id': {
+      id: '/tournament/organizer/registrationStats/$id'
+      path: '/tournament/organizer/registrationStats/$id'
+      fullPath: '/tournament/organizer/registrationStats/$id'
+      preLoaderRoute: typeof TournamentOrganizerRegistrationStatsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tournament/organizer/manage-registrants/$id': {
@@ -385,6 +406,8 @@ const rootRouteChildren: RootRouteChildren = {
     TournamentOrganizerManageDivisionsIdRoute,
   TournamentOrganizerManageRegistrantsIdRoute:
     TournamentOrganizerManageRegistrantsIdRoute,
+  TournamentOrganizerRegistrationStatsIdRoute:
+    TournamentOrganizerRegistrationStatsIdRoute,
   TournamentParticipantRegisterIdCreateParticipantRoute:
     TournamentParticipantRegisterIdCreateParticipantRoute,
   TournamentParticipantRegisterIdSelectEventsRoute:

@@ -22,6 +22,10 @@ export function OrganizerDashboard() {
         navigate({ to: `/tournament/organizer/manage-registrants/${id}` });
     }
 
+    function handleRegistrationStats(id: number) {
+        navigate({ to: `/tournament/organizer/registrationStats/${id}` });
+    }
+
     return (<div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
         <h1 className="text-3xl font-semibold mb-6">Welcome to the tournament registration page</h1>
         <div className="max-w-3xl mx-auto p-6">
@@ -40,18 +44,24 @@ export function OrganizerDashboard() {
                             <p className="text-gray-300">{format(new Date(t.date), 'MMM d, yyyy')}</p>
                             <p className="text-gray-400">{t.location}</p>
 
-                            <div className="mt-4 flex gap-2">
+                            <div className="mt-4 flex flex-wrap gap-2">
                                 <button
                                     onClick={() => handleManageDivisions(t.id)}
-                                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                                    className="flex-1 min-w-max px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                                 >
                                     Manage Divisions
                                 </button>
                                 <button
                                     onClick={() => handleManageRegistrants(t.id)}
-                                    className="flex-1 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                                    className="flex-1 min-w-max px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
                                 >
                                     Manage Registrants
+                                </button>
+                                <button
+                                    onClick={() => handleRegistrationStats(t.id)}
+                                    className="flex-1 min-w-max px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm"
+                                >
+                                    Registration Stats
                                 </button>
                             </div>
                         </div>
