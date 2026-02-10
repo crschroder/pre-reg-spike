@@ -755,7 +755,17 @@ app.get('/api/tournaments/:id/participants', async (req: Request, res: Response,
   });
 
 
+app.get('/api/tournaments/:id/participants/lite', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tournamentId = Number(req.params.id);
+    if (!tournamentId || isNaN(tournamentId)) {
+      return res.status(400).json({ error: "Invalid tournament ID" });
+    }
+    const participants = await getPrisma().participantSummary.findMany({ where: { tournamentId } });
+    return res.json(participants);
+  } catch (err) { next(err); }
 
+});
   
 // app.get('/api/tournaments/:id/divisions', async (req: Request, res: Response, next: NextFunction) => {
 // });

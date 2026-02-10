@@ -191,7 +191,7 @@ model ParticipantEvent{
   @@map("participant_event")
 }
 
-view ParticipantRegistrationSummary {
+view ParticipantSummary {
   userEmail              String     @map("user_email")
   userId                 Int        @map("user_id")
   participantId          Int        @map("participant_id")  

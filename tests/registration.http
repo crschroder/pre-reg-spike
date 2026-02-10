@@ -53,6 +53,10 @@ GET {{baseUrl}}/ping
 GET {{baseUrl}}/api/tournaments/{{tournamentId}}/participants
 X-API-Key: {{apiKey}}
 
+### Get participants summary (flattened view) for managing paricipants
+GET {{baseUrl}}/api/tournaments/{{tournamentId}}/participants/lite
+X-API-Key: {{apiKey}}
+
 ### Create another participant Check participant_event table entries are created correctly
 POST {{baseUrl}}/api/tournaments/{{tournamentId}}/registrations
 Content-Type: application/json
