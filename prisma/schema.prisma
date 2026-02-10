@@ -191,3 +191,24 @@ model ParticipantEvent{
   @@map("participant_event")
 }
 
+view ParticipantRegistrationSummary {
+  userEmail              String     @map("user_email")
+  userId                 Int        @map("user_id")
+  participantId          Int        @map("participant_id")  
+  firstName              String     @map("first_name")
+  lastName               String     @map("last_name")
+  age                    Int
+  beltColor              String     @map("belt_color")
+  participantGender      String     @map("participant_gender")
+  participantDivisionType String    @map("participant_division_type")
+  paid                   Boolean
+  checkedIn              Boolean    @map("checked_in")
+  eventRegistered        String     @map("event_registered")
+  tournamentId           Int        @map("tournament_id")
+  eventId                Int        @map("event_id")
+  participantEventId     Int        @map("participant_event_id")
+  genderId               Int        @map("gender_id")
+
+  
+  @@map("participant_registration_summary")
+}
