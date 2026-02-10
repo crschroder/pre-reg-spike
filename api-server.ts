@@ -754,6 +754,9 @@ app.get('/api/tournaments/:id/participants', async (req: Request, res: Response,
     }
   });
 
+
+
+  
 // app.get('/api/tournaments/:id/divisions', async (req: Request, res: Response, next: NextFunction) => {
 // });
 
