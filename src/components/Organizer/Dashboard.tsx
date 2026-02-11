@@ -26,8 +26,12 @@ export function OrganizerDashboard() {
         navigate({ to: `/tournament/organizer/registrationStats/${id}` });
     }
 
+    function handleCreated(id: number) {
+        navigate({ to: `/tournament/organizer/created/${id}` });
+    }
+
     return (<div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
-        <h1 className="text-3xl font-semibold mb-6">Welcome to the tournament registration page</h1>
+        <h1 className="text-3xl font-semibold mb-6">Welcome to the tournament dashboard page</h1>
         <div className="max-w-3xl mx-auto p-6">
             <h1 className="text-3xl font-bold mb-6 text-white">
                 Select a Tournament
@@ -45,6 +49,12 @@ export function OrganizerDashboard() {
                             <p className="text-gray-400">{t.location}</p>
 
                             <div className="mt-4 flex flex-wrap gap-2">
+                                <button
+                                    onClick={() => handleCreated(t.id)}
+                                    className="flex-1 min-w-max px-3 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm"
+                                >
+                                    Edit Tournament
+                                </button>
                                 <button
                                     onClick={() => handleManageDivisions(t.id)}
                                     className="flex-1 min-w-max px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"

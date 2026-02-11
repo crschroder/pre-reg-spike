@@ -92,3 +92,10 @@ export function getTournamentRegistrations(tournamentId: number) {
   return api.get(`/api/tournaments/${tournamentId}/participants`)
     .then(res => res.data);
 }
+
+
+
+export function getParticipantSummary(tournamentId: number) {
+  return api.get(`/api/tournaments/${tournamentId}/participants/lite`)
+    .then(res => res.data);
+}
