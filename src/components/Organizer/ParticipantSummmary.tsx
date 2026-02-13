@@ -173,12 +173,14 @@ import type { ExpandedState } from "@tanstack/react-table";
 
 export function ParticipantTable({ participants }: { participants: GroupedParticipant[] }) {
   const [expanded, setExpanded] = useState<ExpandedState>({});
-
+const myColumns = useMemo<ColumnDef<GroupedParticipant>[]>(() =>columns, []);
   const table = useReactTable<GroupedParticipant>({
     data: participants,
-    columns,
+    columns: myColumns,
     state: { expanded },
+    getRowId: row => String(row.participantId), 
     onExpandedChange: setExpanded,
+    getRowCanExpand: () => true,
     getCoreRowModel: getCoreRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
      filterFns: {
@@ -187,7 +189,7 @@ export function ParticipantTable({ participants }: { participants: GroupedPartic
   // sortingFns: {},
   // globalFilterFn: undefined,
 
-  } satisfies TableOptions<GroupedParticipant>);
+  });
 
   return (
     <table className="min-w-full border">

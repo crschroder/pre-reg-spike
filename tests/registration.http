@@ -2,7 +2,7 @@
 @azureBaseUrl = https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net
 
 # Switch this between {{localBaseUrl}} and {{azureBaseUrl}}
-@baseUrl = {{localBaseUrl}}
+@baseUrl = {{azureBaseUrl}}
 
 @apiKey = 37339cb4-4761-4e5f-91c0-16a5687f3ae6
 @tournamentId = 7
@@ -63,13 +63,13 @@ Content-Type: application/json
 X-API-Key: {{apiKey}}
 
 {
-  "email": "bill.tester@example.com",
+  "email": "bill.tester3@example.com",
   "participant": {
     "firstName": "Bill",
-    "lastName": "Tester",
-    "age": 22,
+    "lastName": "Tester4",
+    "age": 56,
     "genderId": 1,
-    "beltRankId": 6,
+    "beltRankId": 9,
     "notes": "From Test harness", 
     "dojoId": 13,
     "otherDojoName": null
