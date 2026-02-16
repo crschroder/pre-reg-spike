@@ -15,14 +15,13 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { CheckboxFilter } from "../Custom/CheckboxFilter";
 //import { CheckboxFilterPopover } from "../Custom/CheckBoxFilterPopover";
-import { Filter as FilterIcon, FilterX, X } from "lucide-react";
+import { Filter as FilterIcon, FilterX, } from "lucide-react";
 import { Pill } from "../Custom/Pill";
-import { sizeClasses } from "@/datatypes/sizeClasses";
+
 import { isBeltColor } from "@/datatypes/belt-colors";
-import { beltColors } from "@/datatypes/belt-colors";
-import type { PillSize } from "../Custom/Pill";
 import type { BeltColor } from "@/datatypes/belt-colors";
 import { DebouncedInput } from "../Custom/DebouncedInput";
+import { PillButton } from "../Custom/PillButton";
 
 
 
@@ -384,7 +383,12 @@ const fullNameColumn = table.getColumn("fullName")
         </select>
       </div>
       <div className="mt-4 text-gray-400">
-        {table.getPrePaginationRowModel().rows.length} Participants
+        {table.getPrePaginationRowModel().rows.length} Selected Registrations
+        
+      </div>
+       <div className="mt-4 text-gray-400">
+        
+        {table.getPreSelectedRowModel().rows.length} Total Registrations
       </div>
     </div>
     </div>
@@ -465,41 +469,6 @@ function FilterBar({ table }: FilterBarProps) {
   )
 }
 
-// function DebouncedInput({
-//   value: initialValue,
-//   onChange,
-//   debounce = 500,
-//   ...props
-// }: {
-//   value: string | number
-//   onChange: (value: string | number) => void
-//   debounce?: number
-// } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'>) {
-//   const [value, setValue] = useState(initialValue)
-
-//   useEffect(() => {
-//     setValue(initialValue)
-//   }, [initialValue])
-
-//   useEffect(() => {
-//     const timeout = setTimeout(() => {
-//       onChange(value)
-//     }, debounce)
-
-//     return () => clearTimeout(timeout)
-//   }, [value])
-
-//   return (
-//     <input
-//       {...props}
-//       value={value}
-//       onChange={(e) => setValue(e.target.value)}
-//     />
-//   )
-// }
-
-
-
 
 function Filter({ column, placeholder }: { column: Column<any, unknown>, placeholder?: string }) {
   const columnFilterValue = column.getFilterValue()
@@ -515,43 +484,4 @@ function Filter({ column, placeholder }: { column: Column<any, unknown>, placeho
   )
 }
 
-type PillButtonProps = {
-  children: React.ReactNode
-  onRemove: () => void
-  color?: BeltColor
-  size?: PillSize
-}
 
-export function PillButton({
-  children,
-  onRemove,
-  color = "Blue",
-  size = "md",
-}: PillButtonProps) {
-  return (
-    <span
-      className={`
-        inline-flex items-center rounded-full
-        ${sizeClasses[size]}
-        ${beltColors[color]}
-      `}
-    >
-      <span>{children}</span>
-
-          <button
-        type="button"
-        onClick={onRemove}
-        className="
-          ml-1 p-0.5 rounded-full
-          text-white
-          hover:bg-white/20
-          focus:outline-none
-          flex items-center justify-center
-        "
-      >
-
-        <X size={12} strokeWidth={2} />
-      </button>
-    </span>
-  )
-}

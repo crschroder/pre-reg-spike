@@ -7,3 +7,4 @@ export * from "./divisionPayload";
 export * from "./consts";
 export * from "./createRegistrationPayload";
 export * from "./helpers";
+export * from "./dojoReponse";

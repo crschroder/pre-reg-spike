@@ -6,7 +6,10 @@ import type {
   TournamentInput,
   TournamentStatus,
   TournamentStatusType,
+  DojoResponse
 } from "../../shared/index";
+
+
 
 export function getTournaments() {
   return api.get("/tournament/api/tournment/events")
@@ -26,14 +29,14 @@ export function updateTournament(id: number, data: TournamentInput) {
 
 export function getTournamentById(id: number) {
   return api.get(`/api/tournaments/${id}`).then(res => {
-    console.log(res.data);
+   
     return res.data;});
 }
 
 export function getEventTypes() {
   return api.get("/api/event-types")
     .then(res => {
-      console.log("Fetched event types:", res.data);
+      
 
       return res.data;});
 }
@@ -105,4 +108,15 @@ export function toggleCheckInParticipant(participantId: number, checkedIn: boole
   const participantPayload: ParticipantUpdatePayload = { checkedIn };
   return api.patch(`/api/participant/${participantId}`, participantPayload)
     .then(res => res.data);
+}
+
+export function togglePaidParticipant(participantId: number, paid: boolean) {
+  const participantPayload: ParticipantUpdatePayload = { paid };
+  return api.patch(`/api/participant/${participantId}`, participantPayload)
+    .then(res => res.data);
+}
+
+export function getDojoList(): Promise<DojoResponse[]> {
+  return api.get("/api/dojos")
+    .then(res => res.data as DojoResponse[]);
 }

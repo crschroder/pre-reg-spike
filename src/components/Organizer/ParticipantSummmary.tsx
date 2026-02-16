@@ -125,9 +125,10 @@ function useParticipantTableColumns() {
           >
             {row.getIsExpanded() ? "👇" : "👉"}
           </button>
-          <span className="font-medium text-gray-100">
+          {/* <span className="font-medium text-gray-100">
             {getValue()}
-          </span>
+          </span> */}
+          <Pill color={row.original.beltColor as any}>{getValue()}</Pill>
         </div>
       ),
     },
@@ -229,6 +230,7 @@ import { DebouncedInput } from "../Custom/DebouncedInput";
 import { Toggle } from "../Custom/Toggle";
 import { ToggleButton } from "../Custom/ToggleButton";
 import { SegmentedButton } from "../Custom/SegmentedButton";
+import { Pill } from "../Custom/Pill";
 
 export function ParticipantTable({
   participants,
@@ -438,6 +440,14 @@ export function ParticipantTable({
             </option>
           ))}
         </select>
+      </div>
+      <div className="mt-4 text-gray-400">
+        {table.getPrePaginationRowModel().rows.length} Selected Participants
+        {}
+      </div>
+       <div className="mt-4 text-gray-400">
+        
+        {table.getPreSelectedRowModel().rows.length} Total Participants
       </div>
       </>
   );

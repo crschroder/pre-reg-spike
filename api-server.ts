@@ -15,6 +15,7 @@ import type { NextFunction, Request, Response } from 'express'
 import type {
   CreateRegistrationPayload,
   DivisionPayload,
+  DojoResponse,
   ParticipantUpdatePayload,
   TournamentEventDivisionRow,
   TournamentEventPayload,
@@ -799,6 +800,20 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{id: string}, Partici
 
 });
 
+app.get('/api/dojos', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const dojos = await getPrisma().dojo.findMany();
+    const mapped: DojoResponse[] = dojos.map(({ id, dojoName, city }) => ({
+  id,
+  name: dojoName,
+  city,
+}));
+
+    res.json(mapped);
+  } catch (err) {
+    next(err);
+  }
+});
 
 app.use(errorHandler);
 

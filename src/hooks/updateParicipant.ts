@@ -1,19 +1,18 @@
 import api from "@/api/axios";
 import { ParticipantSummaryRow } from "@/components/Organizer/ParticipantSummmary";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-
+import { toggleCheckInParticipant, togglePaidParticipant } from "@/api/tournaments";
 
 
 export function useUpdateParticipantPaid() {
     const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ participantId, paid, tournamentId }: { participantId: number; paid: boolean; tournamentId: number }) => {
-      const participantPayload = { paid };
-      return api.patch(`/api/participant/${participantId}`, participantPayload)
-        .then(res => res.data);
+      const updatedParticipant = await togglePaidParticipant(participantId, paid);
+      return { participant: updatedParticipant, tournamentId };
     },
-    onMutate: async ({ participantId, paid, tournamentId }) => {
-        const queryKey = ['participant-summary', tournamentId];
+    onMutate: async ({ participantId, paid, tournamentId }) => {  
+        const queryKey = ['participant-summary', tournamentId]; 
         await queryClient.cancelQueries({ queryKey});
         const previous = queryClient.getQueryData(queryKey);
         queryClient.setQueryData(queryKey, (old: ParticipantSummaryRow[]) => {
@@ -52,10 +51,9 @@ export function useUpdateParticipantPaid() {
 export function useToggleCheckInParticipant() {
     const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ participantId, checkedIn, tournamentId }: { participantId: number; checkedIn: boolean; tournamentId: number }) => {
-      const participantPayload = { checkedIn };
-      return api.patch(`/api/participant/${participantId}`, participantPayload)
-        .then(res => res.data);
+    mutationFn: async ({ participantId, checkedIn, tournamentId }: { participantId: number; checkedIn: boolean; tournamentId: number }) => {      
+      const updatedParticipant = await toggleCheckInParticipant(participantId, checkedIn);
+      return { participant: updatedParticipant, tournamentId };
     },
     onMutate: async ({ participantId, checkedIn, tournamentId }) => {
         const queryKey = ['participant-summary', tournamentId];
