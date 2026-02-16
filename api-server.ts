@@ -15,9 +15,11 @@ import type { NextFunction, Request, Response } from 'express'
 import type {
   CreateRegistrationPayload,
   DivisionPayload,
+  ParticipantUpdatePayload,
   TournamentEventDivisionRow,
   TournamentEventPayload,
   TournamentStatusType,
+  TypedRequest,
 } from './shared'
 
 dotenv.config()
@@ -769,6 +771,33 @@ app.get('/api/tournaments/:id/participants/lite', async (req: Request, res: Resp
   
 // app.get('/api/tournaments/:id/divisions', async (req: Request, res: Response, next: NextFunction) => {
 // });
+
+
+app.patch('/api/participant/:id', async (req: TypedRequest<{id: string}, ParticipantUpdatePayload>, res: Response, next: NextFunction) => {
+  try {
+    const participantId = Number(req.params.id);
+    if (!participantId || isNaN(participantId)) {
+      return res.status(400).json({ error: "Invalid participant ID" });
+    }  
+
+    const allowedFields: (keyof ParticipantUpdatePayload)[] = ['paid', 'checkedIn', 'notes', 'firstName', 'lastName', 'age', 'beltRankId', 'dojoId'];
+    const updateData: Prisma.ParticipantUpdateInput = {};
+
+    for (const field of allowedFields) {
+      if (field in req.body) {
+        (updateData as any)[field] = req.body[field];
+      }
+    }
+     const updated = await getPrisma().participant.update({
+      where: { id: participantId },
+      data: updateData,
+    });
+    res.json({ message: "Participant updated", participant: updated });
+
+  } catch (err) {    next(err);
+  }
+
+});
 
 
 app.use(errorHandler);

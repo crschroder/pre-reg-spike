@@ -13,7 +13,7 @@ import {
 } from "@/api/tournaments";
 
 import { useNavigate } from "@tanstack/react-router";
-import type { EventType, TournamentInput } from 'prisma/shared';
+import type { EventType, TournamentInput } from '@shared';
 
 type Props = { tournamentId?: number | undefined };
 

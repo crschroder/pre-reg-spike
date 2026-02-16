@@ -1,6 +1,7 @@
 // src/api/tournaments.ts some comment 
 import  api  from "./axios";
 import type {
+  ParticipantUpdatePayload,
   TournamentEventPayload,
   TournamentInput,
   TournamentStatus,
@@ -97,5 +98,11 @@ export function getTournamentRegistrations(tournamentId: number) {
 
 export function getParticipantSummary(tournamentId: number) {
   return api.get(`/api/tournaments/${tournamentId}/participants/lite`)
+    .then(res => res.data);
+}
+
+export function toggleCheckInParticipant(participantId: number, checkedIn: boolean) {
+  const participantPayload: ParticipantUpdatePayload = { checkedIn };
+  return api.patch(`/api/participant/${participantId}`, participantPayload)
     .then(res => res.data);
 }

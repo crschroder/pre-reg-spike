@@ -2,7 +2,7 @@
 @azureBaseUrl = https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net
 
 # Switch this between {{localBaseUrl}} and {{azureBaseUrl}}
-@baseUrl = {{azureBaseUrl}}
+@baseUrl = {{localBaseUrl}}
 
 @apiKey = 37339cb4-4761-4e5f-91c0-16a5687f3ae6
 @tournamentId = 7
@@ -75,4 +75,13 @@ X-API-Key: {{apiKey}}
     "otherDojoName": null
   },
   "events": ["kumite","kata"]
+}
+
+### Mark participant as paid
+PATCH {{baseUrl}}/api/participant/1413
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+
+{
+  "paid": false
 }
