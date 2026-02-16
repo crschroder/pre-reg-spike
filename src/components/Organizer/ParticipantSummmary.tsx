@@ -1,6 +1,6 @@
 import { getParticipantSummary } from "@/api/tournaments";
 import { useQuery } from "@tanstack/react-query";
-import { ColumnDef, flexRender, getCoreRowModel, getExpandedRowModel, useReactTable, getPaginationRowModel } from "@tanstack/react-table";
+import { ColumnDef, flexRender, getCoreRowModel, getExpandedRowModel, useReactTable, getPaginationRowModel, getFilteredRowModel, Row } from "@tanstack/react-table";
 import React, { useMemo, useState } from "react";
 import { normalizeName } from "@/helpers/stringHelpers";
 
@@ -115,8 +115,8 @@ function useParticipantTableColumns() {
     {
       id: "fullName",
       header: "Name",
-      accessorFn: (row) => normalizeName(`${row.firstName} ${row.lastName}`),
-      cell: ({ row, getValue }) => (
+      accessorFn: (row: GroupedParticipant) => normalizeName(`${row.firstName} ${row.lastName}`),
+      cell: ({ row, getValue }: { row: Row<GroupedParticipant>; getValue: () => any }) => (
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -134,7 +134,13 @@ function useParticipantTableColumns() {
     {
       accessorKey: "paid",
       header: "Paid",
-      cell: ({ row, getValue }) => {
+      cell: ({
+        row,
+        getValue,
+      }: {
+        row: Row<GroupedParticipant>;
+        getValue: () => any;
+      }) => {
         const paid = getValue();
         return (
           <label className="inline-flex items-center cursor-pointer">
@@ -173,7 +179,13 @@ function useParticipantTableColumns() {
     {
       accessorKey: "checkedIn",
       header: "Checked In",
-      cell: ({ row, getValue }) => {
+      cell: ({
+        row,
+        getValue,
+      }: {
+        row: Row<GroupedParticipant>;
+        getValue: () => any;
+      }) => {
         const checkedIn = getValue();
         return (
           <label className="inline-flex items-center cursor-pointer">
@@ -185,6 +197,7 @@ function useParticipantTableColumns() {
                 updateCheckedIn.mutate({
                   participantId: row.original.participantId,
                   checkedIn: !checkedIn,
+                  tournamentId: row.original.tournamentId
                 });
               }}
               className="sr-only peer"
@@ -210,8 +223,12 @@ function useParticipantTableColumns() {
     },
   ];
 }
-import type { ExpandedState } from "@tanstack/react-table";
+import type { ExpandedState, Table } from "@tanstack/react-table";
 import { useToggleCheckInParticipant, useUpdateParticipantPaid } from "@/hooks/updateParicipant";
+import { DebouncedInput } from "../Custom/DebouncedInput";
+import { Toggle } from "../Custom/Toggle";
+import { ToggleButton } from "../Custom/ToggleButton";
+import { SegmentedButton } from "../Custom/SegmentedButton";
 
 export function ParticipantTable({
   participants,
@@ -233,17 +250,21 @@ export function ParticipantTable({
     onExpandedChange: setExpanded,
     getRowCanExpand: () => true,
     getCoreRowModel: getCoreRowModel(),
+     getFilteredRowModel: getFilteredRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     filterFns: {
       fuzzy: () => true, // placeholder
     },
-     autoResetPageIndex: false, // <-- Add this line
+     autoResetPageIndex: false,
   });
 
   return (
     <>
+    <FilterBar table={table} />
+      <div className="h-4" />
     <div className="overflow-x-auto overflow-y-auto rounded-lg border border-gray-700 min-h-[200px] max-h-[60vh]">
+      
       <table className="w-full text-sm text-gray-200">
         <thead className="sticky top-0 z-10 bg-gray-800 text-gray-100">
           {table.getHeaderGroups().map((hg) => (
@@ -421,3 +442,69 @@ export function ParticipantTable({
       </>
   );
 }
+
+type FilterBarProps = {
+  table: Table<any>
+}
+
+function FilterBar({ table }: FilterBarProps) {
+  const nameColumn = table.getColumn("fullName");
+  const columnFilterValue = nameColumn?.getFilterValue()
+  const [paidFilterValue, setPaidFilterValue] = useState(0); // 0 = all, 1 = not paid, 2 = paid
+  const [checkedInFilterValue, setCheckedInFilterValue] = useState(0); // 0 = all, 1 = not checked in, 2 = checked in
+
+  const onPaidFilterChange = (value: number) => {
+    // 0 = all, 1 = not paid, 2 = paid
+    if (value === 0) {
+      table.setColumnFilters(old => old.filter(f => f.id !== "paid"))
+    } else if (value === 1) {
+      table.setColumnFilters(old => [...old.filter(f => f.id !== "paid"), { id: "paid", value: false }])
+    } else if (value === 2) {
+      table.setColumnFilters(old => [...old.filter(f => f.id !== "paid"), { id: "paid", value: true }])
+    }
+    setPaidFilterValue(value);
+
+  }
+
+  const onCheckedInFilterChange = (value: number) => {
+    // 0 = all, 1 = not checked in, 2 = checked in
+    if (value === 0) {
+      table.setColumnFilters(old => old.filter(f => f.id !== "checkedIn"))
+    } else if (value === 1) {
+      table.setColumnFilters(old => [...old.filter(f => f.id !== "checkedIn"), { id: "checkedIn", value: false }])
+    } else if (value === 2) {
+      table.setColumnFilters(old => [...old.filter(f => f.id !== "checkedIn"), { id: "checkedIn", value: true }])
+    }
+    setCheckedInFilterValue(value);
+  }
+
+  return (
+    <div className="mb-4 flex flex-wrap gap-4" text-white>
+
+   
+    <div className="flex items-center gap-2">
+      <DebouncedInput
+      
+        type="text"
+        value={(columnFilterValue ?? '') as string}
+        onChange={(value) => nameColumn?.setFilterValue(value)}
+        placeholder="Search by name..."
+        className="px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+     
+    <SegmentedButton
+      value={paidFilterValue}
+      onChange={onPaidFilterChange}
+      labels={["All","Not Paid","Paid"]}
+      
+    />
+    <SegmentedButton
+      value={checkedInFilterValue}
+      onChange={onCheckedInFilterChange}
+      labels={["All","Not Checked In","Checked In"]}
+    />
+    </div>
+  );
+}
+

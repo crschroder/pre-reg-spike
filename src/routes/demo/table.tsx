@@ -51,7 +51,7 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   return itemRank.passed
 }
 
-// Define a custom fuzzy sort function that will sort by rank if the row has ranking information
+// Define a custom fzuzy sort function that will sort by rank if the row has ranking information
 const fuzzySort: SortingFn<any> = (rowA, rowB, columnId) => {
   let dir = 0
 

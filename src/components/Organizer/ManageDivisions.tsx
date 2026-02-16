@@ -16,8 +16,13 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckboxFilter } from "../Custom/CheckboxFilter";
 //import { CheckboxFilterPopover } from "../Custom/CheckBoxFilterPopover";
 import { Filter as FilterIcon, FilterX, X } from "lucide-react";
-import { beltColors, isBeltColor, Pill, sizeClasses } from "../Custom/Pill";
-import type { BeltColor, PillSize } from "../Custom/Pill";
+import { Pill } from "../Custom/Pill";
+import { sizeClasses } from "@/datatypes/sizeClasses";
+import { isBeltColor } from "@/datatypes/belt-colors";
+import { beltColors } from "@/datatypes/belt-colors";
+import type { PillSize } from "../Custom/Pill";
+import type { BeltColor } from "@/datatypes/belt-colors";
+import { DebouncedInput } from "../Custom/DebouncedInput";
 
 
 
@@ -204,7 +209,7 @@ const fullNameColumn = table.getColumn("fullName")
     <div className="min-h-screen bg-gray-900 p-6">
     <div>
       <h2 className="text-3xl font-semibold mb-6 text-white">Manage Participants for Tournament ID: {tournamentId}</h2>
-      <div className="mb-4 flex flex-wrap gap-4" text-white>
+      <div className="mb-4 flex flex-wrap gap-4 text-white" >
 
         {/* <Filter column={table.getColumn("firstName")!} placeholder="Search first name" />
         <Filter column={table.getColumn("lastName")!} placeholder="Search last name" /> */}
@@ -460,38 +465,38 @@ function FilterBar({ table }: FilterBarProps) {
   )
 }
 
-function DebouncedInput({
-  value: initialValue,
-  onChange,
-  debounce = 500,
-  ...props
-}: {
-  value: string | number
-  onChange: (value: string | number) => void
-  debounce?: number
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'>) {
-  const [value, setValue] = useState(initialValue)
+// function DebouncedInput({
+//   value: initialValue,
+//   onChange,
+//   debounce = 500,
+//   ...props
+// }: {
+//   value: string | number
+//   onChange: (value: string | number) => void
+//   debounce?: number
+// } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'>) {
+//   const [value, setValue] = useState(initialValue)
 
-  useEffect(() => {
-    setValue(initialValue)
-  }, [initialValue])
+//   useEffect(() => {
+//     setValue(initialValue)
+//   }, [initialValue])
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      onChange(value)
-    }, debounce)
+//   useEffect(() => {
+//     const timeout = setTimeout(() => {
+//       onChange(value)
+//     }, debounce)
 
-    return () => clearTimeout(timeout)
-  }, [value])
+//     return () => clearTimeout(timeout)
+//   }, [value])
 
-  return (
-    <input
-      {...props}
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-    />
-  )
-}
+//   return (
+//     <input
+//       {...props}
+//       value={value}
+//       onChange={(e) => setValue(e.target.value)}
+//     />
+//   )
+// }
 
 
 

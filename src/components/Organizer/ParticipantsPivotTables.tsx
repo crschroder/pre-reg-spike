@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { isBeltColor, Pill } from "../Custom/Pill";
+import { Pill } from "../Custom/Pill";
+import { isBeltColor } from "@/datatypes/belt-colors";
 
 export type ParticipantPivotRow = {
   divisionGender: string;
