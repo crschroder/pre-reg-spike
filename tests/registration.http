@@ -85,3 +85,7 @@ X-API-Key: {{apiKey}}
 {
   "paid": false
 }
+
+### Get event types for tournament
+GET {{baseUrl}}/api/tournaments/{{tournamentId}}/tournamentEvents
+X-API-Key: {{apiKey}}

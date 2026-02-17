@@ -1,7 +1,7 @@
 import { getDojoList, getTournamentById } from "@/api/tournaments";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 
 type props = { tournamentId: number; };
@@ -31,6 +31,8 @@ export function CreateParticipant({ tournamentId }: props) {
   });
 
   const [dojoInput, setDojoInput] = useState("");
+
+  const [dojoValue, setDojoValue] = useState<{ id: number | null; freeText?: string }>({ id: null });
 
   console.log("selected dojo:", dojoInput || "none");
 
@@ -124,11 +126,40 @@ export function CreateParticipant({ tournamentId }: props) {
             Dojo
           </label>
           <DojoAutocomplete
-  dojoList={dojoList || []}
-  value={dojoInput}
-  onChange={setDojoInput}
-/>
+          dojoList={dojoList || []}
+          value={dojoValue}
+          onChange={setDojoValue}
+          />
         </div>
+        <div className="col-span-1">
+  <label className="block text-sm font-medium text-gray-200 mb-1">
+    Gender
+  </label>
+  <div className="flex items-center gap-6 mt-2">
+    <label className="inline-flex items-center">
+      <input
+        type="radio"
+        name="gender"
+        value={1}
+        // checked={gender === "male"}
+        // onChange={() => setGender("male")}
+        className="form-radio text-blue-600"
+      />
+      <span className="ml-2 text-gray-200">Male</span>
+    </label>
+    <label className="inline-flex items-center">
+      <input
+        type="radio"
+        name="gender"
+        value={2}
+        // checked={gender === "female"}
+        // onChange={() => setGender("female")}
+        className="form-radio text-pink-600"
+      />
+      <span className="ml-2 text-gray-200">Female</span>
+    </label>
+  </div>
+</div>
       </div>
 
     </div>
@@ -155,9 +186,6 @@ export function CreateParticipant({ tournamentId }: props) {
   </div>)
 }
 
-
-
-
 interface Dojo {
   id: number;
   name: string;
@@ -166,8 +194,8 @@ interface Dojo {
 
 interface DojoAutocompleteProps {
   dojoList: Dojo[];
-  value: string;
-  onChange: (dojoName: string) => void;
+   value: { id: number | null; freeText?: string };
+  onChange: (value: { id: number | null; freeText?: string }) => void;  
   placeholder?: string;
   className?: string;
 }
@@ -179,50 +207,110 @@ export const DojoAutocomplete: React.FC<DojoAutocompleteProps> = ({
   placeholder = "Type dojo name or city",
   className = "",
 }) => {
+  const [input, setInput] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [highlighted, setHighlighted] = useState<number>(-1);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filteredDojos =
-    dojoList?.filter(
+   const filteredDojos =
+    dojoList.filter(
       (dojo) =>
-        dojo.name.toLowerCase().includes(value.toLowerCase()) ||
-        dojo.city.toLowerCase().includes(value.toLowerCase())
+        dojo.name.toLowerCase().includes(input.toLowerCase()) ||
+        dojo.city.toLowerCase().includes(input.toLowerCase())
     ) || [];
-    console.log("filtered dojos:", filteredDojos);
-  function handleSelectDojo(dojo: Dojo) {
-    onChange(dojo.name);
-    setShowDropdown(false);
+    
+  const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
+  useEffect(() => {
+  if (highlighted >= 0 && itemRefs.current[highlighted]) {
+    itemRefs.current[highlighted]?.scrollIntoView({ block: "nearest" });
   }
+}, [highlighted]);
+
+  function handleSelectDojo(dojo: Dojo) {
+    setInput(dojo.name);
+    setShowDropdown(false);
+    if (dojo.id === 18) {
+      onChange({ id: 18, freeText: "" });
+    } else {
+      onChange({ id: dojo.id });
+    }
+  }
+
+  function handleFreeTextChange(e: React.ChangeEvent<HTMLInputElement>) {
+    onChange({ id: 18, freeText: e.target.value });
+  }
+
+  useEffect(() => {
+    if (value.id === 18 && value.freeText !== undefined) {
+      setInput("Other");
+    } else if (value.id) {
+      const dojo = dojoList.find((d) => d.id === value.id);
+      if (dojo) setInput(dojo.name);
+    }
+  }, [value, dojoList]);
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!showDropdown && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      setShowDropdown(true);
+      setHighlighted(0);
+      return;
+    }
+    if (!filteredDojos.length) return;
+
+    if (e.key === "ArrowDown") {
+      setHighlighted((prev) => (prev + 1) % filteredDojos.length);
+    } else if (e.key === "ArrowUp") {
+      setHighlighted((prev) => (prev - 1 + filteredDojos.length) % filteredDojos.length);
+    } else if (e.key === "Enter" && highlighted >= 0) {
+      handleSelectDojo(filteredDojos[highlighted]);
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
+    }
+  }  
 
   return (
     <div className={`relative ${className}`}>
       <input
         ref={inputRef}
         type="text"
-        value={value}
+        value={input}
         onChange={e => {
-          onChange(e.target.value);
+          setInput(e.target.value);
           setShowDropdown(true);
+          setHighlighted(-1);
         }}
         onFocus={() => setShowDropdown(true)}
         onBlur={() => setTimeout(() => setShowDropdown(false), 100)}
+        onKeyDown={handleKeyDown}
         className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
         placeholder={placeholder}
-        autoComplete="off"
+        autoComplete="do-not-auto-fill"
       />
       {showDropdown && filteredDojos.length > 0 && (
         <ul className="absolute z-10 w-full bg-gray-800 border border-gray-700 rounded-md mt-1 max-h-48 overflow-auto">
-          {filteredDojos.map((dojo) => (
+          {filteredDojos.map((dojo, idx) => (
             <li
               key={dojo.id}
-              className="px-3 py-2 cursor-pointer hover:bg-gray-700"
+              className={`px-3 py-2 cursor-pointer hover:bg-gray-700 ${highlighted === idx ? "bg-gray-700" : ""}`}
               onMouseDown={() => handleSelectDojo(dojo)}
+               onMouseEnter={() => setHighlighted(idx)}
+               ref={el => { itemRefs.current[idx] = el; }}               
             >
               <span className="font-medium">{dojo.name}</span>
               <span className="ml-2 text-xs text-gray-400">{dojo.city}</span>
             </li>
           ))}
         </ul>
+      )}
+      {/* Show free text input if 'Other' is selected */}
+      {value.id === 18 && (
+        <input
+          type="text"
+          value={value.freeText || ""}
+          onChange={handleFreeTextChange}
+          className="mt-2 w-full px-3 py-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter dojo name"
+        />
       )}
     </div>
   );

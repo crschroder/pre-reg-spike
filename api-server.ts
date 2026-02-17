@@ -398,6 +398,14 @@ app.get('/api/event-types', async (_req: Request, res: Response, next: NextFunct
   }
 });
 
+app.get('/api/event-types/:tournamentId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+  } catch (err) {
+    next(err); // delegate to error handler
+  }
+});
+
+
 app.get('/api/event/:eventId/allowed-divisions', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const eventIdNum =  
