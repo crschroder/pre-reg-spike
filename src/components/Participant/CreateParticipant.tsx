@@ -1,5 +1,6 @@
-import { getDojoList, getTournamentById } from "@/api/tournaments";
-import { useQuery } from "@tanstack/react-query";
+import { createRegistration, getDojoList, getTournamentById, getTournamentEvents } from "@/api/tournaments";
+import { CreateRegistrationPayload } from "@shared";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
@@ -25,15 +26,46 @@ export function CreateParticipant({ tournamentId }: props) {
     enabled: !!tournamentId,
   });
 
+  // State for form data
+  const [formData, setFormData] = useState<CreateRegistrationPayload | null>(null);
+
   const {data: dojoList} = useQuery({
     queryKey: ["dojos"],
     queryFn: () => getDojoList(),
   });
 
+  const {data: eventTypes} = useQuery({
+    queryKey: ["eventTypes", tournamentId],
+    queryFn: () => getTournamentEvents(tournamentId),
+    enabled: !!tournamentId,
+  });
+
+  const mappedEvents = (eventTypes ?? []).map((item: any) => ({
+  id: item.id,
+  EventId: item.eventId,
+  Name: item.event?.name ?? "",
+}));
+
   const [dojoInput, setDojoInput] = useState("");
+
+
 
   const [dojoValue, setDojoValue] = useState<{ id: number | null; freeText?: string }>({ id: null });
 
+  // State for selected events
+  const [selectedEvents, setSelectedEvents] = useState<number[]>([]);
+
+  const mutation = useMutation({
+    mutationFn: (newRegistration: CreateRegistrationPayload) =>
+      createRegistration(tournamentId, newRegistration),
+    onSuccess: () => {
+      // Invalidate and refetch registrations after successful creation
+      //queryClient.invalidateQueries({ queryKey: ["registrations", tournamentId] });
+      //navigate(`/tournament/${tournamentId}/participants`);
+    }
+  });
+
+ 
   console.log("selected dojo:", dojoInput || "none");
 
   const navigate = useNavigate();
@@ -132,34 +164,64 @@ export function CreateParticipant({ tournamentId }: props) {
           />
         </div>
         <div className="col-span-1">
-  <label className="block text-sm font-medium text-gray-200 mb-1">
-    Gender
-  </label>
-  <div className="flex items-center gap-6 mt-2">
-    <label className="inline-flex items-center">
-      <input
-        type="radio"
-        name="gender"
-        value={1}
-        // checked={gender === "male"}
-        // onChange={() => setGender("male")}
-        className="form-radio text-blue-600"
-      />
-      <span className="ml-2 text-gray-200">Male</span>
-    </label>
-    <label className="inline-flex items-center">
-      <input
-        type="radio"
-        name="gender"
-        value={2}
-        // checked={gender === "female"}
-        // onChange={() => setGender("female")}
-        className="form-radio text-pink-600"
-      />
-      <span className="ml-2 text-gray-200">Female</span>
-    </label>
-  </div>
-</div>
+          <label className="block text-sm font-medium text-gray-200 mb-1">
+            Gender
+          </label>
+          <div className="flex items-center gap-6 mt-2">
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                name="gender"
+                value={1}
+                // checked={gender === "male"}
+                // onChange={() => setGender("male")}
+                className="form-radio text-blue-600"
+              />
+              <span className="ml-2 text-gray-200">Male</span>
+            </label>
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                name="gender"
+                value={2}
+                // checked={gender === "female"}
+                // onChange={() => setGender("female")}
+                className="form-radio text-pink-600"
+              />
+              <span className="ml-2 text-gray-200">Female</span>
+            </label>
+          </div>
+        </div>
+        {/* Events field in the same column as First Name and Belt Color */}
+        <div className="col-span-1">
+          {mappedEvents.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-200 mb-1 mt-4">
+                Events
+              </label>
+              <div className="flex flex-col gap-2 mt-1">
+                {mappedEvents.map(event => (
+                  <label key={event.id} className="inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      value={event.EventId}
+                      checked={selectedEvents.includes(event.EventId)}
+                      onChange={e => {
+                        setSelectedEvents(prev =>
+                          e.target.checked
+                            ? [...prev, event.EventId]
+                            : prev.filter(id => id !== event.EventId)
+                        );
+                      }}
+                      className="form-checkbox text-green-500"
+                    />
+                    <span className="ml-2 text-gray-200">{event.Name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
     </div>

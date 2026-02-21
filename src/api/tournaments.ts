@@ -6,8 +6,9 @@ import type {
   TournamentInput,
   TournamentStatus,
   TournamentStatusType,
-  DojoResponse
-} from "../../shared/index";
+  DojoResponse,
+  CreateRegistrationPayload
+} from "@shared/index";
 
 
 
@@ -76,8 +77,8 @@ export function getTournamentEventDivisions(tournamentId: number, eventId: numbe
 }
 
 export function saveTournamentEventDivisions(
-  tournamentId: number,
-  eventId: number,
+  tournamentId: number, //tournament id identifies the tournament
+  eventId: number, // event id identifies Kata, Kumite, etc. within the tournament
   divisions: { divisionId: number; genderId: number }[]
 ) {
   return api
@@ -119,4 +120,10 @@ export function togglePaidParticipant(participantId: number, paid: boolean) {
 export function getDojoList(): Promise<DojoResponse[]> {
   return api.get("/api/dojos")
     .then(res => res.data as DojoResponse[]);
+}
+
+
+export function createRegistration(tournamentId: number, registrationData: CreateRegistrationPayload) {
+  return api.post(`/api/tournaments/${tournamentId}/registrations`, registrationData)
+    .then(res => res.data);
 }
