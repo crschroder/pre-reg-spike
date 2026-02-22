@@ -17,8 +17,6 @@ import type {
   DivisionPayload,
   DojoResponse,
   EventSelection,
-  Participant,
-  ParticipantCreatePayload,
   ParticipantUpdatePayload,
   TournamentEventDivisionRow,
   TournamentEventPayload,
@@ -401,7 +399,7 @@ app.get('/api/event-types', async (_req: Request, res: Response, next: NextFunct
   }
 });
 
-app.get('/api/event-types/:tournamentId', async (req: Request, res: Response, next: NextFunction) => {
+app.get('/api/event-types/:tournamentId', async (_req: Request, _res: Response, next: NextFunction) => {
   try {
   } catch (err) {
     next(err); // delegate to error handler
@@ -811,7 +809,7 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{id: string}, Partici
 
 });
 
-app.get('/api/dojos', async (req: Request, res: Response, next: NextFunction) => {
+app.get('/api/dojos', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const dojos = await getPrisma().dojo.findMany();
     const mapped: DojoResponse[] = dojos.map(({ id, dojoName, city }) => ({
