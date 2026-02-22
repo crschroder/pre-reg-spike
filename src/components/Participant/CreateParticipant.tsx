@@ -1,11 +1,15 @@
-import { createRegistration, getDojoList, getTournamentById, getTournamentEvents } from "@/api/tournaments";
-import { CreateRegistrationPayload } from "@shared";
+import { createRegistration, getDojoList, getParticipantById, getTournamentById, getTournamentEvents } from "@/api/tournaments";
+import { CreateRegistrationPayload, EventSelection } from "@shared";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { set } from "date-fns";
+import { on } from "events";
 import { useEffect, useRef, useState } from "react";
 
 
-type props = { tournamentId: number; };
+type props = { tournamentId: number; 
+  participantId?: number | undefined
+ };
 
 
 const beltColors = [
@@ -19,15 +23,33 @@ const beltColors = [
   { id: 8, name: "Black" }
 ] as const;
 
-export function CreateParticipant({ tournamentId }: props) {
+export function CreateParticipant({ tournamentId, participantId }: props) {
   const { data, isLoading } = useQuery({
     queryKey: ["tournament", tournamentId],
     queryFn: () => getTournamentById(tournamentId!),
     enabled: !!tournamentId,
   });
-
+  console.log("TournamentID:", tournamentId);
   // State for form data
-  const [formData, setFormData] = useState<CreateRegistrationPayload | null>(null);
+  const [formData, setFormData] = useState<CreateRegistrationPayload>({
+  email: "",
+  participant: {
+    firstName: "",
+    lastName: "",
+    age: 0,
+    genderId: 0,
+    beltRankId: 0,
+    notes: "",
+    dojoId: 0,
+    otherDojoName: "",
+    paid: false,
+    checkedIn: false,
+  },
+  events: [],
+});
+
+  const isEdit = Boolean(participantId);
+  
 
   const {data: dojoList} = useQuery({
     queryKey: ["dojos"],
@@ -48,6 +70,12 @@ export function CreateParticipant({ tournamentId }: props) {
 
   const [dojoInput, setDojoInput] = useState("");
 
+  const { data: participantData, isLoading: isLoadingParticipant } = useQuery({
+    queryKey: ["participant", participantId],
+    queryFn: () => getParticipantById(participantId!),
+    enabled: isEdit, // only fetch when editing
+  });
+
 
 
   const [dojoValue, setDojoValue] = useState<{ id: number | null; freeText?: string }>({ id: null });
@@ -55,21 +83,70 @@ export function CreateParticipant({ tournamentId }: props) {
   // State for selected events
   const [selectedEvents, setSelectedEvents] = useState<number[]>([]);
 
+  const [savedMessage, setSavedMessage] = useState("");
   const mutation = useMutation({
     mutationFn: (newRegistration: CreateRegistrationPayload) =>
       createRegistration(tournamentId, newRegistration),
     onSuccess: () => {
+      setSavedMessage("Data has been saved.");
       // Invalidate and refetch registrations after successful creation
       //queryClient.invalidateQueries({ queryKey: ["registrations", tournamentId] });
       //navigate(`/tournament/${tournamentId}/participants`);
+      setTimeout(() => setSavedMessage(""), 3000);
     }
   });
 
+  useEffect(() => {
+  setFormData(prev => ({
+    ...prev,
+    events: selectedEvents
+  } as CreateRegistrationPayload));
+}, [selectedEvents]);
+
+// prefill form when participant data is loaded for editing
+useEffect(() => {
+  if (participantData) {
+   
+    setFormData({
+      email: participantData.email || "",
+      participant: {
+        firstName: participantData.participant.firstName,
+        lastName: participantData.participant.lastName,
+        age: participantData.participant.age,
+        genderId: participantData.participant.genderId,
+        beltRankId: participantData.participant.beltRankId,
+        notes: participantData.participant.notes,
+        dojoId: participantData.participant.dojoId,
+        otherDojoName: participantData.participant.otherDojoName,
+        paid: participantData.participant.paid,
+        checkedIn: participantData.participant.checkedIn,
+      },
+      events: participantData.events.map((e) => e.eventId) || [],
+    });    
+    if (participantData.participant.dojoId) {
+      
+      const dojo = dojoList?.find(d => d.id === participantData.participant.dojoId);
+      if (dojo) {
+        setDojoValue({ id: dojo.id });
+      } else if (participantData.participant.otherDojoName) {
+        setDojoValue({ id: 18, freeText: participantData.participant.otherDojoName });
+      }
+    }
+    if(participantData.events) {
+      debugger;
+      console.log("Participant events:", participantData.events);
+      // const eventIds = mappedEvents
+      //   .filter(e => participantData.events.some((pe: EventSelection) => pe.eventId === e.EventId))
+      //   .map(e => e.EventId);
+      // setSelectedEvents(eventIds);
+    }
+  }
+}, [participantData, dojoList]);
+
  
-  console.log("selected dojo:", dojoInput || "none");
 
   const navigate = useNavigate();
-  const isEdit = true;
+  
   const handleNext = () => {
     // TODO, change this to handle save and proceed    
     if (tournamentId) {
@@ -81,15 +158,29 @@ export function CreateParticipant({ tournamentId }: props) {
   };
 
   const handleBack = () => {
-    console.log("Going back to participant dashboard");
+    
     navigate({
       to: `/tournament/participant`,
 
     });
   };
 
+  const onSubmit  = () => {
+    setSavedMessage("Saving data...");
+    mutation.mutate(formData!, {
+      onSuccess: () => {
+       
+      }
+    }); 
+  }
+
 
   return (<div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
+    {savedMessage && (
+      <div className="mb-4 p-3 bg-green-700 text-white rounded shadow text-center">
+        {savedMessage}
+      </div>
+    )}
     <div className="p-8 w-full max-w-6xl">
       <h1 className="text-xl font-semibold mb-6">
         {isLoading ? "Loading..." : `Register for tournament : ${data.name}`}
@@ -102,7 +193,9 @@ export function CreateParticipant({ tournamentId }: props) {
           <input
             type="text"
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={formData?.email}
             placeholder="Enter participant email"
+            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value } as CreateRegistrationPayload))}  
           />
         </div>
         <div className="col-span-1">
@@ -113,6 +206,14 @@ export function CreateParticipant({ tournamentId }: props) {
             type="text"
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Participant first name"
+            value={formData?.participant.firstName}
+            onChange={(e) => setFormData(prev => ({
+              ...prev,
+              participant: {
+                ...prev?.participant,
+                firstName: e.target.value
+              }
+            } as CreateRegistrationPayload))} 
           />
         </div>
         <div className="col-span-1">
@@ -123,6 +224,14 @@ export function CreateParticipant({ tournamentId }: props) {
             type="text"
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter participant last name"
+            value={formData?.participant.lastName}
+            onChange={(e) => setFormData(prev => ({
+              ...prev,
+              participant: {
+                ...prev?.participant,
+                lastName: e.target.value
+              }
+            } as CreateRegistrationPayload))}  
           />
         </div>
         <div className="col-span-1">
@@ -133,6 +242,14 @@ export function CreateParticipant({ tournamentId }: props) {
             type="number"
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter participant age (as of tournament date)"
+            value={formData.participant.age === 0 ? "" : formData.participant.age}
+            onChange={(e) => setFormData(prev => ({
+              ...prev,
+              participant: {
+                ...prev?.participant,
+                age: Number(e.target.value)
+              }
+            } as CreateRegistrationPayload))}
           />
         </div>
         <div className="col-span-1">
@@ -142,15 +259,25 @@ export function CreateParticipant({ tournamentId }: props) {
           <select
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             defaultValue=""
+            value={formData?.participant.beltRankId==0 ? "" : formData?.participant.beltRankId  }
+            onChange={(e) =>
+                setFormData(prev => ({
+              ...prev,
+              participant: {
+                ...prev?.participant,
+                beltRankId: e.target.value ? Number(e.target.value) : undefined
+              }
+            } as CreateRegistrationPayload))}
           >
             <option value="" disabled>
-              Select belt color
+              Select belt color 
             </option>
             {beltColors.map((belt) => (
-              <option key={belt.name} value={belt.name}>
+              <option key={belt.name} value={belt.id} >
                 {belt.name}
               </option>
             ))}
+
           </select>
         </div>
         <div className="col-span-1">
@@ -160,7 +287,17 @@ export function CreateParticipant({ tournamentId }: props) {
           <DojoAutocomplete
           dojoList={dojoList || []}
           value={dojoValue}
-          onChange={setDojoValue}
+          onChange={(value) => {
+            setDojoValue(value);
+            setFormData(prev => ({
+              ...prev,
+              participant: {
+                ...prev?.participant,
+                dojoId: value?.id || null,
+                otherDojoName: value.id === 18 ? value.freeText : undefined
+              }
+            } as CreateRegistrationPayload));
+          }}
           />
         </div>
         <div className="col-span-1">
@@ -173,8 +310,16 @@ export function CreateParticipant({ tournamentId }: props) {
                 type="radio"
                 name="gender"
                 value={1}
-                // checked={gender === "male"}
-                // onChange={() => setGender("male")}
+                checked={formData.participant.genderId === 1}
+                onChange ={(e) => {
+                
+                  setFormData(prev => ({
+                  ...prev,
+                  participant: {
+                    ...prev?.participant,
+                    genderId: Number(e.target.value)
+                  }
+                } as CreateRegistrationPayload))}}
                 className="form-radio text-blue-600"
               />
               <span className="ml-2 text-gray-200">Male</span>
@@ -184,8 +329,15 @@ export function CreateParticipant({ tournamentId }: props) {
                 type="radio"
                 name="gender"
                 value={2}
-                // checked={gender === "female"}
-                // onChange={() => setGender("female")}
+                onChange ={(e) => {
+                  
+                  setFormData(prev => ({
+                  ...prev,
+                  participant: {
+                    ...prev?.participant,
+                    genderId: Number(e.target.value)
+                  }
+                } as CreateRegistrationPayload))}}
                 className="form-radio text-pink-600"
               />
               <span className="ml-2 text-gray-200">Female</span>
@@ -204,13 +356,13 @@ export function CreateParticipant({ tournamentId }: props) {
                   <label key={event.id} className="inline-flex items-center">
                     <input
                       type="checkbox"
-                      value={event.EventId}
-                      checked={selectedEvents.includes(event.EventId)}
+                      value={event.Name}
+                      checked={selectedEvents.includes(event.Name)}
                       onChange={e => {
                         setSelectedEvents(prev =>
                           e.target.checked
-                            ? [...prev, event.EventId]
-                            : prev.filter(id => id !== event.EventId)
+                            ? [...prev, event.Name]
+                            : prev.filter(name => name !== event.Name)
                         );
                       }}
                       className="form-checkbox text-green-500"
@@ -227,6 +379,17 @@ export function CreateParticipant({ tournamentId }: props) {
     </div>
     <div className="mt-8 flex gap-4 justify-center">
       <button
+        onClick={onSubmit}
+        disabled={mutation.isPending}
+        className={`px-4 py-2 rounded 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
+          }`}
+      >
+        Submit
+      </button>
+
+
+
+      {/* <button
         onClick={handleBack}
         //disabled={true}
         className={`px-4 py-2 rounded 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
@@ -243,7 +406,7 @@ export function CreateParticipant({ tournamentId }: props) {
           }`}
       >
         Next
-      </button>
+      </button> */}
     </div>
   </div>)
 }
@@ -273,7 +436,7 @@ export const DojoAutocomplete: React.FC<DojoAutocompleteProps> = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlighted, setHighlighted] = useState<number>(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-
+  console.log("DojoAutocomplete value:", value);
    const filteredDojos =
     dojoList.filter(
       (dojo) =>
@@ -342,7 +505,7 @@ export const DojoAutocomplete: React.FC<DojoAutocompleteProps> = ({
           setHighlighted(-1);
         }}
         onFocus={() => setShowDropdown(true)}
-        onBlur={() => setTimeout(() => setShowDropdown(false), 100)}
+         onBlur={() => setTimeout(() => setShowDropdown(false), 100)}
         onKeyDown={handleKeyDown}
         className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
         placeholder={placeholder}

@@ -16,6 +16,9 @@ import type {
   CreateRegistrationPayload,
   DivisionPayload,
   DojoResponse,
+  EventSelection,
+  Participant,
+  ParticipantCreatePayload,
   ParticipantUpdatePayload,
   TournamentEventDivisionRow,
   TournamentEventPayload,
@@ -816,6 +819,43 @@ app.get('/api/dojos', async (req: Request, res: Response, next: NextFunction) =>
   name: dojoName,
   city,
 }));
+
+    res.json(mapped);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/api/tournaments/:id/participant', async (req: Request, res: Response, next: NextFunction) => {
+  try {    const participantId = Number(req.params.id);
+    if (!participantId || isNaN(participantId)) {
+      return res.status(400).json({ error: "Invalid participant ID" });
+    }
+    const participant = await getPrisma().participant.findUnique({
+      where: { id: participantId },
+      include: {events: {include: {event: true}},  
+        user : true}
+    });
+    if (!participant) {
+      return res.status(404).json({ error: "Participant not found" });
+    }
+
+    const mapped : CreateRegistrationPayload = {
+      email: participant.user.email,
+      participant: {
+        firstName: participant.firstName,
+        lastName: participant.lastName,
+        age: participant.age,
+        genderId: participant.genderId,
+        beltRankId: participant.beltRankId,
+        notes: participant.notes || undefined,
+        dojoId: participant.dojoId || undefined,
+        otherDojoName: participant.otherDojoName || undefined,
+        paid: participant.paid || undefined,
+        checkedIn: participant.checkedIn || undefined
+      },
+      events: participant.events.map(e => e.event.name.toLowerCase() as EventSelection)
+    };  
 
     res.json(mapped);
   } catch (err) {

@@ -124,6 +124,13 @@ export function getDojoList(): Promise<DojoResponse[]> {
 
 
 export function createRegistration(tournamentId: number, registrationData: CreateRegistrationPayload) {
+
+  console.log("the passed in tournmaentId is:", tournamentId);
   return api.post(`/api/tournaments/${tournamentId}/registrations`, registrationData)
     .then(res => res.data);
+}
+
+export function getParticipantById(participantId: number) : Promise<CreateRegistrationPayload> {
+  return api.get(`/api/tournaments/${participantId}/participant`)
+    .then(res => res.data as CreateRegistrationPayload);
 }

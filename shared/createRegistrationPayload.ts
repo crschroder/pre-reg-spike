@@ -25,11 +25,18 @@ export type CreateRegistrationPayload = {
   otherDojoName?: string;
   paid?: boolean;
   checkedIn?: boolean;
+  // participantEvents?: ParticipantEvent[]; // Optional, only needed for edit form
+  // userEmail?: string; // Optional, only needed for edit form to show email
   // ...any other fields
 };
 
 
-export type ParticipantCreatePayload = Omit<Participant, 'id'>;
+export type ParticipantEvent = {
+  id: number;
+  eventId: number;
+};
+
+export type ParticipantCreatePayload = Omit<Participant, 'id' >;//| 'participantEvents'|'userEmail'> & {};
 
 // For update: omit id, all fields optional
 export type ParticipantUpdatePayload = Partial<Omit<Participant, 'id'>> & {
