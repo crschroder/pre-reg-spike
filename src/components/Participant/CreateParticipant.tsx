@@ -1,4 +1,4 @@
-import { createRegistration, getDojoList, getParticipantById, getTournamentById, getTournamentEvents } from "@/api/tournaments";
+import { createRegistration, getDojoList, getParticipantById, getTournamentById, getTournamentEvents, updateParticipant } from "@/api/tournaments";
 import { CreateRegistrationPayload, EventSelection } from "@shared";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -96,6 +96,11 @@ export function CreateParticipant({ tournamentId, participantId }: props) {
     }
   });
 
+  // const updateMutaion = useMutation({
+  //   mutationFn: (updatedRegistration: ParticipantUpdatePayload) =>
+  //     updateParticipant(participantId!, updatedRegistration),
+
+
   useEffect(() => {
   setFormData(prev => ({
     ...prev,
@@ -133,14 +138,20 @@ useEffect(() => {
       }
     }
     if(participantData.events) {
-      debugger;
+     
       console.log("Participant events:", participantData.events);
-      // const eventIds = mappedEvents
-      //   .filter(e => participantData.events.some((pe: EventSelection) => pe.eventId === e.EventId))
-      //   .map(e => e.EventId);
-      // setSelectedEvents(eventIds);
+      const  a = participantData.events.some((pe: EventSelection) => pe === "kumite");
+      if(a) {        console.log("Participant is in kumite");
+      } else {
+        console.log("Participant is NOT in kumite");
+      }
+
+      const eventIds = mappedEvents
+        .filter((e: { Name: string; }) => participantData.events.some((pe: EventSelection) => pe === e.Name.toLowerCase() ))
+        .map(e => e.Name);
+       setSelectedEvents(eventIds);
     }
-  }
+  }``
 }, [participantData, dojoList]);
 
  
@@ -165,6 +176,11 @@ useEffect(() => {
     });
   };
 
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    console.log("Input changed:", name, value);
+  };
+
   const onSubmit  = () => {
     setSavedMessage("Saving data...");
     mutation.mutate(formData!, {
@@ -173,7 +189,7 @@ useEffect(() => {
       }
     }); 
   }
-
+  console.log("Selected events:", selectedEvents);
 
   return (<div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
     {savedMessage && (
@@ -192,10 +208,12 @@ useEffect(() => {
           </label>
           <input
             type="text"
+            name="email"
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={formData?.email}
             placeholder="Enter participant email"
-            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value } as CreateRegistrationPayload))}  
+           // onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value } as CreateRegistrationPayload))}  
+           onChange= {onChange}
           />
         </div>
         <div className="col-span-1">
@@ -204,6 +222,7 @@ useEffect(() => {
           </label>
           <input
             type="text"
+           
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Participant first name"
             value={formData?.participant.firstName}

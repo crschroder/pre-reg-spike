@@ -134,3 +134,9 @@ export function getParticipantById(participantId: number) : Promise<CreateRegist
   return api.get(`/api/tournaments/${participantId}/participant`)
     .then(res => res.data as CreateRegistrationPayload);
 }
+
+
+export function updateParticipant(participantId: number, participantData: ParticipantUpdatePayload) {
+  return api.put(`/api/participant/${participantId}`, participantData)
+    .then(res => res.data);
+}

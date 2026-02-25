@@ -15,16 +15,16 @@ X-API-Key: {{apiKey}}
 {
   "email": "michelle.schroder@example.com",
   "participant": {
-    "firstName": "Michelle",
+    "firstName": "Amber",
     "lastName": "Schroder",
-    "age": 49,
+    "age": 16,
     "genderId": 2,
     "beltRankId": 7,
     "notes": "From Test harness", 
     "dojoId": 12,
     "otherDojoName": null
   },
-  "events": ["kumite"]
+  "events": ["kumite","kata"]
 }
 
 ### Create second participant with same email (should reuse user)
@@ -89,3 +89,16 @@ X-API-Key: {{apiKey}}
 ### Get event types for tournament
 GET {{baseUrl}}/api/tournaments/{{tournamentId}}/tournamentEvents
 X-API-Key: {{apiKey}}
+
+
+### Update participant name
+PATCH {{baseUrl}}/api/participant/1413
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+
+{
+  "firstName": "Peg",
+  "lastName": "Test",
+  "events": ["kata"] 
+}
+

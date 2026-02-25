@@ -23,6 +23,7 @@ import type {
   TournamentStatusType,
   TypedRequest,
 } from './shared'
+import e from 'cors'
 
 dotenv.config()
 
@@ -783,28 +784,151 @@ app.get('/api/tournaments/:id/participants/lite', async (req: Request, res: Resp
 // });
 
 
-app.patch('/api/participant/:id', async (req: TypedRequest<{id: string}, ParticipantUpdatePayload>, res: Response, next: NextFunction) => {
+app.patch('/api/participant/:id', async (req: TypedRequest<{ id: string }, ParticipantUpdatePayload>, res: Response, next: NextFunction) => {
   try {
     const participantId = Number(req.params.id);
     if (!participantId || isNaN(participantId)) {
       return res.status(400).json({ error: "Invalid participant ID" });
-    }  
+    }
+    const payload = req.body as ParticipantUpdatePayload;
+    const {
+      //   email,
 
-    const allowedFields: (keyof ParticipantUpdatePayload)[] = ['paid', 'checkedIn', 'notes', 'firstName', 'lastName', 'age', 'beltRankId', 'dojoId'];
+      //     firstName,
+      //     lastName,
+      age,
+      genderId,
+      beltRankId
+      //     notes,
+      //     dojoId,
+      //     otherDojoName,
+      //     paid,
+      //     checkedIn,
+    } = payload;
+    let events: EventSelection[] | undefined = payload.events;
+
+    const allowedFields: (keyof ParticipantUpdatePayload)[] = ['paid', 'checkedIn', 'notes', 'firstName', 'lastName', 'age', 'beltRankId', 'dojoId', 'otherDojoName', 'email', 'events'];
     const updateData: Prisma.ParticipantUpdateInput = {};
 
     for (const field of allowedFields) {
-      if (field in req.body) {
-        (updateData as any)[field] = req.body[field];
+      if (field in payload && field !== 'events') {
+        (updateData as any)[field] = payload[field];
       }
     }
-     const updated = await getPrisma().participant.update({
+    const updated = await getPrisma().participant.update({
       where: { id: participantId },
       data: updateData,
     });
+
+    if (events) {
+      // Delete all existing ParticipantEvent records for this participant
+      await getPrisma().participantEvent.deleteMany({
+        where: { participantId },
+      });
+
+      // Insert new ParticipantEvent records
+      const eventIds = await getPrisma().event.findMany({
+        where: {
+          name: { in: events ? events.map((e: any) => String(e).toLowerCase()) : [] }
+        },
+        select: { id: true }
+      });
+
+      if (eventIds.length > 0) {
+        await getPrisma().participantEvent.createMany({
+          data: eventIds.map(({ id }) => ({
+            participantId,
+            eventId: id,
+          })),
+        });
+      }
+    }
+
+    if (age || genderId || beltRankId || events) {
+
+      const divisions = await getPrisma().tournamentEventDivision.findMany({
+        where: {
+          tournamentEvent: {
+            tournamentId: updated.tournamentId
+          },
+          genderId: {
+            in: [updated.genderId, 3]   // competitor gender OR coed
+          },
+          division: {
+            beltRankId: updated.beltRankId,
+            divisionType: {
+              minAge: { lte: updated.age },
+              maxAge: { gte: updated.age }
+            }
+          }
+        },
+        include: {
+          tournamentEvent: {
+            include: { event: true }
+          },
+          division: {
+            include: {
+              divisionType: true,
+              beltRank: true
+            }
+          }
+        }
+      });
+
+      const selectedDivisionIds: number[] = [];
+      const selectedEventIds: number[] = [];
+
+      if (!events || events.length === 0) {
+        events = [];
+        
+        await getPrisma().participantEvent.findMany({
+          where: { participantId },
+          include: { event: true }
+        }).then(res => res.map(pe => pe.event.name.toLowerCase() as EventSelection));
+      }
+
+      events.forEach(event => {
+        const eventName = String(event).toLowerCase();
+
+        const genderMatches = divisions.filter(
+          d =>
+            d.tournamentEvent.event.name.toLowerCase() === eventName &&
+            d.genderId === genderId
+        );
+
+        const matches =
+          genderMatches.length > 0
+            ? genderMatches
+            : divisions.filter(
+              d =>
+                d.tournamentEvent.event.name.toLowerCase() === eventName &&
+                d.genderId === 3
+            );
+
+        selectedDivisionIds.push(...matches.map(d => d.id));
+
+        // Track unique event IDs for ParticipantEvent table
+        matches.forEach(match => {
+          if (!selectedEventIds.includes(match.tournamentEvent.eventId)) {
+            selectedEventIds.push(match.tournamentEvent.eventId);
+          }
+        });
+      });
+
+      await getPrisma().registration.deleteMany({
+        where: { participantId },
+      });
+
+
+
+    }
+
+
+
     res.json({ message: "Participant updated", participant: updated });
 
-  } catch (err) {    next(err);
+  } catch (err) {
+    next(err);
   }
 
 });

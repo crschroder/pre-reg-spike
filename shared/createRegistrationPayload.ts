@@ -41,4 +41,5 @@ export type ParticipantCreatePayload = Omit<Participant, 'id' >;//| 'participant
 // For update: omit id, all fields optional
 export type ParticipantUpdatePayload = Partial<Omit<Participant, 'id'>> & {
   events?: EventSelection[];
+  email?: string; // Allow updating email as well
 };
