@@ -805,7 +805,7 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{ id: string }, Parti
       //     paid,
       //     checkedIn,
     } = payload;
-    let events: EventSelection[] | undefined = payload.events;
+    let events: EventSelection[] = payload.events ?? [];
 
     const allowedFields: (keyof ParticipantUpdatePayload)[] = ['paid', 'checkedIn', 'notes', 'firstName', 'lastName', 'age', 'beltRankId', 'dojoId', 'otherDojoName', 'email', 'events'];
     const updateData: Prisma.ParticipantUpdateInput = {};
@@ -881,7 +881,7 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{ id: string }, Parti
       if (!events || events.length === 0) {
         events = [];
         
-        await getPrisma().participantEvent.findMany({
+        events = await getPrisma().participantEvent.findMany({
           where: { participantId },
           include: { event: true }
         }).then(res => res.map(pe => pe.event.name.toLowerCase() as EventSelection));
@@ -893,7 +893,7 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{ id: string }, Parti
         const genderMatches = divisions.filter(
           d =>
             d.tournamentEvent.event.name.toLowerCase() === eventName &&
-            d.genderId === genderId
+            d.genderId === updated.genderId
         );
 
         const matches =
@@ -918,6 +918,24 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{ id: string }, Parti
       await getPrisma().registration.deleteMany({
         where: { participantId },
       });
+
+      //const result = await getPrisma().$transaction(async (tx) => {
+  
+
+  await getPrisma().registration.createMany({
+    data: selectedDivisionIds.map((divisionId) => ({
+      participantId: updated.id,
+      eventDivisionId: divisionId
+    }))
+  });
+
+  // Insert selected events into ParticipantEvent table
+  // await getPrisma().participantEvent.createMany({
+  //   data: selectedEventIds.map((eventId) => ({
+  //     participantId: updated.id,
+  //     eventId: eventId
+  //   }))
+  // });
 
 
 
