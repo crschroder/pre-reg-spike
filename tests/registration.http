@@ -97,8 +97,8 @@ Content-Type: application/json
 X-API-Key: {{apiKey}}
 
 {
-  "firstName": "Peg",
+  "firstName": "Peggy",
   "lastName": "Test",
-  "events": ["kata"] 
+  "events": ["kumite"] 
 }
 

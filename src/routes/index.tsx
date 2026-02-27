@@ -57,45 +57,38 @@ function App() {
         <div className="relative max-w-5xl mx-auto">
           <div className="flex items-center justify-center gap-6 mb-6">
             <img
-              src="/tanstack-circle-logo.png"
-              alt="TanStack Logo"
+              src="/KYOKAI-LOGO2.svg"
+              alt="Kyuoku Kai Logo"
               className="w-24 h-24 md:w-32 md:h-32"
             />
             <h1 className="text-6xl md:text-7xl font-black text-white [letter-spacing:-0.08em]">
-              <span className="text-gray-300">TANSTACK</span>{' '}
+              <span className="text-gray-300">KYO</span>
               <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                START
+                KAI
               </span>
             </h1>
           </div>
           <p className="text-2xl md:text-3xl text-gray-300 mb-4 font-light">
-            The framework for next generation AI applications
+            This is a demo application for the Kyokai Event Manager.
           </p>
           <p className="text-lg text-gray-400 max-w-3xl mx-auto mb-8">
-            Full-stack framework powered by TanStack Router for React and Solid.
-            Build modern applications with server functions, streaming, and type
-            safety.
+            The purpose of this application is to move the pre-registration process for our tournaments online. It is built using the latest web technologies, including React, TypeScript, and Tailwind CSS, to provide a modern and responsive user experience.
           </p>
           <div className="flex flex-col items-center gap-4">
-            <a
+            {/* <a
               href="https://tanstack.com/start"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-cyan-500/50"
             >
               Documentation
-            </a>
-            <p className="text-gray-400 text-sm mt-2">
-              Begin your TanStack Start journey by editing{' '}
-              <code className="px-2 py-1 bg-slate-700 rounded text-cyan-400">
-                /src/routes/index.tsx
-              </code>
-            </p>
+            </a> */}
+            
           </div>
         </div>
       </section>
 
-      <section className="py-16 px-6 max-w-7xl mx-auto">
+      {/* <section className="py-16 px-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature, index) => (
             <div
@@ -112,7 +105,7 @@ function App() {
             </div>
           ))}
         </div>
-      </section>
+      </section> */}
     </div>
   )
 }

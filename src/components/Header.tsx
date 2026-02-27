@@ -37,7 +37,14 @@ export default function Header() {
             <Menu size={24} />
           </button>
           <h1 className="text-xl font-semibold leading-none">
-            <Link to="/">Kyuoku Kai Tournament Manager</Link>
+            <Link to="/" className="flex items-center gap-4">
+              <img
+                src="/KYOKAI-LOGO2.svg"
+                alt="Kyuoku Kai Logo"
+                className="h-16 w-auto"
+              />
+              <span>Kyokai Event Manager</span>
+            </Link>
           </h1>
         </div>
 
