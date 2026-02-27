@@ -137,6 +137,6 @@ export function getParticipantById(participantId: number) : Promise<CreateRegist
 
 
 export function updateParticipant(participantId: number, participantData: ParticipantUpdatePayload) {
-  return api.put(`/api/participant/${participantId}`, participantData)
+  return api.patch(`/api/participant/${participantId}`, participantData)
     .then(res => res.data);
 }
