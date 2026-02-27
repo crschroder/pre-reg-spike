@@ -23,7 +23,7 @@ import type {
   TournamentStatusType,
   TypedRequest,
 } from './shared'
-
+import e from 'cors'
 
 dotenv.config()
 
