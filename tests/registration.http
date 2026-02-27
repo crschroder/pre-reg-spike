@@ -98,7 +98,8 @@ X-API-Key: {{apiKey}}
 
 {
   "firstName": "Peggy",
-  "lastName": "Test",
-  "events": ["kumite"] 
+  "lastName": "Testing",
+  "age": 16,
+  "events": ["kumite","kata"] 
 }
 
