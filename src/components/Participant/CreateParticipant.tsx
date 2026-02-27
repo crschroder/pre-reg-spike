@@ -1,6 +1,6 @@
 import { createRegistration, getDojoList, getParticipantById, getTournamentById, getTournamentEvents, updateParticipant } from "@/api/tournaments";
-import { CreateRegistrationPayload, EventSelection } from "@shared";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { CreateRegistrationPayload, EventSelection, ParticipantUpdatePayload } from "@shared";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { set } from "date-fns";
 import { on } from "events";
@@ -48,8 +48,13 @@ export function CreateParticipant({ tournamentId, participantId }: props) {
   events: [],
 });
 
+const [updateFormData, setUpdateFormData] = useState<ParticipantUpdatePayload>({});
+
+
+const [dirtyList, setDirtyList] = useState<string[]>([]);
+
   const isEdit = Boolean(participantId);
-  
+
 
   const {data: dojoList} = useQuery({
     queryKey: ["dojos"],
@@ -84,22 +89,54 @@ export function CreateParticipant({ tournamentId, participantId }: props) {
   const [selectedEvents, setSelectedEvents] = useState<number[]>([]);
 
   const [savedMessage, setSavedMessage] = useState("");
+  const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (newRegistration: CreateRegistrationPayload) =>
+      isEdit ? updateParticipant(participantId!, getUpdatePayload()) :
       createRegistration(tournamentId, newRegistration),
-    onSuccess: () => {
+    onSuccess: async(result) => {
       setSavedMessage("Data has been saved.");
       // Invalidate and refetch registrations after successful creation
-      //queryClient.invalidateQueries({ queryKey: ["registrations", tournamentId] });
+      queryClient.invalidateQueries({ queryKey: ["participant-summary", tournamentId] });
       //navigate(`/tournament/${tournamentId}/participants`);
       setTimeout(() => setSavedMessage(""), 3000);
+      if(!isEdit) {
+        navigate({
+          to: `/tournament/participant/register/${tournamentId}/update-participant/${result.id}`,         
+        });
+      }
     }
   });
 
-  // const updateMutaion = useMutation({
-  //   mutationFn: (updatedRegistration: ParticipantUpdatePayload) =>
-  //     updateParticipant(participantId!, updatedRegistration),
-
+  const getUpdatePayload = (): ParticipantUpdatePayload => {
+    const payload: ParticipantUpdatePayload = {};
+    if (dirtyList.includes("email")) {
+      payload.email = formData.email;
+    }
+    if (dirtyList.includes("firstName")) {
+      payload.firstName = formData.participant.firstName;
+    }
+    if (dirtyList.includes("lastName")) {
+      payload.lastName = formData.participant.lastName;
+    }
+    if (dirtyList.includes("age")) {
+      payload.age = formData.participant.age;
+    }
+    if (dirtyList.includes("genderId")) {
+      payload.genderId = formData.participant.genderId; 
+    }
+    if (dirtyList.includes("beltRankId")) {
+      payload.beltRankId = formData.participant.beltRankId;
+    }
+    if (dirtyList.includes("dojoId") || dirtyList.includes("otherDojoName")) {
+      payload.dojoId = formData.participant.dojoId;
+      payload.otherDojoName = formData.participant.otherDojoName;
+    } 
+    if (dirtyList.includes("events")) {
+      payload.events = formData.events;
+    }
+    return payload;
+  }
 
   useEffect(() => {
   setFormData(prev => ({
@@ -126,7 +163,7 @@ useEffect(() => {
         paid: participantData.participant.paid,
         checkedIn: participantData.participant.checkedIn,
       },
-      events: participantData.events.map((e) => e.eventId) || [],
+      events: participantData.events || [] //.map((e) => e.eventId) || [],
     });    
     if (participantData.participant.dojoId) {
       
@@ -151,7 +188,7 @@ useEffect(() => {
         .map(e => e.Name);
        setSelectedEvents(eventIds);
     }
-  }``
+  }
 }, [participantData, dojoList]);
 
  
@@ -175,10 +212,14 @@ useEffect(() => {
 
     });
   };
-
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    console.log("Input changed:", name, value);
+ 
+  const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+     setDirtyList((prev) => {
+    if (!prev.includes(e.target.name)) {
+      return [...prev, e.target.name];
+    }
+    return prev; // Return the same list if the item already exists
+  });
   };
 
   const onSubmit  = () => {
@@ -212,8 +253,8 @@ useEffect(() => {
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={formData?.email}
             placeholder="Enter participant email"
-           // onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value } as CreateRegistrationPayload))}  
-           onChange= {onChange}
+           onChange={(e) => {setFormData(prev => ({ ...prev, email: e.target.value } as CreateRegistrationPayload)); onChange(e);}}  
+           
           />
         </div>
         <div className="col-span-1">
@@ -226,13 +267,17 @@ useEffect(() => {
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Participant first name"
             value={formData?.participant.firstName}
-            onChange={(e) => setFormData(prev => ({
+            name="firstName"
+           onChange={(e) => {setFormData(prev => ({
               ...prev,
               participant: {
                 ...prev?.participant,
                 firstName: e.target.value
               }
-            } as CreateRegistrationPayload))} 
+            } as CreateRegistrationPayload));
+          onChange(e);
+          }  }
+            
           />
         </div>
         <div className="col-span-1">
@@ -243,14 +288,17 @@ useEffect(() => {
             type="text"
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter participant last name"
+            name="lastName"
             value={formData?.participant.lastName}
-            onChange={(e) => setFormData(prev => ({
+            onChange={(e) => {setFormData(prev => ({
               ...prev,
               participant: {
                 ...prev?.participant,
                 lastName: e.target.value
               }
-            } as CreateRegistrationPayload))}  
+            } as CreateRegistrationPayload));
+            onChange(e);
+          }}
           />
         </div>
         <div className="col-span-1">
@@ -259,16 +307,19 @@ useEffect(() => {
           </label>
           <input
             type="number"
+            name="age"
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter participant age (as of tournament date)"
             value={formData.participant.age === 0 ? "" : formData.participant.age}
-            onChange={(e) => setFormData(prev => ({
+            onChange={(e) => {setFormData(prev => ({
               ...prev,
               participant: {
                 ...prev?.participant,
                 age: Number(e.target.value)
               }
-            } as CreateRegistrationPayload))}
+            } as CreateRegistrationPayload));
+            onChange(e);
+          }}
           />
         </div>
         <div className="col-span-1">
@@ -278,15 +329,18 @@ useEffect(() => {
           <select
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             defaultValue=""
+            name="beltRankId"
             value={formData?.participant.beltRankId==0 ? "" : formData?.participant.beltRankId  }
             onChange={(e) =>
-                setFormData(prev => ({
+                {setFormData(prev => ({
               ...prev,
               participant: {
                 ...prev?.participant,
                 beltRankId: e.target.value ? Number(e.target.value) : undefined
               }
-            } as CreateRegistrationPayload))}
+            } as CreateRegistrationPayload));
+            onChange(e);
+          }}
           >
             <option value="" disabled>
               Select belt color 
@@ -316,6 +370,7 @@ useEffect(() => {
                 otherDojoName: value.id === 18 ? value.freeText : undefined
               }
             } as CreateRegistrationPayload));
+            onChange({ target: { name: "dojo", value: value.id } } as unknown as React.ChangeEvent<HTMLInputElement>);
           }}
           />
         </div>
@@ -348,6 +403,7 @@ useEffect(() => {
                 type="radio"
                 name="gender"
                 value={2}
+                checked={formData.participant.genderId === 2}
                 onChange ={(e) => {
                   
                   setFormData(prev => ({
@@ -376,6 +432,7 @@ useEffect(() => {
                     <input
                       type="checkbox"
                       value={event.Name}
+                      name="events"
                       checked={selectedEvents.includes(event.Name)}
                       onChange={e => {
                         setSelectedEvents(prev =>
@@ -383,6 +440,7 @@ useEffect(() => {
                             ? [...prev, event.Name]
                             : prev.filter(name => name !== event.Name)
                         );
+                        onChange(e);
                       }}
                       className="form-checkbox text-green-500"
                     />

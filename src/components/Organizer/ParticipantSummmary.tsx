@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ColumnDef, flexRender, getCoreRowModel, getExpandedRowModel, useReactTable, getPaginationRowModel, getFilteredRowModel, Row } from "@tanstack/react-table";
 import React, { useMemo, useState } from "react";
 import { normalizeName } from "@/helpers/stringHelpers";
+import { useNavigate } from "@tanstack/react-router";
 
 interface ParticipantEvent {
   eventId: number;
@@ -261,6 +262,14 @@ export function ParticipantTable({
      autoResetPageIndex: false,
   });
 
+  const navigate = useNavigate();
+
+  const editDetails = function (tournamentId: number, participantId: number) {
+    navigate({
+      to: `/tournament/participant/register/${tournamentId}/update-participant/${participantId}`,      
+    });
+  }
+
   return (
     <>
     <FilterBar table={table} />
@@ -352,7 +361,7 @@ export function ParticipantTable({
                         <button
                           type="button"
                           className="rounded bg-sky-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-600"
-                          onClick={() => onEditParticipant?.(row.original)}
+                          onClick={() => editDetails(row.original.tournamentId, row.original.participantId)}
                         >
                           Edit details
                         </button>
