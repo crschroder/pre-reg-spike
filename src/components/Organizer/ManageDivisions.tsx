@@ -435,7 +435,7 @@ function FilterBar({ table }: FilterBarProps) {
             {table.getColumn("eventName") && (
               <CheckboxFilter
                 column={table.getColumn("eventName")!}
-                options={['Kumite', 'Kata']}
+                options={['kumite', 'kata']}
               />
             )}
 
