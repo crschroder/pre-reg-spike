@@ -1,3 +1,4 @@
+import { normalizeName } from '@/helpers/stringHelpers'
 import type { Column } from '@tanstack/react-table'
 
 type Primitive = string | number | boolean
@@ -37,7 +38,7 @@ export function CheckboxFilter<T extends Primitive>({
               checked={checked}
               onChange={e => toggle(option, e.target.checked)}
             />
-            {label}
+            {normalizeName(label)}
           </label>
         )
       })}
