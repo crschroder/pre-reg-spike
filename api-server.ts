@@ -17,12 +17,15 @@ import type {
   DivisionPayload,
   DojoResponse,
   EventSelection,
+  EventType,
   ParticipantUpdatePayload,
   TournamentEventDivisionRow,
   TournamentEventPayload,
+  TournamentEventWithEvent,
   TournamentStatusType,
   TypedRequest,
 } from './shared'
+import { EventAllowedDivision } from '@shared/eventAllowedDivision'
 
 // DO NOT REMOVE THIS LINE
 //import e from 'cors'
@@ -336,17 +339,21 @@ app.put(
   }
 );
 
+type PrismaTournamentEvent = Prisma.TournamentEventGetPayload<{
+  include: { event: true }
+}>;
+
 app.get('/api/tournaments/:id/tournamentEvents', async (req, res, next) => {
   try {
     const { id } = req.params;
     const tournamentId = Number(id);
 
-    const tournamentEvents = await getPrisma().tournamentEvent.findMany({
+    const tournamentEvents: PrismaTournamentEvent[] = await getPrisma().tournamentEvent.findMany({
       where: { tournamentId },
       include: { event: true }
     });
 
-    res.json(tournamentEvents);
+    res.json(tournamentEvents as TournamentEventWithEvent[]);
   } catch (error) {
     next(error);
   }
@@ -392,11 +399,14 @@ app.put('/api/tournaments/:id', async (req, res, next) => {
     next(error);
   }
 });
+
+
+type PrismaEventType = Prisma.EventGetPayload<{}>;
 // Get the list of possible events 
 app.get('/api/event-types', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const eventTypes = await getPrisma().event.findMany();
-    res.json(eventTypes);
+    const eventTypes : PrismaEventType[] = await getPrisma().event.findMany();
+    res.json(eventTypes as EventType[]);
   } catch (err) {
     next(err); // delegate to error handler
   }
@@ -431,15 +441,15 @@ app.get('/api/event/:eventId/allowed-divisions', async (req: Request, res: Respo
           },    
         },
         orderBy: {
-          divisionType: {minAge: 'asc'}
+          divisionType: {minAge: 'asc'},
+         
         },
       });
+    
+      const test = allowedDivisions.map(a => a.divisionType) ;
+      const test2 = allowedDivisions.map(a => a.divisionType) as EventAllowedDivision[];
 
-    // Return only the division objects (cleaner for UI)
-    //const divisions = allowedDivisions.map(ad => ad.divisionType.divisions).flat();
-
-    //res.json(mapDivisions(divisions));
-     res.json(allowedDivisions.map(a => a.divisionType));
+     res.json(allowedDivisions.map(a => a.divisionType) as EventAllowedDivision[]);
 
   } catch (err) {
     next(err); // delegate to error handler

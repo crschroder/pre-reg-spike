@@ -3,7 +3,7 @@ import {
   getDivisionsByEventType,
   
 } from "../api/tournaments";
-import type { Division } from "../../shared/index";
+import type { Division, EventAllowedDivision } from "../../shared/index";
 
 
 export function useAllowedDivisions(eventId: number) {
@@ -29,7 +29,7 @@ interface DivisionTypeDTO {
   }[];
 }
 
-export function flattenDivisionTypes(types: DivisionTypeDTO[]): Division[] {
+export function flattenDivisionTypes(types: EventAllowedDivision[]): Division[] {
   return types.flatMap(dt =>
     dt.divisions.map(div => ({
       id: div.id,
@@ -39,7 +39,17 @@ export function flattenDivisionTypes(types: DivisionTypeDTO[]): Division[] {
       beltRankId: div.beltRankId,
       beltRank: div.beltRank
     }))
-  );
+  ).sort((a, b) => {
+      // Sort by minAge first (nulls last)
+      const ageA = a.minAge ?? Number.MAX_VALUE;
+      const ageB = b.minAge ?? Number.MAX_VALUE;
+      if (ageA !== ageB) return ageA - ageB;
+
+      // Then by beltRank sortOrder (nulls last)
+      const sortA = a.beltRank?.sortOrder ?? Number.MAX_VALUE;
+      const sortB = b.beltRank?.sortOrder ?? Number.MAX_VALUE;
+      return sortA - sortB;
+    });;
 }
 
 

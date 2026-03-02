@@ -28,7 +28,7 @@ export default function CreateEvents({tournamentId} : Props){
 
   const { data: tournamentEvents, isLoading: isLoadingTournamentEvents } = useQuery({
     queryKey: ["tournamentEvents", tournamentId],
-    queryFn: () => getTournamentEvents(tournamentId!),
+    queryFn: () => getTournamentEvents(tournamentId!),    
     enabled: !!tournamentId,
   });
   const mutation = useMutation({
@@ -94,7 +94,9 @@ const selectedEventIds =
     tournamentEvents?.map((te: { eventId: any; }) => te.eventId) ?? [];
 
   const filteredEventTypes =
-    eventTypes?.filter(et => selectedEventIds.includes(et.id)) ?? [];
+  eventTypes
+    ?.filter(et => selectedEventIds.includes(et.id))
+    .sort((a, b) => a.sortOrder - b.sortOrder) ?? [];
 
     
 
@@ -159,6 +161,10 @@ export interface AllowedDivisionsProps {
 
 function AllowedDivisions({ tournamentId, eventId, divisionSettings, setDivisionMode }: AllowedDivisionsProps) {
   const { data: divisions = [], isLoading, error } = useAllowedDivisions(eventId);
+  if(!isLoading ) {
+    console.log("allowed divisions for event", eventId, ":", divisions);
+  }
+
 
   if (!isLoading || divisions.length > 0) {
     console.log("divisions:", JSON.stringify(divisions));

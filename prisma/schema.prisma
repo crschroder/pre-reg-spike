@@ -46,6 +46,8 @@ model Tournament {
 model Event {
   id          Int               @id @default(autoincrement())
   name        String
+  sortOrder   Int?              @map("sort_order")
+  prefixCode  String? @db.Char(1) @map("prefix_code")
   tournaments TournamentEvent[] @relation("EventToTournamentEvent")
   allowedDivisions EventAllowedDivision[]
   participantEvents ParticipantEvent[]
@@ -83,7 +85,7 @@ model TournamentEventDivision {
   eventGender        EventGender      @relation(fields: [genderId], references: [id])
   displayName        String?          @map("display_name")
   registrations      Registration[]
-
+  
   @@map("tournament_event_division")
 }
 

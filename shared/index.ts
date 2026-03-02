@@ -8,3 +8,5 @@ export * from "./consts";
 export * from "./createRegistrationPayload";
 export * from "./helpers";
 export * from "./dojoReponse";
+export * from "./tournamentEvent";
+export * from "./eventAllowedDivision";

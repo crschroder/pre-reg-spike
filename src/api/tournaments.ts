@@ -1,4 +1,5 @@
 // src/api/tournaments.ts some comment 
+import { P } from "node_modules/@faker-js/faker/dist/airline-DF6RqYmq";
 import  api  from "./axios";
 import type {
   ParticipantUpdatePayload,
@@ -7,7 +8,9 @@ import type {
   TournamentStatus,
   TournamentStatusType,
   DojoResponse,
-  CreateRegistrationPayload
+  CreateRegistrationPayload,
+  TournamentEventWithEvent,
+  EventAllowedDivision
 } from "@shared/index";
 
 
@@ -42,9 +45,9 @@ export function getEventTypes() {
       return res.data;});
 }
 
-export function getDivisionsByEventType(eventTypeId: number) {
+export function getDivisionsByEventType(eventTypeId: number) : Promise<EventAllowedDivision[]> {
   return api.get(`/api/event/${eventTypeId}/allowed-divisions`)
-    .then(res => res.data);
+    .then(res => res.data as EventAllowedDivision[]);
 }
 
 export function createTournamentEvents(
@@ -64,10 +67,10 @@ export function updateTournamentEvents(
     .then(res => res.data);
 }
 
-export function getTournamentEvents(tournamentId: number) {
+export function getTournamentEvents(tournamentId: number): Promise<TournamentEventWithEvent[]> {
   return api
     .get(`/api/tournaments/${tournamentId}/tournamentEvents`)
-    .then(res => res.data);
+    .then(res => res.data as TournamentEventWithEvent[]);
 }
 
 export function getTournamentEventDivisions(tournamentId: number, eventId: number) {
