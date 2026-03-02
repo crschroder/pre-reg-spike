@@ -9,6 +9,7 @@ interface ParticipantEvent {
   eventId: number;
   eventRegistered: string;
   participantEventId: number;
+  displayName?: string;
 }
 
 interface GroupedParticipant {
@@ -45,6 +46,7 @@ export interface ParticipantSummaryRow {
   eventId: number;
   participantEventId: number;
   genderId: number;
+  displayName?: string;
 }
 
 export function groupParticipants(rows: ParticipantSummaryRow[]): GroupedParticipant[] {
@@ -71,7 +73,8 @@ export function groupParticipants(rows: ParticipantSummaryRow[]): GroupedPartici
     acc[id].events.push({
       eventId: row.eventId,
       eventRegistered: row.eventRegistered,
-      participantEventId: row.participantEventId
+      participantEventId: row.participantEventId,
+      displayName: row.displayName
     });
     return acc;
   }, {} as Record<number, GroupedParticipant>);
@@ -350,7 +353,7 @@ export function ParticipantTable({
                           <ul className="list-disc pl-5">
                             {row.original.events.map((ev) => (
                               <li key={ev.participantEventId}>
-                                {ev.eventRegistered}
+                                {ev.eventRegistered} - {ev.displayName?.toLocaleUpperCase()}
                               </li>
                             ))}
                           </ul>
