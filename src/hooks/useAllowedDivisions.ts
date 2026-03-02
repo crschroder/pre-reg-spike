@@ -37,7 +37,8 @@ export function flattenDivisionTypes(types: EventAllowedDivision[]): Division[] 
       minAge: dt.minAge,
       maxAge: dt.maxAge,
       beltRankId: div.beltRankId,
-      beltRank: div.beltRank
+      beltRank: div.beltRank,
+      divisionTypeId: dt.id
     }))
   ).sort((a, b) => {
       // Sort by minAge first (nulls last)

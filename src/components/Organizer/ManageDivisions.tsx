@@ -185,9 +185,7 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
     }))
   )
 }, [registrations])
-if(!participantLoading){
-  console.log("Participant loading is complete:", JSON.stringify(registrations, null, 2));
-}
+
   
    const table = useReactTable({
        data: flattened ?? [],

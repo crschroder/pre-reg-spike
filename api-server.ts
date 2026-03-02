@@ -10,7 +10,7 @@ import { HttpError, errorHandler } from './errors/HttpError'
 import { TournamentStatus, validStatuses } from './shared'
 import { TournamentSchema } from './validations/TournamentSchema'
 
-import type { Prisma } from '@prisma/client'
+import type { BeltRank, Prisma } from '@prisma/client'
 import type { NextFunction, Request, Response } from 'express'
 import type {
   CreateRegistrationPayload,
@@ -131,6 +131,41 @@ app.use((req, res, next) => {
 
   next();
 });
+
+const eventCache: { data: any[] | null } = { data: null };
+const divisionTypeCache: { data: any[] | null } = { data: null };
+const divisionCache: { data: any[] | null } = { data: null };
+
+const beltrankCache: { data: any[] | null } = { data: null };
+
+// Utility to load and cache
+async function getCachedEvents(): Promise<EventType[]> {
+  if (!eventCache.data) {
+    eventCache.data = await getPrisma().event.findMany() as EventType[];
+  }
+  return eventCache.data;
+}
+
+async function getCachedDivisionTypes() {
+  if (!divisionTypeCache.data) {
+    divisionTypeCache.data = await getPrisma().divisionType.findMany();
+  }
+  return divisionTypeCache.data;
+}
+
+async function getCachedDivisions() {
+  if (!divisionCache.data) {
+    divisionCache.data = await getPrisma().division.findMany();
+  }
+  return divisionCache.data;
+}
+
+async function getCachedBeltRanks(): Promise<BeltRank[]> {   
+  if (!beltrankCache.data) {
+    beltrankCache.data = await getPrisma().beltRank.findMany() as BeltRank[];
+  }
+  return beltrankCache.data;
+}
 
 app.get('/api/tournaments/:id', async (req, res, next) => {
   try {
@@ -405,7 +440,7 @@ type PrismaEventType = Prisma.EventGetPayload<{}>;
 // Get the list of possible events 
 app.get('/api/event-types', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const eventTypes : PrismaEventType[] = await getPrisma().event.findMany();
+    const eventTypes : PrismaEventType[] = await await getCachedEvents();
     res.json(eventTypes as EventType[]);
   } catch (err) {
     next(err); // delegate to error handler
@@ -445,9 +480,7 @@ app.get('/api/event/:eventId/allowed-divisions', async (req: Request, res: Respo
          
         },
       });
-    
-      const test = allowedDivisions.map(a => a.divisionType) ;
-      const test2 = allowedDivisions.map(a => a.divisionType) as EventAllowedDivision[];
+        
 
      res.json(allowedDivisions.map(a => a.divisionType) as EventAllowedDivision[]);
 
@@ -492,10 +525,25 @@ app.post(
   "/api/tournaments/:tournamentId/events/:eventId/divisions",
   async (req, res, next) => {
     try {
+
+      const divisionCaches = await getCachedDivisions();
+      const divisionTypesCache = await getCachedDivisionTypes();
+      const beltRanksCache = await getCachedBeltRanks(); // Add this cache function
+      const eventsCache = await getCachedEvents(); // Add this cache function
+
+
+
+      const divisionMap = new Map(divisionCaches.map(d => [d.id, d]));
+      const divisionTypeMap = new Map(divisionTypesCache.map(dt => [dt.id, dt]));
+      const beltRankMap = new Map(beltRanksCache.map(br => [br.id, br]));
+
       const tournamentId = Number(req.params.tournamentId);
       const eventId = Number(req.params.eventId);
 
       const divisions = req.body.divisions as DivisionPayload[];
+
+      const divisionPrefix = eventsCache.find(e => e.id === eventId)?.prefixCode; 
+
 
       if (!Array.isArray(divisions)) {
         return res.status(400).json({ error: "Invalid payload: divisions must be an array" });
@@ -516,10 +564,32 @@ app.post(
       });
 
       // 3. Build typed rows for Prisma
-      const rows: TournamentEventDivisionRow[] = divisions.map((d) => ({
+      const rows = divisions.map((d) => ({
         tournamentEventId: tournamentEvent.id,
         divisionId: d.divisionId,
         genderId: d.genderId,
+        divisionTypeId: d.divisionTypeId,       
+
+      })).sort((a, b) => {
+        // beltRank.sortOrder
+        const beltA = beltRankMap.get(divisionMap.get(a.divisionId)?.beltRankId ?? 0);
+        const beltB = beltRankMap.get(divisionMap.get(b.divisionId)?.beltRankId ?? 0);
+        const sortA = beltA?.sortOrder ?? 9999;
+        const sortB = beltB?.sortOrder ?? 9999;
+        if (sortA !== sortB) return sortA - sortB;
+
+        // divisionType.minAge
+        const minAgeA = divisionTypeMap.get(a.divisionTypeId)?.minAge ?? 9999;
+        const minAgeB = divisionTypeMap.get(b.divisionTypeId)?.minAge ?? 9999;
+        if (minAgeA !== minAgeB) return minAgeA - minAgeB;
+
+        // genderId
+        return a.genderId - b.genderId;
+      }).map((row, idx): TournamentEventDivisionRow => ({
+       tournamentEventId: row.tournamentEventId,
+        divisionId: row.divisionId,
+      genderId: row.genderId,
+      displayName: `${divisionPrefix}${idx + 1}`,
       }));
 
       // 4. Insert new rows

@@ -82,7 +82,7 @@ export function getTournamentEventDivisions(tournamentId: number, eventId: numbe
 export function saveTournamentEventDivisions(
   tournamentId: number, //tournament id identifies the tournament
   eventId: number, // event id identifies Kata, Kumite, etc. within the tournament
-  divisions: { divisionId: number; genderId: number }[]
+  divisions: { divisionId: number; genderId: number; divisionTypeId: number }[]
 ) {
   return api
     .post(`/api/tournaments/${tournamentId}/events/${eventId}/divisions`, {

@@ -3,7 +3,7 @@ import { getEventTypes, getTournamentEventDivisions,
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Accordion } from "../Custom/Accordian";
 import { useAllowedDivisions } from "@/hooks/useAllowedDivisions";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Division, DivisionPayload, EventType } from "@shared";
 //import { S } from "@faker-js/faker/dist/airline-DF6RqYmq";
 
@@ -12,7 +12,7 @@ type Props = { tournamentId: number };
 
 type SaveDivisionVars = {
   eventId: number;
-  divisions: { divisionId: number; genderId: number }[];
+  divisions: { divisionId: number; genderId: number; divisionTypeId: number }[];
 };
 
 
@@ -26,7 +26,7 @@ export default function CreateEvents({tournamentId} : Props){
       queryFn: () => getEventTypes(),
     });
 
-  const { data: tournamentEvents, isLoading: isLoadingTournamentEvents } = useQuery({
+  const { data: tournamentEvents } = useQuery({
     queryKey: ["tournamentEvents", tournamentId],
     queryFn: () => getTournamentEvents(tournamentId!),    
     enabled: !!tournamentId,
@@ -46,7 +46,38 @@ export default function CreateEvents({tournamentId} : Props){
 });
 
     const [divisionSettings, setDivisionSettings] = useState<DivisionSettings>({});
+    const [divisionTypeIndex, setDivisionTypeIndex] = useState<DivisionTypeIndex>({});
     const [unsavedChanges, setUnsavedChanges] = useState<Record<number, boolean>>({});
+
+    const onDivisionsLoaded = useCallback((eventId: number, divisions: Division[]) => {
+      const nextIndex = Object.fromEntries(
+        divisions.map(d => [d.id, d.divisionTypeId] as const)
+      ) as Record<number, number>;
+
+      setDivisionTypeIndex(prev => {
+        const prevIndex = prev[eventId];
+        if (prevIndex) {
+          const prevKeys = Object.keys(prevIndex);
+          const nextKeys = Object.keys(nextIndex);
+          if (prevKeys.length === nextKeys.length) {
+            let same = true;
+            for (const k of nextKeys) {
+              const key = Number(k);
+              if (prevIndex[key] !== nextIndex[key]) {
+                same = false;
+                break;
+              }
+            }
+            if (same) return prev;
+          }
+        }
+
+        return {
+          ...prev,
+          [eventId]: nextIndex,
+        };
+      });
+    }, []);
     
 
   function setDivisionMode(eventId: number, divisionId: number, modeOrFn: DivisionModeUpdater, markDirty = true) {
@@ -77,12 +108,17 @@ function saveEventDivisions(eventId: number) {
   const settings = divisionSettings[eventId];
   if (!settings) return;
 
-  const rows = Object.entries(settings).flatMap(([divisionId, mode]) => {
-    const out = [];
+  const typeIndex = divisionTypeIndex[eventId] ?? {};
 
-    if (mode.male) out.push({ divisionId: Number(divisionId), genderId: 1 });
-    if (mode.female) out.push({ divisionId: Number(divisionId), genderId: 2 });
-    if (mode.coed) out.push({ divisionId: Number(divisionId), genderId: 3 });
+  const rows = Object.entries(settings).flatMap(([divisionIdStr, mode]) => {
+   
+    const divisionId = Number(divisionIdStr);
+    const divisionTypeId = typeIndex[divisionId];
+
+    const out: { divisionId: number; genderId: number; divisionTypeId: number }[] = [];
+    if (mode.male) out.push({ divisionId: divisionId, genderId: 1, divisionTypeId });
+    if (mode.female) out.push({ divisionId: divisionId, genderId: 2, divisionTypeId });
+    if (mode.coed) out.push({ divisionId: divisionId, genderId: 3, divisionTypeId });
 
     return out;
   });
@@ -120,6 +156,7 @@ const selectedEventIds =
                       eventId={et.id}
                       divisionSettings={divisionSettings[et.id] || {}}
                       setDivisionMode={setDivisionMode}
+                      onDivisionsLoaded={onDivisionsLoaded}
                     />
                     <div className="sticky bottom-0 bg-white py-3 border-t flex justify-end">
                       {unsavedChanges[et.id] && (
@@ -157,18 +194,16 @@ export interface AllowedDivisionsProps {
   eventId: number;
   divisionSettings: Record<number, DivisionMode>; // divisionId → female true/false
   setDivisionMode: (eventId: number, divisionId: number, mode: DivisionModeUpdater, markDirty?: boolean) => void;
+  onDivisionsLoaded?: (eventId: number, divisions: Division[]) => void;
 }
 
-function AllowedDivisions({ tournamentId, eventId, divisionSettings, setDivisionMode }: AllowedDivisionsProps) {
+function AllowedDivisions({ tournamentId, eventId, divisionSettings, setDivisionMode, onDivisionsLoaded }: AllowedDivisionsProps) {
   const { data: divisions = [], isLoading, error } = useAllowedDivisions(eventId);
-  if(!isLoading ) {
-    console.log("allowed divisions for event", eventId, ":", divisions);
-  }
-
-
-  if (!isLoading || divisions.length > 0) {
-    console.log("divisions:", JSON.stringify(divisions));
-  }
+  useEffect(() => {
+    if (!isLoading && divisions.length > 0) {
+      onDivisionsLoaded?.(eventId, divisions);
+    }
+  }, [isLoading, divisions, eventId, onDivisionsLoaded]);
 
    const { data: saved = [] } = useQuery({
      queryKey: ['savedDivisions', eventId, tournamentId],
@@ -256,7 +291,7 @@ function updateDivisionMode(
     <div className="grid grid-cols-1 md:grid-cols- lg:grid-cols-3 gap-3">
       {divisions.map((division: Division) => {
          const currentMode = divisionSettings[division.id] ?? defaultMode;
-        console.log("division:", division);
+     
         return (
           <div
             key={division.id}
@@ -288,7 +323,9 @@ type DivisionMode = {
   coed: boolean;
 };
 
+
 type DivisionSettings = Record<number, Record<number, DivisionMode>>;
+type DivisionTypeIndex = Record<number, Record<number, number>>;
 
 type DivisionModeUpdater =
   | DivisionMode

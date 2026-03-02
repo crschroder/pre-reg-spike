@@ -7,4 +7,5 @@ export interface Division {
   maxAge: number | null;
   beltRankId: number | null;
   beltRank: BeltRank | null;
+  divisionTypeId: number;
 }

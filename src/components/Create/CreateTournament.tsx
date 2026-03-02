@@ -23,7 +23,7 @@ export default function CreateTournament ({tournamentId}:Props) {
     { label: 'Add Events' },
     { label: 'Step 3' },  { label: 'Step 4' },
   ];
-  console.log("tournamentId in CreateTournament:", tournamentId);
+
   const [activeStep, setActiveStep] = useState(0);
 
   const queryClient = useQueryClient();
@@ -31,7 +31,7 @@ export default function CreateTournament ({tournamentId}:Props) {
   const navigate = useNavigate();
 
   const isEdit = Boolean(tournamentId);
-  console.log("isEdit:", isEdit); 
+  
     // Load tournament only when editing
     const { data, isLoading } = useQuery({
       queryKey: ["tournament", tournamentId],
