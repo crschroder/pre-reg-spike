@@ -1,44 +1,23 @@
 import { getUpcomingTournaments } from "../../api/tournaments";
 import { useQuery } from "@tanstack/react-query";
 import { TournamentStatus } from "../../../shared";
-import { JSXElementConstructor, ReactElement, ReactNode, ReactPortal, useState } from "react";
+// ...existing code...
 import {format} from 'date-fns';
 import { useNavigate } from "@tanstack/react-router";
 
-const tournaments = [
-  {
-    id: 1,
-    name: "Edmonton Winter Open",
-    date: "Feb 22, 2025",
-    location: "Edmonton, AB",
-  },
-  {
-    id: 2,
-    name: "Calgary Spring Classic",
-    date: "Apr 12, 2025",
-    location: "Calgary, AB",
-  },
-  {
-    id: 3,
-    name: "Western Canadian Championships",
-    date: "Jun 7, 2025",
-    location: "Vancouver, BC",
-  },
-];
+// ...existing code...
 
 export function ParticipantDashboard() {
   
-  const [selectedId, setSelectedId] = useState<number | null>(null);
   const status = TournamentStatus.Upcoming;
-
   const navigate = useNavigate();
 
-  const {data: upcomingTournaments, isLoading:upcomingIsLoading} = useQuery({
-    queryKey:['tournaments',status],
+  const { data: upcomingTournaments, isLoading: upcomingIsLoading } = useQuery({
+    queryKey: ['tournaments', status],
     queryFn: () => getUpcomingTournaments(status),
   });
 
-  function handleSelectTournament(id: number) {
+  function handleCreateRegistration(id: number) {
     navigate({ to: `/tournament/participant/register/${id}/create-participant` });
   }
 
@@ -51,42 +30,28 @@ export function ParticipantDashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {!upcomingIsLoading && upcomingTournaments.map((t: { id: number; name: string; date: string; location: string }) => {
-          const isSelected = selectedId === t.id;
-
           return (
-            <button
+            <div
               key={t.id}
-              onClick={() => setSelectedId(t.id)}
-              className={`p-5 rounded-lg border text-left transition 
-                ${isSelected
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-700 bg-gray-800 hover:bg-gray-700"
-                }`}
+              className="p-5 rounded-lg border border-gray-700 bg-gray-800"
             >
               <h2 className="text-xl font-semibold text-white">{t.name}</h2>
               <p className="text-gray-300">{format(new Date(t.date), 'MMM d, yyyy')}</p>
               <p className="text-gray-400">{t.location}</p>
 
-              {isSelected && (
-                <p className="text-blue-400 font-medium mt-2">
-                  Selected
-                </p>
-              )}
-            </button>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleCreateRegistration(t.id)}
+                  className="flex-1 min-w-max px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                >
+                  Create Registration
+                </button>
+              </div>
+            </div>
           );
         })}
       </div>
-
-      {selectedId && (
-        <div className="mt-6">
-          <button
-            className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700"
-            onClick={() => handleSelectTournament(selectedId)}
-          >
-            Continue Registration
-          </button>
-        </div>
-      )}
+      {/* Removed Continue Registration button, now handled per card */}
     </div>
 
   </div>)

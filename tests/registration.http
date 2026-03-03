@@ -2,10 +2,10 @@
 @azureBaseUrl = https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net
                 
 # Switch this between {{localBaseUrl}} and {{azureBaseUrl}}
-@baseUrl = {{azureBaseUrl}}
+@baseUrl = {{localBaseUrl}}
 
 @apiKey = 37339cb4-4761-4e5f-91c0-16a5687f3ae6
-@tournamentId = 7
+@tournamentId = 19
 
 
 ### get upcoming tournaments 
@@ -22,10 +22,10 @@ X-API-Key: {{apiKey}}
 {
   "email": "michelle.schroder@example.com",
   "participant": {
-    "firstName": "Amber",
+    "firstName": "Nathan",
     "lastName": "Schroder",
     "age": 16,
-    "genderId": 2,
+    "genderId": 1,
     "beltRankId": 7,
     "notes": "From Test harness", 
     "dojoId": 12,
@@ -42,7 +42,7 @@ X-API-Key: {{apiKey}}
 {
   "email": "michelle.schroder@example.com",
   "participant": {
-    "firstName": "John",
+    "firstName": "Johnny",
     "lastName": "Schroder",
     "age": 12,
     "genderId": 1,
@@ -50,7 +50,7 @@ X-API-Key: {{apiKey}}
     "notes": "Second child registration", 
     "dojoId": 12
   },
-  "events": ["kata", "kumite"]
+  "events": ["kobudo"]
 }
 
 ### Ping the server
@@ -81,7 +81,7 @@ X-API-Key: {{apiKey}}
     "dojoId": 13,
     "otherDojoName": null
   },
-  "events": ["kumite","kata"]
+  "events": ["kobudo"]
 }
 
 ### Mark participant as paid

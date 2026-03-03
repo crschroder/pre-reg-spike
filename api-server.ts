@@ -647,6 +647,21 @@ app.post('/api/tournaments/:id/registrations', async (req: Request, res: Respons
     }
 
     const userId = user.id;
+    let kobudoBeltRankId: number  = 0;
+    
+
+    // if events contains kobudo then we need to get the kobudo rank 
+    // TODO : Need to refactor this logic, it's very specific to current belt ranking system and kobudo rules. For example, if we add more events with different belt requirements this will get messy fast. We may want to consider a more flexible way to determine allowed events based on belt rank, or store the kobudo rank requirement directly in the database.
+    if (events.includes("kobudo" as EventSelection)) {
+      if(beltRankId >= 1 && beltRankId <= 6) {
+        kobudoBeltRankId = 9;
+      } else if (beltRankId === 7) {
+        kobudoBeltRankId = 10;
+      } else if (beltRankId === 8) {
+        kobudoBeltRankId = 11;
+      }
+    }
+      
 
 const divisions = await getPrisma().tournamentEventDivision.findMany({
   where: {
@@ -657,7 +672,7 @@ const divisions = await getPrisma().tournamentEventDivision.findMany({
       in: [genderId, 3]   // competitor gender OR coed
     },
     division: {
-      beltRankId: beltRankId,
+      beltRankId: {in: [beltRankId, kobudoBeltRankId]},
       divisionType: {
         minAge: { lte: age },
         maxAge: { gte: age }
