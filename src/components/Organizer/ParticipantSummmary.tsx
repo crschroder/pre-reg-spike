@@ -4,6 +4,7 @@ import { ColumnDef, flexRender, getCoreRowModel, getExpandedRowModel, useReactTa
 import React, { useMemo, useState } from "react";
 import { normalizeName } from "@/helpers/stringHelpers";
 import { useNavigate } from "@tanstack/react-router";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 interface ParticipantEvent {
   eventId: number;
@@ -127,8 +128,9 @@ function useParticipantTableColumns() {
             onClick={row.getToggleExpandedHandler()}
             className="text-lg leading-none"
           >
-            {row.getIsExpanded() ? "👇" : "👉"}
+            {row.getIsExpanded() ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
           </button>
+          
           {/* <span className="font-medium text-gray-100">
             {getValue()}
           </span> */}

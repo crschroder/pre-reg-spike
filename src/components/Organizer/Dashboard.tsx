@@ -44,7 +44,7 @@ export function OrganizerDashboard() {
                             key={t.id}
                             className="p-5 rounded-lg border border-gray-700 bg-gray-800"
                         >
-                            <h2 className="text-xl font-semibold text-white">{t.name}</h2>
+                            <h2 className="text-xl font-semibold text-white">{t.name}({t.id})</h2>
                             <p className="text-gray-300">{format(new Date(t.date), 'MMM d, yyyy')}</p>
                             <p className="text-gray-400">{t.location}</p>
 

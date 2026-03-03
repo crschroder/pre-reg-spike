@@ -42,12 +42,12 @@ X-API-Key: {{apiKey}}
 {
   "email": "michelle.schroder@example.com",
   "participant": {
-    "firstName": "Johnny",
-    "lastName": "Schroder",
+    "firstName": "Shelly",
+    "lastName": "Smith",
     "age": 12,
-    "genderId": 1,
+    "genderId": 2,
     "beltRankId": 5,
-    "notes": "Second child registration", 
+    "notes": "Check for kobudo event creation", 
     "dojoId": 12
   },
   "events": ["kobudo"]
