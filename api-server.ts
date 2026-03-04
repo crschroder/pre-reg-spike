@@ -132,7 +132,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const eventCache: { data: any[] | null } = { data: null };
+const eventCache: { data: EventType[] | null } = { data: null };
 const divisionTypeCache: { data: any[] | null } = { data: null };
 const divisionCache: { data: any[] | null } = { data: null };
 
@@ -916,20 +916,17 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{ id: string }, Parti
         data: updateData,
       });
 
+      let eventIds: {id : number}[] = [];
+
       // Handle events
       if (events.length > 0) {
         // Delete all existing ParticipantEvent records for this participant
         await tx.participantEvent.deleteMany({
           where: { participantId },
         });
-
-        // Insert new ParticipantEvent records
-        const eventIds = await tx.event.findMany({
-          where: {
-            name: { in: events.map((e: any) => String(e).toLowerCase()) },
-          },
-          select: { id: true },
-        });
+        
+        eventIds = (await getCachedEvents())
+        .filter(e => events.map(ev => String(ev).toLowerCase()).includes(e.name.toLowerCase())).map(e => ({id: e.id}));
 
         if (eventIds.length > 0) {
            await tx.participantEvent.createMany({
@@ -944,29 +941,25 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{ id: string }, Parti
       // Handle registrations
       if (age || genderId || beltRankId || events.length > 0) {
 
-        let kobudoBeltRankId  = 0;
+        let kobudoBeltRankId  = 0; 
+        
+        if (events.length === 0) {
+          events = await tx.participantEvent.findMany({
+            where: { participantId },
+            include: { event: true },
+          }).then((res) => res.map((pe) => pe.event.name.toLowerCase() as EventSelection));
+        }
 
-        // if events contains kobudo then we need to get the kobudo rank 
-    // TODO : Need to refactor this logic, it's very specific to current belt ranking system and kobudo rules. For example, if we add more events with different belt requirements this will get messy fast. We may want to consider a more flexible way to determine allowed events based on belt rank, or store the kobudo rank requirement directly in the database.
-    if(events.length === 0) {
-      // if no events provided in payload, we need to check if participant is currently registered for kobudo and get the kobudo belt rank if they are
-      const currentEvents = await tx.participantEvent.findMany({
-        where: { participantId },
-        include: { event: true },
-      });
-    }
-    
-    
-    if (events.includes("kobudo" as EventSelection)) {
-      if(updated.beltRankId >= 1 && updated.beltRankId <= 6) {
-        kobudoBeltRankId = 9;
-      } else if (updated.beltRankId === 7) {
-        kobudoBeltRankId = 10;
-      } else if (updated.beltRankId === 8) {
-        kobudoBeltRankId = 11;
-      }
-    } 
-
+        if (events.includes("kobudo" as EventSelection)) {
+          if (updated.beltRankId >= 1 && updated.beltRankId <= 6) {
+            kobudoBeltRankId = 9;
+          } else if (updated.beltRankId === 7) {
+            kobudoBeltRankId = 10;
+          } else if (updated.beltRankId === 8) {
+            kobudoBeltRankId = 11;
+          }
+        }
+           
 
         const divisions = await tx.tournamentEventDivision.findMany({
           where: {
@@ -998,14 +991,7 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{ id: string }, Parti
         });
 
         const selectedDivisionIds: number[] = [];
-        const selectedEventIds: number[] = [];
-
-        if (events.length === 0) {
-          events = await tx.participantEvent.findMany({
-            where: { participantId },
-            include: { event: true },
-          }).then((res) => res.map((pe) => pe.event.name.toLowerCase() as EventSelection));
-        }
+        const selectedEventIds: number[] = [];   
 
         events.forEach((event) => {
           const eventName = String(event).toLowerCase();

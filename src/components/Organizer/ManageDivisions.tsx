@@ -34,6 +34,7 @@ export type RegistrationRow = {
   participantGender: string
   participantRank: string
   isPaid: boolean
+  checkedIn: boolean
 
   divisionGender: string
   divisionName: string
@@ -106,13 +107,13 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
         },
         {
           header: 'Rank',
-          accessorKey: 'divisionRank',
+          accessorKey: 'participantRank',
           filterFn: (row, columnId, filterValue) => {
             if (!filterValue || filterValue.length === 0) return true
             return filterValue.includes(row.getValue(columnId))
           },
           cell: ({ row }) => {
-            const color = row.original.divisionRank
+            const color = row.original.participantRank
 
             if (isBeltColor(color)) {
               return <Pill color={color}>{color}</Pill>
@@ -147,6 +148,18 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
           },
         },
         {
+          header: 'Checked In',
+          accessorKey: 'checkedIn',
+          cell: ({ getValue }) => {
+            const value = getValue<boolean>()
+            return value ? 'Checked In' : 'Not Checked In'
+          },
+          filterFn: (row, columnId, filterValue) => {
+            if (!filterValue || filterValue.length === 0) return true
+            return filterValue.includes(row.getValue(columnId))
+          },
+        },
+        {
           header: 'Paid',
           accessorKey: 'isPaid',
           cell: ({ getValue }) => {
@@ -173,6 +186,7 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
       participantGender: p.gender.description,
       participantRank: p.rank.beltColor,
       isPaid: p.paid,
+      checkedIn: p.checkedIn,
 
       divisionGender: r.tournamentEventDivision.eventGender.description,
       divisionName: r.tournamentEventDivision.division.divisionType.name,
@@ -222,12 +236,16 @@ const fullNameColumn = table.getColumn("fullName")
       const values = Array.isArray(filter.value) ? filter.value : [filter.value]
       if (filter.id === "fullName") return null
       
-      if (filter.id === "divisionRank") {
+      if (filter.id === "participantRank") {
       }
       return values.map(v => {
+        let label = String(v)
         let color:BeltColor = "Blue"
-        if (filter.id === "divisionRank" && isBeltColor(v as string)) {
+        if (filter.id === "participantRank" && isBeltColor(v as string)) {
           color = v as BeltColor
+        }
+        if(filter.id === "isPaid" || filter.id === "checkedIn") {
+          label = `${filter.id === "isPaid"? v? "Paid" : "Unpaid" : v? "Checked In" : "Not Checked In"  }`
         }
         return (  
           <PillButton
@@ -244,7 +262,7 @@ const fullNameColumn = table.getColumn("fullName")
               }
             }}
           >
-            {String(v)}
+            {label}
           </PillButton>
         )
       })
@@ -271,23 +289,21 @@ const fullNameColumn = table.getColumn("fullName")
                   </div>
        {!participantLoading ? (
         <table className="w-full text-sm text-gray-200">
-            <thead  className="bg-gray-800 text-gray-100">
-                {table.getHeaderGroups().map(headerGroup => (
-                    <tr key={headerGroup.id}>
-                        {headerGroup.headers.map(header => (
-                            <th key={header.id} colSpan={header.colSpan} className="px-4 py-3 text-left relative overflow-visible">
-                                {header.isPlaceholder ? null : (
-                                    <div className="flex items-center gap-2">
-                                        {flexRender(header.column.columnDef.header, header.getContext())}
-
-                                        
-                                    </div>
-                                )}
-                            </th>
-                        ))}
-                    </tr>
+          <thead className="sticky top-0 z-20 bg-gray-800 text-gray-100">
+            {table.getHeaderGroups().map(headerGroup => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map(header => (
+                  <th key={header.id} colSpan={header.colSpan} className="px-4 py-3 text-left relative overflow-visible bg-gray-800 sticky top-0 z-20">
+                    {header.isPlaceholder ? null : (
+                      <div className="flex items-center gap-2">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                      </div>
+                    )}
+                  </th>
                 ))}
-            </thead>
+              </tr>
+            ))}
+          </thead>
             <tbody  className="divide-y divide-gray-700">
                 {table.getRowModel().rows.map(row => (
                     <tr key={row.id} className="hover:bg-gray-800 transition-colors">
@@ -433,13 +449,13 @@ function FilterBar({ table }: FilterBarProps) {
             {table.getColumn("eventName") && (
               <CheckboxFilter
                 column={table.getColumn("eventName")!}
-                options={['kumite', 'kata']}
+                options={['kumite', 'kata','kobudo']}
               />
             )}
 
-            {table.getColumn("divisionRank") && (
+            {table.getColumn("participantRank") && (
               <CheckboxFilter
-                column={table.getColumn("divisionRank")!}
+                column={table.getColumn("participantRank")!}
                 options={['White', 'Yellow', 'Orange', 'Green','Purple', 'Blue', 'Brown', 'Black']}
               />
             )}
@@ -448,6 +464,13 @@ function FilterBar({ table }: FilterBarProps) {
               <CheckboxFilter
                 column={table.getColumn("participantGender")!}
                 options={['Male', 'Female', 'Coed']}
+              />
+            )}
+              {table.getColumn("checkedIn") && (
+              <CheckboxFilter
+                column={table.getColumn("checkedIn")!}
+                options={[true, false]}
+                labels={{ true: "Checked In", false: "Not Checked In" }}
               />
             )}
 
