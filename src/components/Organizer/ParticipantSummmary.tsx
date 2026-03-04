@@ -68,17 +68,26 @@ export function groupParticipants(rows: ParticipantSummaryRow[]): GroupedPartici
         checkedIn: row.checkedIn,
         tournamentId: row.tournamentId,
         genderId: row.genderId,
-        events: []
+        events: [],
       };
     }
+
+    // Aggregate distinct participantDivisionType values
+    const currentDivisionTypes = acc[id].participantDivisionType.split(" / ");
+    if (!currentDivisionTypes.includes(row.participantDivisionType)) {
+      acc[id].participantDivisionType = [...currentDivisionTypes, row.participantDivisionType].join(" / ");
+    }
+
     acc[id].events.push({
       eventId: row.eventId,
       eventRegistered: row.eventRegistered,
       participantEventId: row.participantEventId,
-      displayName: row.displayName
+      displayName: row.displayName,
     });
+
     return acc;
   }, {} as Record<number, GroupedParticipant>);
+
   return Object.values(map);
 }
 
@@ -89,6 +98,7 @@ export function ParticipantSummary({ tournamentId }: { tournamentId: number }) {
   })
   const participants = useMemo(() => {
     if (!rows) return []
+   
     return groupParticipants(rows)
   }, [rows])
 

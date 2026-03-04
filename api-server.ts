@@ -647,7 +647,7 @@ app.post('/api/tournaments/:id/registrations', async (req: Request, res: Respons
     }
 
     const userId = user.id;
-    let kobudoBeltRankId: number  = 0;
+    let kobudoBeltRankId  = 0;
     
 
     // if events contains kobudo then we need to get the kobudo rank 
@@ -932,17 +932,42 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{ id: string }, Parti
         });
 
         if (eventIds.length > 0) {
-          await tx.participantEvent.createMany({
+           await tx.participantEvent.createMany({
             data: eventIds.map(({ id }) => ({
               participantId,
               eventId: id,
             })),
-          });
+          });        
         }
       }
 
       // Handle registrations
       if (age || genderId || beltRankId || events.length > 0) {
+
+        let kobudoBeltRankId  = 0;
+
+        // if events contains kobudo then we need to get the kobudo rank 
+    // TODO : Need to refactor this logic, it's very specific to current belt ranking system and kobudo rules. For example, if we add more events with different belt requirements this will get messy fast. We may want to consider a more flexible way to determine allowed events based on belt rank, or store the kobudo rank requirement directly in the database.
+    if(events.length === 0) {
+      // if no events provided in payload, we need to check if participant is currently registered for kobudo and get the kobudo belt rank if they are
+      const currentEvents = await tx.participantEvent.findMany({
+        where: { participantId },
+        include: { event: true },
+      });
+    }
+    
+    
+    if (events.includes("kobudo" as EventSelection)) {
+      if(updated.beltRankId >= 1 && updated.beltRankId <= 6) {
+        kobudoBeltRankId = 9;
+      } else if (updated.beltRankId === 7) {
+        kobudoBeltRankId = 10;
+      } else if (updated.beltRankId === 8) {
+        kobudoBeltRankId = 11;
+      }
+    } 
+
+
         const divisions = await tx.tournamentEventDivision.findMany({
           where: {
             tournamentEvent: {
@@ -952,7 +977,7 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{ id: string }, Parti
               in: [updated.genderId, 3], // competitor gender OR coed
             },
             division: {
-              beltRankId: updated.beltRankId,
+              beltRankId: {in: [updated.beltRankId, kobudoBeltRankId]},
               divisionType: {
                 minAge: { lte: updated.age },
                 maxAge: { gte: updated.age },
