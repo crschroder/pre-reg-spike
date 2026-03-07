@@ -20,11 +20,19 @@ const PIVOT_DIVISION_ORDER = [
   "youth",
 ] as const;
 
+const PIVOT_KOBUODO_DIVISION_ORDER = [
+  "kids weapons",
+  "adult weapons",  
+] as const;
+
+
 const PIVOT_GENDER_ORDER = ["Male", "Female", "Coed"] as const;
 
 type PivotGender = (typeof PIVOT_GENDER_ORDER)[number];
 
 type PivotDivision = (typeof PIVOT_DIVISION_ORDER)[number];
+
+type PivotKobudoDivision = (typeof PIVOT_KOBUODO_DIVISION_ORDER)[number];
 
 function normalizeKey(value: unknown) {
   return String(value ?? "")
@@ -44,7 +52,7 @@ function toPivotGender(genderName: string): PivotGender | null {
 
   if (key === "male") return "Male";
   if (key === "female") return "Female";
-  if (key === "coed") return "Coed";
+  if (key === "both") return "Coed";
 
   return null;
 }
@@ -54,6 +62,7 @@ export function ParticipantsPivotTables({ data }: { data: ParticipantPivotRow[] 
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
       <ParticipantsPivotTable data={data} eventName="Kata" />
       <ParticipantsPivotTable data={data} eventName="Kumite" />
+      <ParticipantsPivotTable data={data} eventName="Kobudo" />
     </div>
   );
 }
@@ -66,83 +75,89 @@ export function ParticipantsPivotTable({
   eventName: string;
 }) {
   const { ranks, divisions, pivot, total } = useMemo(() => {
-    const filtered = (data ?? []).filter(
-      (row) => normalizeKey(row.eventName) === normalizeKey(eventName),
-    );
+  const filtered = (data ?? []).filter(
+    (row) => normalizeKey(row.eventName) === normalizeKey(eventName),
+  );
+  // rank -> division -> gender -> count
+  const pivotMap = new Map<
+    string,
+    Map<PivotDivision | PivotKobudoDivision, Record<PivotGender, number>>
+  >();
 
-    // rank -> division -> gender -> count
-    const pivotMap = new Map<
-      string,
-      Map<PivotDivision, Record<PivotGender, number>>
-    >();
+  // division -> minAge (for ordering the header columns)
+  const divisionMinAge = new Map<PivotDivision | PivotKobudoDivision, number>();
 
-    // division -> minAge (for ordering the header columns)
-    const divisionMinAge = new Map<PivotDivision, number>();
+  // Keep belt order for sorting ranks
+  const rankOrder = new Map<string, number>();
 
-    // Keep belt order for sorting ranks
-    const rankOrder = new Map<string, number>();
+  const isKobudo = normalizeKey(eventName) === "kobudo";
+  const divisionOrder = isKobudo ? PIVOT_KOBUODO_DIVISION_ORDER : PIVOT_DIVISION_ORDER;
 
-    for (const row of filtered) {
-      const division = toPivotDivision(row.divisionName);
-      if (!division) continue;
+  for (const row of filtered) {
+    const division = isKobudo
+      ? (normalizeKey(row.divisionName) as PivotKobudoDivision)
+      : toPivotDivision(row.divisionName);
 
-      if (!divisionMinAge.has(division)) {
-        divisionMinAge.set(division, Number.isFinite(row.minAge) ? row.minAge : 999);
-      } else {
-        const current = divisionMinAge.get(division) ?? 999;
-        const next = Number.isFinite(row.minAge) ? row.minAge : 999;
-        if (next < current) divisionMinAge.set(division, next);
-      }
+    if (!division) continue;
 
-      const gender = toPivotGender(row.divisionGender);
-      if (!gender) continue;
-
-      const rank = String(row.divisionRank ?? "").trim();
-      if (!rank) continue;
-
-      if (!rankOrder.has(rank)) {
-        rankOrder.set(
-          rank,
-          Number.isFinite(row.divisionBeltOrder) ? row.divisionBeltOrder : 999,
-        );
-      }
-
-      let divisionMap = pivotMap.get(rank);
-      if (!divisionMap) {
-        divisionMap = new Map();
-        pivotMap.set(rank, divisionMap);
-      }
-
-      let genderCounts = divisionMap.get(division);
-      if (!genderCounts) {
-        genderCounts = { Male: 0, Female: 0, Coed: 0 };
-        divisionMap.set(division, genderCounts);
-      }
-
-      genderCounts[gender] = (genderCounts[gender] ?? 0) + 1;
+    if (!divisionMinAge.has(division)) {
+      divisionMinAge.set(division, Number.isFinite(row.minAge) ? row.minAge : 999);
+    } else {
+      const current = divisionMinAge.get(division) ?? 999;
+      const next = Number.isFinite(row.minAge) ? row.minAge : 999;
+      if (next < current) divisionMinAge.set(division, next);
     }
 
-    const rankList = Array.from(pivotMap.keys()).sort((a, b) => {
-      const aOrder = rankOrder.get(a) ?? 999;
-      const bOrder = rankOrder.get(b) ?? 999;
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      return a.localeCompare(b);
-    });
+    const gender = toPivotGender(row.divisionGender);
+    if (!gender) continue;
 
-    const divisionList = Array.from(PIVOT_DIVISION_ORDER).sort((a, b) => {
-      const aAge = divisionMinAge.get(a) ?? Number.POSITIVE_INFINITY;
-      const bAge = divisionMinAge.get(b) ?? Number.POSITIVE_INFINITY;
+    const rank = String(row.divisionRank ?? "").trim();
+    if (!rank) continue;
+
+    if (!rankOrder.has(rank)) {
+      rankOrder.set(
+        rank,
+        Number.isFinite(row.divisionBeltOrder) ? row.divisionBeltOrder : 999,
+      );
+    }
+
+    let divisionMap = pivotMap.get(rank);
+    if (!divisionMap) {
+      divisionMap = new Map();
+      pivotMap.set(rank, divisionMap);
+    }
+
+    let genderCounts = divisionMap.get(division);
+    if (!genderCounts) {
+      genderCounts = { Male: 0, Female: 0, Coed: 0 };
+      divisionMap.set(division, genderCounts);
+    }
+
+    genderCounts[gender] = (genderCounts[gender] ?? 0) + 1;
+  }
+
+  const rankList = Array.from(pivotMap.keys()).sort((a, b) => {
+    const aOrder = rankOrder.get(a) ?? 999;
+    const bOrder = rankOrder.get(b) ?? 999;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return a.localeCompare(b);
+  });
+
+  const divisionList = Array.from(divisionOrder as readonly string[])
+    .sort((a, b) => {
+      const aAge = divisionMinAge.get(a as PivotDivision | PivotKobudoDivision) ?? Number.POSITIVE_INFINITY;
+      const bAge = divisionMinAge.get(b as PivotDivision | PivotKobudoDivision) ?? Number.POSITIVE_INFINITY;
       if (aAge !== bAge) return aAge - bAge;
       return a.localeCompare(b);
     });
 
-    return {
-      ranks: rankList,
-      divisions: divisionList,
-      pivot: pivotMap,
-      total: filtered.length,
-    };
-  }, [data, eventName]);
+  return {
+    ranks: rankList,
+    divisions: divisionList,
+    pivot: pivotMap,
+    total: filtered.length,
+  };
+}, [data, eventName]);
 
   return (
     <div className="rounded-lg border border-gray-700 overflow-hidden">
@@ -184,7 +199,7 @@ export function ParticipantsPivotTable({
 
                 {divisions.map((division) => {
                   const genderCounts =
-                    pivot.get(rank)?.get(division) ??
+                    pivot.get(rank)?.get(division as PivotDivision | PivotKobudoDivision) ??
                     ({ Male: 0, Female: 0, Coed: 0 } as Record<PivotGender, number>);
 
                   return (

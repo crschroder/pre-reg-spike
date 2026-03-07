@@ -42,7 +42,7 @@ function RouteComponent() {
           participantGender: p.gender.description,
           participantRank: p.rank.beltColor,
           isPaid: p.paid,
-    
+          divisionGenderId: r.tournamentEventDivision.eventGender.id,
           divisionGender: r.tournamentEventDivision.eventGender.description,
           divisionName: r.tournamentEventDivision.division.divisionType.name,
           divisionRank: r.tournamentEventDivision.division.beltRank.beltColor,

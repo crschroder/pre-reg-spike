@@ -22,6 +22,7 @@ import { isBeltColor } from "@/datatypes/belt-colors";
 import type { BeltColor } from "@/datatypes/belt-colors";
 import { DebouncedInput } from "../Custom/DebouncedInput";
 import { PillButton } from "../Custom/PillButton";
+import { normalizeName } from "@/helpers/stringHelpers";
 
 
 
@@ -42,7 +43,7 @@ export type RegistrationRow = {
   divisionBeltOrder: number
   minAge: number
   maxAge: number | null
-
+  eventDisplayName: string  
   eventName: string
 }
 // declare module '@tanstack/react-table' {
@@ -97,6 +98,14 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
         cell: (info) => info.getValue(), 
         filterFn: "includesString"      
       },
+      {
+          header: 'Event Number',
+          accessorKey: 'eventDisplayName',
+          filterFn: (row, columnId, filterValue) => {
+            if (!filterValue || filterValue.length === 0) return true
+            return filterValue.includes(row.getValue(columnId))
+          },
+        },
         {
           header: 'Gender',
           accessorKey: 'participantGender',
@@ -189,18 +198,18 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
       checkedIn: p.checkedIn,
 
       divisionGender: r.tournamentEventDivision.eventGender.description,
-      divisionName: r.tournamentEventDivision.division.divisionType.name,
+      divisionName: normalizeName(r.tournamentEventDivision.division.divisionType.name),
       divisionRank: r.tournamentEventDivision.division.beltRank.beltColor,
       divisionBeltOrder: r.tournamentEventDivision.division.beltRank.sortOrder,
       minAge: r.tournamentEventDivision.division.divisionType.minAge,
       maxAge: r.tournamentEventDivision.division.divisionType.maxAge,
-
-      eventName: r.tournamentEventDivision.tournamentEvent.event.name
+      eventDisplayName: normalizeName(r.tournamentEventDivision.displayName),
+      eventName: normalizeName(r.tournamentEventDivision.tournamentEvent.event.name),
+      
     }))
   )
 }, [registrations])
 
-  
    const table = useReactTable({
        data: flattened ?? [],
        columns,
