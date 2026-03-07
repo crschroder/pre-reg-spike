@@ -571,17 +571,18 @@ app.post(
         divisionTypeId: d.divisionTypeId,       
 
       })).sort((a, b) => {
+        
+        // divisionType.minAge
+        const minAgeA = divisionTypeMap.get(a.divisionTypeId)?.minAge ?? 9999;
+        const minAgeB = divisionTypeMap.get(b.divisionTypeId)?.minAge ?? 9999;
+        if (minAgeA !== minAgeB) return minAgeA - minAgeB;
+        
         // beltRank.sortOrder
         const beltA = beltRankMap.get(divisionMap.get(a.divisionId)?.beltRankId ?? 0);
         const beltB = beltRankMap.get(divisionMap.get(b.divisionId)?.beltRankId ?? 0);
         const sortA = beltA?.sortOrder ?? 9999;
         const sortB = beltB?.sortOrder ?? 9999;
-        if (sortA !== sortB) return sortA - sortB;
-
-        // divisionType.minAge
-        const minAgeA = divisionTypeMap.get(a.divisionTypeId)?.minAge ?? 9999;
-        const minAgeB = divisionTypeMap.get(b.divisionTypeId)?.minAge ?? 9999;
-        if (minAgeA !== minAgeB) return minAgeA - minAgeB;
+        if (sortA !== sortB) return sortA - sortB;        
 
         // genderId
         return a.genderId - b.genderId;
