@@ -14,31 +14,36 @@ export function CheckboxFilter<T extends Primitive>({
   options,
   labels = {},
 }: CheckboxFilterProps<T>) {
-  const selected = (column.getFilterValue() as T[]) ?? []
+  // normalize helper so casing/whitespace differences don't break matching
+  const normalize = (v: unknown) => String(v ?? "").trim().toLowerCase()
+
+  const selectedRaw = (column.getFilterValue() as T[]) ?? []
+  const selected = selectedRaw.map((s) => normalize(s))
 
   const toggle = (value: T, checked: boolean) => {
     if (checked) {
-      column.setFilterValue([...selected, value])
+      column.setFilterValue([...selectedRaw, value])
     } else {
-      column.setFilterValue(selected.filter(v => v !== value))
+      column.setFilterValue(selectedRaw.filter(v => v !== value))
     }
   }
 
   return (
     <div className="mt-2 flex flex-col gap-1 text-xs text-white">
       {options.map(option => {
-        const checked = selected.includes(option)
         const key = String(option)
+        const checked = selected.includes(normalize(option))
         const label = labels[key] ?? key
 
         return (
-          <label key={String(option)} className="flex items-center gap-2">
+          <label key={key} className="flex items-center gap-2">
             <input
               type="checkbox"
               checked={checked}
-              onChange={e => toggle(option, e.target.checked)}
+              onChange={(e) => toggle(option, e.target.checked)}
+              className="w-4 h-4"
             />
-            {normalizeName(label)}
+            <span>{label}</span>
           </label>
         )
       })}

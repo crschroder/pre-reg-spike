@@ -9,13 +9,15 @@ import {
   getPaginationRowModel,
   Column,
   Table
+  , getSortedRowModel 
 } from "@tanstack/react-table";
+import type {SortingState} from "@tanstack/react-table";
 
 // import { RankingInfo, rankItem } from "@tanstack/match-sorter-utils";
 import { useEffect, useMemo, useState } from "react";
 import { CheckboxFilter } from "../Custom/CheckboxFilter";
 //import { CheckboxFilterPopover } from "../Custom/CheckBoxFilterPopover";
-import { Filter as FilterIcon, FilterX, } from "lucide-react";
+import { Filter as FilterIcon, FilterX, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { Pill } from "../Custom/Pill";
 
 import { isBeltColor } from "@/datatypes/belt-colors";
@@ -23,8 +25,8 @@ import type { BeltColor } from "@/datatypes/belt-colors";
 import { DebouncedInput } from "../Custom/DebouncedInput";
 import { PillButton } from "../Custom/PillButton";
 import { normalizeName } from "@/helpers/stringHelpers";
-
-
+import { rankItem } from '@tanstack/match-sorter-utils';
+import type { FilterFn } from '@tanstack/react-table';
 
 
 
@@ -54,6 +56,18 @@ export type RegistrationRow = {
 //     itemRank: RankingInfo
 //   }
 // }
+
+function normalizeKey(value: unknown) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
+  const itemRank = rankItem(row.getValue(columnId), value);
+  addMeta?.({ itemRank });
+  return itemRank.passed;
+};
 
 // // Define a custom fuzzy filter function that will apply ranking info to rows (using match-sorter utils)
 // const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
@@ -96,7 +110,7 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
         id: 'fullName',
         header: 'Full Name',
         cell: (info) => info.getValue(), 
-        filterFn: "includesString"      
+        filterFn: "fuzzy"      
       },
       {
           header: 'Event Number',
@@ -210,17 +224,21 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
   )
 }, [registrations])
 
+  const [sorting, setSorting] = useState<SortingState>([]);
+
    const table = useReactTable({
        data: flattened ?? [],
        columns,
+       state: { sorting },
+       onSortingChange: setSorting,
        getCoreRowModel: getCoreRowModel(),
+       getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
       filterFns: {
-    fuzzy: () => true, // placeholder
+    fuzzy: fuzzyFilter, // placeholder
   },
-    },
-   );   
+    });   
 
 
 const fullNameColumn = table.getColumn("fullName")
@@ -304,10 +322,25 @@ const fullNameColumn = table.getColumn("fullName")
                 {headerGroup.headers.map(header => (
                   <th key={header.id} colSpan={header.colSpan} className="px-4 py-3 text-left relative overflow-visible bg-gray-800 sticky top-0 z-20">
                     {header.isPlaceholder ? null : (
-                      <div className="flex items-center gap-2">
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                      </div>
-                    )}
+                          <div className="flex items-center gap-2">
+                            <div
+                              role="button"
+                              onClick={header.column.getToggleSortingHandler()}
+                              className={header.column.getCanSort() ? "cursor-pointer select-none" : ""}
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                            </div>
+                            <div className="ml-1">
+                              {header.column.getIsSorted() === "asc" ? (
+                                <ChevronUp size={14} />
+                              ) : header.column.getIsSorted() === "desc" ? (
+                                <ChevronDown size={14} />
+                              ) : (
+                                <ChevronsUpDown size={14} />
+                              )}
+                            </div>
+                          </div>
+                        )}
                   </th>
                 ))}
               </tr>
@@ -451,14 +484,14 @@ function FilterBar({ table }: FilterBarProps) {
             {table.getColumn("divisionName") && (
               <CheckboxFilter
                 column={table.getColumn("divisionName")!}
-                options={['junior', 'adult', 'masters', 'senior', 'pee-wee', 'youth']}
+                options={['Junior', 'Adult', 'Masters', 'Senior', 'Pee-Wee', 'Youth']}
               />
             )}
 
             {table.getColumn("eventName") && (
               <CheckboxFilter
                 column={table.getColumn("eventName")!}
-                options={['kumite', 'kata','kobudo']}
+                options={['Kumite', 'Kata','Kobudo']}
               />
             )}
 
