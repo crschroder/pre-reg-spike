@@ -23,6 +23,7 @@ import { Pill } from "../Custom/Pill";
 import { isBeltColor } from "@/datatypes/belt-colors";
 import type { BeltColor } from "@/datatypes/belt-colors";
 import { DebouncedInput } from "../Custom/DebouncedInput";
+import { ReactSelectMulti } from "../Custom/ReactSelectMulti";
 import { PillButton } from "../Custom/PillButton";
 import { normalizeName } from "@/helpers/stringHelpers";
 import { rankItem } from '@tanstack/match-sorter-utils';
@@ -224,6 +225,11 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
   )
 }, [registrations])
 
+  const eventOptions = useMemo(() => {
+    if (!flattened) return [] as string[];
+    return Array.from(new Set(flattened.map((r: any) => r.eventDisplayName))).sort((a: string, b: string) => a.localeCompare(b));
+  }, [flattened]);
+
   const [sorting, setSorting] = useState<SortingState>([]);
 
    const table = useReactTable({
@@ -248,10 +254,15 @@ const fullNameColumn = table.getColumn("fullName")
     <div>
       <h2 className="text-3xl font-semibold mb-6 text-white">Manage Participants for Tournament ID: {tournamentId}</h2>
       <div className="mb-4 flex flex-wrap gap-4 text-white" >
-
-        {/* <Filter column={table.getColumn("firstName")!} placeholder="Search first name" />
-        <Filter column={table.getColumn("lastName")!} placeholder="Search last name" /> */}
-        <Filter column={fullNameColumn!} placeholder="Search full name" />
+        <div className="flex items-center gap-2">
+          <Filter column={fullNameColumn!} placeholder="Search full name" />
+            <ReactSelectMulti
+            options={eventOptions}
+            selected={(table.getColumn("eventDisplayName")?.getFilterValue() as string[]) ?? []}
+            onChange={(vals) => table.getColumn("eventDisplayName")?.setFilterValue(vals)}
+            placeholder="Event numbers"
+            />
+        </div>
         <FilterBar table={table} />
 </div>
 
@@ -261,6 +272,7 @@ const fullNameColumn = table.getColumn("fullName")
     {table.getState().columnFilters.flatMap(filter => {
       const column = table.getColumn(filter.id)
       const values = Array.isArray(filter.value) ? filter.value : [filter.value]
+      // skip filters that render their own chips (full name search and event multiselect)
       if (filter.id === "fullName") return null
       
       if (filter.id === "participantRank") {
