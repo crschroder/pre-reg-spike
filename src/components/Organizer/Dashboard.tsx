@@ -30,6 +30,10 @@ export function OrganizerDashboard() {
         navigate({ to: `/tournament/organizer/created/${id}` });
     }
 
+    function handleViewEvents(id: number) {
+        navigate({ to: `/tournament/organizer/tournamentSummary/${id}` });
+    }
+
     return (<div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
         <h1 className="text-3xl font-semibold mb-6">Welcome to the tournament dashboard page</h1>
         <div className="max-w-3xl mx-auto p-6">
@@ -72,6 +76,12 @@ export function OrganizerDashboard() {
                                     className="flex-1 min-w-max px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm"
                                 >
                                     Registration Stats
+                                </button>
+                                <button
+                                    onClick={() => handleViewEvents(t.id)}
+                                    className="flex-1 min-w-max px-3 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 text-sm"
+                                >
+                                    View Events
                                 </button>
                             </div>
                         </div>

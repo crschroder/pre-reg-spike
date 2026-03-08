@@ -17,10 +17,12 @@ import type {
   DivisionPayload,
   DojoResponse,
   EventSelection,
+  EventSummary,
   EventType,
   ParticipantUpdatePayload,
   TournamentEventDivisionRow,
   TournamentEventPayload,
+  TournamentEventSummary,
   TournamentEventWithEvent,
   TournamentStatusType,
   TypedRequest,
@@ -1095,6 +1097,47 @@ app.get('/api/tournaments/:id/participant', async (req: Request, res: Response, 
   }
 });
 
+app.get('/api/tournament/:id/summary', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tournamentId = Number(req.params.id);
+    if (!tournamentId || isNaN(tournamentId)) {
+      return res.status(400).json({ error: "Invalid tournament ID" });
+    }
+
+    const summaryRows = await getPrisma().tournamentEventSummary.findMany({      
+      where: { tournamentId },
+      orderBy: [
+        { eventOrder: 'asc' },
+        { beltRankOrder: 'asc' }
+      ]
+    });
+
+    const summary: EventSummary[] = summaryRows.reduce((acc, row) => {
+      acc.push({
+        eventCode: row.eventCode,
+        eventType: row.eventType,
+        divisionName: row.divisionName,
+        beltColor: row.beltColor,
+        gender: row.gender,
+        minAge: row.minAge,
+        maxAge: row.maxAge,
+        beltRankOrder: row.beltRankOrder,
+        eventOrder: row.eventOrder,
+      });
+      return acc;
+    }, [] as EventSummary[]);
+
+    const tournamentInfo: TournamentEventSummary = {
+      tournamentId: summaryRows[0]?.tournamentId || 0,
+      tournamentName: summaryRows[0]?.tournamentName || "Unknown Tournament",
+      events: summary
+    };
+
+    res.json(tournamentInfo);
+  } catch (err) {
+    next(err);
+  }
+});
 app.use(errorHandler);
 
 const PORT = Number(process.env.PORT ?? process.env.WEBSITES_PORT ?? 4000);

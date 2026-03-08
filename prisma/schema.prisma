@@ -215,3 +215,18 @@ view ParticipantSummary {
   
   @@map("participant_registration_summary")
 }
+
+view TournamentEventSummary {
+  tournamentName  String  @map("tournament_name")
+  eventCode       String  @map("event_code")
+  eventType       String @map("event_type")
+  divisionName    String  @map("division")
+  beltColor       String  @map("belt_color")
+  gender          String  @map("gender")
+  minAge          Int     @map("min_age")
+  maxAge          Int    @map("max_age")
+  tournamentId    Int     @map("tournament_id")
+  beltRankOrder   Int     @map("belt_rank_sort_order")
+  eventOrder      Int     @map("event_sort_order")
+  @@map("tournament_event_summary")    
+}

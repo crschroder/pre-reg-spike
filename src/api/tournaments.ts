@@ -10,7 +10,8 @@ import type {
   DojoResponse,
   CreateRegistrationPayload,
   TournamentEventWithEvent,
-  EventAllowedDivision
+  EventAllowedDivision,
+  TournamentEventSummary
 } from "@shared/index";
 
 
@@ -142,4 +143,10 @@ export function getParticipantById(participantId: number) : Promise<CreateRegist
 export function updateParticipant(participantId: number, participantData: ParticipantUpdatePayload) {
   return api.patch(`/api/participant/${participantId}`, participantData)
     .then(res => res.data);
+}
+
+
+export function getTournamentEventSummary(tournamentId: number): Promise<TournamentEventSummary> {
+  return api.get(`/api/tournament/${tournamentId}/summary`)
+    .then(res => res.data as TournamentEventSummary);
 }

@@ -110,3 +110,8 @@ X-API-Key: {{apiKey}}
   "events": ["kumite","kata"] 
 }
 
+### Get Tournament Event Summary
+GET {{baseUrl}}/api/tournament/{{tournamentId}}/summary
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+
