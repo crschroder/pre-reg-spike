@@ -432,7 +432,7 @@ jobs:
             CORS_ORIGINS="${{ needs.set-target.outputs.ui_url }}" \
             WEBSITES_PORT=8080 \
             WEBSITE_RUN_FROM_PACKAGE=1 \
-            SCM_DO_BUILD_DURING_DEPLOYMENT=false
+            SCM_DO_BUILD_DURING_DEPLOYMENT=true
 
       - name: Configure API Startup Command
         run: |
