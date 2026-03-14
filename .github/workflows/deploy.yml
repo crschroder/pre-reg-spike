@@ -1,5 +1,19 @@
 name: Deploy to Azure App Services
 
+env:
+  UI_RESOURCE_GROUP: ${{ vars.UI_RESOURCE_GROUP || 'pre-reg-spike-rg' }}
+  API_RESOURCE_GROUP: ${{ vars.API_RESOURCE_GROUP || 'pre-reg-spike-api_group' }}
+
+  DEV_UI_APP_NAME: ${{ vars.DEV_UI_APP_NAME || 'pre-reg-spike-ui-dev' }}
+  DEV_UI_URL: ${{ vars.DEV_UI_URL || 'https://pre-reg-spike-ui-dev-cubfdca4c7ftfqeq.canadacentral-01.azurewebsites.net' }}
+  DEV_API_APP_NAME: ${{ vars.DEV_API_APP_NAME || 'pre-reg-spike-api-dev' }}
+  DEV_API_URL: ${{ vars.DEV_API_URL || 'https://pre-reg-spike-api-dev-gtadf8hrdme8c5ey.canadacentral-01.azurewebsites.net' }}
+
+  PROD_UI_APP_NAME: ${{ vars.PROD_UI_APP_NAME || 'pre-reg-spike-ui' }}
+  PROD_UI_URL: ${{ vars.PROD_UI_URL || 'https://pre-reg-spike-ui-f3hghrcse9gme5ge.canadacentral-01.azurewebsites.net' }}
+  PROD_API_APP_NAME: ${{ vars.PROD_API_APP_NAME || 'pre-reg-spike-api' }}
+  PROD_API_URL: ${{ vars.PROD_API_URL || 'https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net' }}
+
 on:
   push:
     branches:
@@ -14,6 +28,14 @@ on:
         description: 'Git ref to build/deploy (branch, tag, or SHA)'
         required: true
         default: 'main'
+      environment:
+        description: 'Target environment (manual runs only)'
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - prod
       deploy:
         description: 'What to deploy (manual runs only)'
         required: true
@@ -26,7 +48,79 @@ on:
           - both
 
 jobs:
+  set-target:
+    runs-on: ubuntu-latest
+    outputs:
+      target_env: ${{ steps.set.outputs.target_env }}
+      ui_app_name: ${{ steps.set.outputs.ui_app_name }}
+      ui_url: ${{ steps.set.outputs.ui_url }}
+      ui_resource_group: ${{ steps.set.outputs.ui_resource_group }}
+      api_app_name: ${{ steps.set.outputs.api_app_name }}
+      api_url: ${{ steps.set.outputs.api_url }}
+      api_resource_group: ${{ steps.set.outputs.api_resource_group }}
+      deploy_ui: ${{ steps.set.outputs.deploy_ui }}
+      deploy_api: ${{ steps.set.outputs.deploy_api }}
+    steps:
+      - id: set
+        name: Select target environment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TARGET_ENV="dev"
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            TARGET_ENV="${{ inputs.environment }}"
+          elif [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            TARGET_ENV="dev"
+          else
+            # Build-only runs (PRs / non-main pushes): default to dev settings.
+            TARGET_ENV="dev"
+          fi
+
+          if [ "${TARGET_ENV}" = "prod" ]; then
+            UI_APP_NAME="${PROD_UI_APP_NAME}"
+            UI_URL="${PROD_UI_URL}"
+            API_APP_NAME="${PROD_API_APP_NAME}"
+            API_URL="${PROD_API_URL}"
+          else
+            UI_APP_NAME="${DEV_UI_APP_NAME}"
+            UI_URL="${DEV_UI_URL}"
+            API_APP_NAME="${DEV_API_APP_NAME}"
+            API_URL="${DEV_API_URL}"
+          fi
+
+          DEPLOY_UI="false"
+          DEPLOY_API="false"
+
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            DEPLOY_UI="true"
+            DEPLOY_API="true"
+          elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            case "${{ inputs.deploy }}" in
+              ui)
+                DEPLOY_UI="true";;
+              api)
+                DEPLOY_API="true";;
+              both)
+                DEPLOY_UI="true"; DEPLOY_API="true";;
+              none)
+                ;; 
+            esac
+          fi
+
+          echo "target_env=${TARGET_ENV}" >> "${GITHUB_OUTPUT}"
+          echo "ui_app_name=${UI_APP_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "ui_url=${UI_URL}" >> "${GITHUB_OUTPUT}"
+          echo "ui_resource_group=${UI_RESOURCE_GROUP}" >> "${GITHUB_OUTPUT}"
+          echo "api_app_name=${API_APP_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "api_url=${API_URL}" >> "${GITHUB_OUTPUT}"
+          echo "api_resource_group=${API_RESOURCE_GROUP}" >> "${GITHUB_OUTPUT}"
+          echo "deploy_ui=${DEPLOY_UI}" >> "${GITHUB_OUTPUT}"
+          echo "deploy_api=${DEPLOY_API}" >> "${GITHUB_OUTPUT}"
+
   build-ui:
+    needs: set-target
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,14 +138,15 @@ jobs:
       - name: Compute build metadata
         run: |
           VERSION=$(node -e "const n=Number(process.env.GITHUB_RUN_NUMBER||1); console.log((1 + (n-1)/10).toFixed(1))")
+          SHA=$(git rev-parse HEAD)
           echo "VITE_BUILD_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "VITE_BUILD_SHA=${GITHUB_SHA}" >> $GITHUB_ENV
+          echo "VITE_BUILD_SHA=${SHA}" >> $GITHUB_ENV
           echo "VITE_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
 
       - name: Build UI
         run: npm run build
         env:
-          VITE_API_URL: https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net
+          VITE_API_URL: ${{ needs.set-target.outputs.api_url }}
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
           VITE_BUILD_VERSION: ${{ env.VITE_BUILD_VERSION }}
           VITE_BUILD_SHA: ${{ env.VITE_BUILD_SHA }}
@@ -71,6 +166,7 @@ jobs:
           retention-days: 1
 
   build-api:
+    needs: set-target
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -106,11 +202,10 @@ jobs:
           retention-days: 1
 
   deploy-ui:
-    needs: build-ui
+    needs: [set-target, build-ui]
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_dispatch' && (inputs.deploy == 'ui' || inputs.deploy == 'both'))
+    if: ${{ needs.set-target.outputs.deploy_ui == 'true' }}
+    environment: ${{ needs.set-target.outputs.target_env }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -222,43 +317,30 @@ jobs:
         with:
           creds: ${{ format('{{"clientId":"{0}","clientSecret":"{1}","subscriptionId":"{2}","tenantId":"{3}"}}', secrets.AZURE_CLIENT_ID, secrets.AZURE_CLIENT_SECRET, secrets.AZURE_SUBSCRIPTION_ID, secrets.AZURE_TENANT_ID) }}
 
-      - name: Ensure API uses Node runtime (not container)
-        run: |
-          CURRENT=$(az webapp config show --resource-group pre-reg-spike-api_group --name pre-reg-spike-api --query linuxFxVersion -o tsv)
-          echo "Current linuxFxVersion: ${CURRENT}"
-          if [ "${CURRENT}" != "NODE|22-lts" ]; then
-            az webapp config set \
-              --resource-group pre-reg-spike-api_group \
-              --name pre-reg-spike-api \
-              --linux-fx-version "NODE|22-lts"
-            sleep 20
-          fi
-
       - name: Deploy UI to Azure App Service
         uses: azure/webapps-deploy@v3
         with:
-          app-name: pre-reg-spike-ui
+          app-name: ${{ needs.set-target.outputs.ui_app_name }}
           package: ./wwwroot
           clean: true
 
       - name: Configure UI App Settings
         run: |
           az webapp config appsettings set \
-            --resource-group pre-reg-spike-rg \
-            --name pre-reg-spike-ui \
+            --resource-group "${{ needs.set-target.outputs.ui_resource_group }}" \
+            --name "${{ needs.set-target.outputs.ui_app_name }}" \
             --settings \
             VITE_API_KEY="${{ secrets.VITE_API_KEY }}" \
-            VITE_API_URL="https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net" \
-            API_SERVER="https://pre-reg-spike-api-gncmescydpgebuhj.canadacentral-01.azurewebsites.net"
+            VITE_API_URL="${{ needs.set-target.outputs.api_url }}" \
+            API_SERVER="${{ needs.set-target.outputs.api_url }}"
           
-          az webapp config set --resource-group pre-reg-spike-rg --name pre-reg-spike-ui --startup-file "bash /home/site/wwwroot/startup.sh"
+          az webapp config set --resource-group "${{ needs.set-target.outputs.ui_resource_group }}" --name "${{ needs.set-target.outputs.ui_app_name }}" --startup-file "bash /home/site/wwwroot/startup.sh"
 
   deploy-api:
-    needs: build-api
+    needs: [set-target, build-api]
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_dispatch' && (inputs.deploy == 'api' || inputs.deploy == 'both'))
+    if: ${{ needs.set-target.outputs.deploy_api == 'true' }}
+    environment: ${{ needs.set-target.outputs.target_env }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -321,21 +403,33 @@ jobs:
         with:
           creds: ${{ format('{{"clientId":"{0}","clientSecret":"{1}","subscriptionId":"{2}","tenantId":"{3}"}}', secrets.AZURE_CLIENT_ID, secrets.AZURE_CLIENT_SECRET, secrets.AZURE_SUBSCRIPTION_ID, secrets.AZURE_TENANT_ID) }}
 
+      - name: Ensure API uses Node runtime (not container)
+        run: |
+          CURRENT=$(az webapp config show --resource-group "${{ needs.set-target.outputs.api_resource_group }}" --name "${{ needs.set-target.outputs.api_app_name }}" --query linuxFxVersion -o tsv)
+          echo "Current linuxFxVersion: ${CURRENT}"
+          if [ "${CURRENT}" != "NODE|22-lts" ]; then
+            az webapp config set \
+              --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
+              --name "${{ needs.set-target.outputs.api_app_name }}" \
+              --linux-fx-version "NODE|22-lts"
+            sleep 20
+          fi
+
       - name: Deploy API to Azure App Service
         uses: azure/webapps-deploy@v3
         with:
-          app-name: pre-reg-spike-api
+          app-name: ${{ needs.set-target.outputs.api_app_name }}
           package: ./api-deploy
 
       - name: Configure API App Settings
         run: |
           az webapp config appsettings set \
-            --resource-group pre-reg-spike-api_group \
-            --name pre-reg-spike-api \
+            --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
+            --name "${{ needs.set-target.outputs.api_app_name }}" \
             --settings \
             DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             API_KEY="${{ secrets.API_KEY }}" \
-            CORS_ORIGINS="https://pre-reg-spike-ui-f3hghrcse9gme5ge.canadacentral-01.azurewebsites.net" \
+            CORS_ORIGINS="${{ needs.set-target.outputs.ui_url }}" \
             WEBSITES_PORT=8080 \
             WEBSITE_RUN_FROM_PACKAGE=1 \
             SCM_DO_BUILD_DURING_DEPLOYMENT=false
@@ -343,26 +437,26 @@ jobs:
       - name: Configure API Startup Command
         run: |
           az webapp config set \
-            --resource-group pre-reg-spike-api_group \
-            --name pre-reg-spike-api \
+            --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
+            --name "${{ needs.set-target.outputs.api_app_name }}" \
             --startup-file "bash /home/site/wwwroot/startup.sh"
 
       - name: Enable Always On + health check
         run: |
           az webapp config set \
-            --resource-group pre-reg-spike-api_group \
-            --name pre-reg-spike-api \
+            --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
+            --name "${{ needs.set-target.outputs.api_app_name }}" \
             --always-on true
 
           # Health check path may not be available on all SKUs; don't fail deploy if unsupported
           az webapp config set \
-            --resource-group pre-reg-spike-api_group \
-            --name pre-reg-spike-api \
+            --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
+            --name "${{ needs.set-target.outputs.api_app_name }}" \
             --health-check-path "/ping" || true
 
       - name: Warm up API (/ping)
         run: |
-          HOST=$(az webapp show --resource-group pre-reg-spike-api_group --name pre-reg-spike-api --query defaultHostName -o tsv)
+          HOST=$(az webapp show --resource-group "${{ needs.set-target.outputs.api_resource_group }}" --name "${{ needs.set-target.outputs.api_app_name }}" --query defaultHostName -o tsv)
           echo "Warming up https://${HOST}/ping"
           for i in $(seq 1 36); do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://${HOST}/ping" || true)
