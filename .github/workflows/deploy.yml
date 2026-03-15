@@ -332,7 +332,8 @@ jobs:
             --settings \
             VITE_API_KEY="${{ secrets.VITE_API_KEY }}" \
             VITE_API_URL="${{ needs.set-target.outputs.api_url }}" \
-            API_SERVER="${{ needs.set-target.outputs.api_url }}"
+            API_SERVER="${{ needs.set-target.outputs.api_url }}" \
+            WEBSITES_PORT=8080
           
           az webapp config set --resource-group "${{ needs.set-target.outputs.ui_resource_group }}" --name "${{ needs.set-target.outputs.ui_app_name }}" --startup-file "bash /home/site/wwwroot/startup.sh"
 
@@ -460,6 +461,21 @@ jobs:
           echo "Warming up https://${HOST}/ping"
           for i in $(seq 1 36); do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://${HOST}/ping" || true)
+            echo "Attempt ${i}: HTTP ${CODE}"
+            if [ "${CODE}" = "200" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Warmup failed"
+          exit 1
+
+      - name: Warm up UI (/)
+        run: |
+          HOST=$(az webapp show --resource-group "${{ needs.set-target.outputs.ui_resource_group }}" --name "${{ needs.set-target.outputs.ui_app_name }}" --query defaultHostName -o tsv)
+          echo "Warming up https://${HOST}/"
+          for i in $(seq 1 36); do
+            CODE=$(curl -s -L -o /dev/null -w "%{http_code}" "https://${HOST}/" || true)
             echo "Attempt ${i}: HTTP ${CODE}"
             if [ "${CODE}" = "200" ]; then
               exit 0
