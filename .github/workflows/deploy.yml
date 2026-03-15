@@ -382,11 +382,18 @@ jobs:
           }
           EOF
 
-      - name: Install API deps + generate Prisma client
+      - name: Install API deps
         run: |
           cd ./api-deploy
           npm install --omit=dev --no-audit --no-fund
-          DATABASE_URL="postgresql://dummy:dummy@localhost/dummy" npx prisma generate --schema prisma/schema.prisma
+
+      - name: Prisma migrate deploy + generate client
+        working-directory: ./api-deploy
+        env:
+          DATABASE_URL: ${{ needs.set-target.outputs.target_env == 'prod' && secrets.DATABASE_URL || secrets.DATABASE_URL_DEV }}
+        run: |
+          npx prisma migrate deploy --schema prisma/schema.prisma
+          npx prisma generate --schema prisma/schema.prisma
 
       - name: Create startup script
         run: |
@@ -428,7 +435,7 @@ jobs:
             --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
             --name "${{ needs.set-target.outputs.api_app_name }}" \
             --settings \
-            DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            DATABASE_URL="${{ needs.set-target.outputs.target_env == 'prod' && secrets.DATABASE_URL || secrets.DATABASE_URL_DEV }}" \
             API_KEY="${{ secrets.API_KEY }}" \
             CORS_ORIGINS="${{ needs.set-target.outputs.ui_url }}" \
             WEBSITES_PORT=8080 \

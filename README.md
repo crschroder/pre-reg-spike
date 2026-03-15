@@ -12,6 +12,13 @@ npm install
 npm run start
 ```
 
+## CI/CD (Azure + Prisma)
+
+The GitHub Actions deploy workflow applies Prisma migrations during API deploys (`prisma migrate deploy`) and regenerates the Prisma client (`prisma generate`). It selects the database connection string based on the GitHub Environment:
+
+- `prod` deploys use `DATABASE_URL`
+- `dev` deploys use `DATABASE_URL_DEV`
+
 # Building For Production
 
 To build this application for production:
