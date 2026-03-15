@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OrganizerDivisionsRouteImport } from './routes/organizer/divisions'
 import { Route as DemoTableRouteImport } from './routes/demo/table'
 import { Route as TournamentParticipantIndexRouteImport } from './routes/tournament/participant/index'
 import { Route as TournamentOrganizerIndexRouteImport } from './routes/tournament/organizer/index'
@@ -32,6 +33,11 @@ import { Route as TournamentParticipantRegisterIdUpdateParticipantParticipantIdR
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrganizerDivisionsRoute = OrganizerDivisionsRouteImport.update({
+  id: '/organizer/divisions',
+  path: '/organizer/divisions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoTableRoute = DemoTableRouteImport.update({
@@ -147,6 +153,7 @@ const TournamentParticipantRegisterIdUpdateParticipantParticipantIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/demo/table': typeof DemoTableRoute
+  '/organizer/divisions': typeof OrganizerDivisionsRoute
   '/tournament/organizer/create': typeof TournamentOrganizerCreateRoute
   '/tournament/organizer/registration-summary': typeof TournamentOrganizerRegistrationSummaryRoute
   '/tournament/organizer': typeof TournamentOrganizerIndexRoute
@@ -168,6 +175,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/demo/table': typeof DemoTableRoute
+  '/organizer/divisions': typeof OrganizerDivisionsRoute
   '/tournament/organizer/create': typeof TournamentOrganizerCreateRoute
   '/tournament/organizer/registration-summary': typeof TournamentOrganizerRegistrationSummaryRoute
   '/tournament/organizer': typeof TournamentOrganizerIndexRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/demo/table': typeof DemoTableRoute
+  '/organizer/divisions': typeof OrganizerDivisionsRoute
   '/tournament/organizer/create': typeof TournamentOrganizerCreateRoute
   '/tournament/organizer/registration-summary': typeof TournamentOrganizerRegistrationSummaryRoute
   '/tournament/organizer/': typeof TournamentOrganizerIndexRoute
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/demo/table'
+    | '/organizer/divisions'
     | '/tournament/organizer/create'
     | '/tournament/organizer/registration-summary'
     | '/tournament/organizer'
@@ -234,6 +244,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/demo/table'
+    | '/organizer/divisions'
     | '/tournament/organizer/create'
     | '/tournament/organizer/registration-summary'
     | '/tournament/organizer'
@@ -255,6 +266,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/demo/table'
+    | '/organizer/divisions'
     | '/tournament/organizer/create'
     | '/tournament/organizer/registration-summary'
     | '/tournament/organizer/'
@@ -277,6 +289,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DemoTableRoute: typeof DemoTableRoute
+  OrganizerDivisionsRoute: typeof OrganizerDivisionsRoute
   TournamentOrganizerCreateRoute: typeof TournamentOrganizerCreateRoute
   TournamentOrganizerRegistrationSummaryRoute: typeof TournamentOrganizerRegistrationSummaryRoute
   TournamentOrganizerIndexRoute: typeof TournamentOrganizerIndexRoute
@@ -303,6 +316,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/organizer/divisions': {
+      id: '/organizer/divisions'
+      path: '/organizer/divisions'
+      fullPath: '/organizer/divisions'
+      preLoaderRoute: typeof OrganizerDivisionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/table': {
@@ -437,6 +457,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DemoTableRoute: DemoTableRoute,
+  OrganizerDivisionsRoute: OrganizerDivisionsRoute,
   TournamentOrganizerCreateRoute: TournamentOrganizerCreateRoute,
   TournamentOrganizerRegistrationSummaryRoute:
     TournamentOrganizerRegistrationSummaryRoute,

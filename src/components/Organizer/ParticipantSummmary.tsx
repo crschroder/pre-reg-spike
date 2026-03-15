@@ -467,10 +467,8 @@ export function ParticipantTable({
       </div>
       <div className="mt-4 text-gray-400">
         {table.getPrePaginationRowModel().rows.length} Selected Participants
-        {}
-      </div>
-       <div className="mt-4 text-gray-400">
-        
+        &nbsp;{table.getFilteredRowModel().rows.length} Filtered Participants
+         &nbsp;
         {table.getPreSelectedRowModel().rows.length} Total Participants
       </div>
       </>

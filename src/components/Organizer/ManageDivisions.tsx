@@ -15,20 +15,23 @@ import type {SortingState} from "@tanstack/react-table";
 
 // import { RankingInfo, rankItem } from "@tanstack/match-sorter-utils";
 import { useEffect, useMemo, useState } from "react";
+import { useSetAtom } from "jotai";
+import { selectedRegistrationsAtom } from "@/store/selectedRegistrations";
+import { useNavigate } from "@tanstack/react-router";
 import { CheckboxFilter } from "../Custom/CheckboxFilter";
 //import { CheckboxFilterPopover } from "../Custom/CheckBoxFilterPopover";
 import { Filter as FilterIcon, FilterX, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { Pill } from "../Custom/Pill";
 
-import { isBeltColor } from "@/datatypes/belt-colors";
-import type { BeltColor } from "@/datatypes/belt-colors";
+// import { isBeltColor } from "@/datatypes/belt-colors";
+import  { BeltColor,isBeltColor } from "@/datatypes/belt-colors";
 import { DebouncedInput } from "../Custom/DebouncedInput";
 import { ReactSelectMulti } from "../Custom/ReactSelectMulti";
-import { PillButton } from "../Custom/PillButton";
+// import { PillButton } from "../Custom/PillButton";
 import { normalizeName } from "@/helpers/stringHelpers";
 import { rankItem } from '@tanstack/match-sorter-utils';
 import type { FilterFn } from '@tanstack/react-table';
-
+import { IndeterminateCheckbox, PillButton } from "@/components/Custom/";
 
 
 export type RegistrationRow = {
@@ -87,6 +90,9 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
 
 export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
 
+  const setSelectedRegistrations = useSetAtom(selectedRegistrationsAtom);
+  const navigate = useNavigate();
+
 
     const { data: registrations, isLoading: participantLoading } = useQuery<any[]>({
         queryKey: ['tournament-registrations', tournamentId],
@@ -106,6 +112,30 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
         //   header: 'Last Name',
         //   accessorKey: 'lastName',
         // },
+        {
+        id: 'select',
+        header: ({ table }) => (
+          <IndeterminateCheckbox
+            {...{
+              checked: table.getIsAllRowsSelected(),
+              indeterminate: table.getIsSomeRowsSelected(),
+              onChange: table.getToggleAllRowsSelectedHandler(),
+            }}
+          />
+        ),
+        cell: ({ row }) => (
+          <div className="px-1">
+            <IndeterminateCheckbox
+              {...{
+                checked: row.getIsSelected(),
+                disabled: !row.getCanSelect(),
+                indeterminate: row.getIsSomeSelected(),
+                onChange: row.getToggleSelectedHandler(),
+              }}
+            />
+          </div>
+        ),
+      },
         {
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
         id: 'fullName',
@@ -388,7 +418,21 @@ const fullNameColumn = table.getColumn("fullName")
 )}
          </div>
           <div className="h-4" />
-      <div className="flex flex-wrap items-center gap-2 text-gray-200">
+          {/* Button to set selected registrations and navigate */}
+          <div className="my-4">
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              disabled={table.getSelectedRowModel().rows.length === 0}
+              onClick={() => {
+                const selectedRows = table.getSelectedRowModel().rows.map(row => row.original);
+                setSelectedRegistrations(selectedRows);
+                navigate({ to: "/organizer/divisions" });
+              }}
+            >
+              Use Selected Registrations
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-gray-200">
         <button
           className="px-3 py-1 bg-gray-800 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={() => table.setPageIndex(0)}
