@@ -386,7 +386,7 @@ jobs:
       - name: Install API deps
         run: |
           cd ./api-deploy
-          npm install --omit=dev --no-audit --no-fund
+          npm install --omit=dev --no-audit --no-fund --ignore-scripts
 
       - name: Prisma migrate deploy + generate client
         working-directory: ./api-deploy
