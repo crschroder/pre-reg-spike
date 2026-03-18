@@ -424,14 +424,13 @@ jobs:
             sleep 20
           fi
 
-      - name: Deploy API to Azure App Service
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ needs.set-target.outputs.api_app_name }}
-          package: ./api-deploy
-
-      - name: Configure API App Settings
+      - name: Configure API App Settings (BEFORE deploy)
         run: |
+          az webapp config appsettings delete \
+            --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
+            --name "${{ needs.set-target.outputs.api_app_name }}" \
+            --setting-names SCM_DO_BUILD_DURING_DEPLOYMENT || true
+
           az webapp config appsettings set \
             --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
             --name "${{ needs.set-target.outputs.api_app_name }}" \
@@ -441,28 +440,33 @@ jobs:
             CORS_ORIGINS="${{ needs.set-target.outputs.ui_url }}" \
             WEBSITES_PORT=8080 \
             NODE_OPTIONS="--dns-result-order=ipv4first" \
-            WEBSITE_RUN_FROM_PACKAGE=0 \
-            SCM_DO_BUILD_DURING_DEPLOYMENT=false
+            WEBSITE_RUN_FROM_PACKAGE=1
 
       - name: Configure API Startup Command
         run: |
           az webapp config set \
             --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
             --name "${{ needs.set-target.outputs.api_app_name }}" \
-            --startup-file "bash /home/site/wwwroot/startup.sh"
-
-      - name: Enable Always On + health check
-        run: |
-          az webapp config set \
-            --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
-            --name "${{ needs.set-target.outputs.api_app_name }}" \
+            --startup-file "bash /home/site/wwwroot/startup.sh" \
             --always-on true
 
-          # Health check path may not be available on all SKUs; don't fail deploy if unsupported
           az webapp config set \
             --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
             --name "${{ needs.set-target.outputs.api_app_name }}" \
             --health-check-path "/ping" || true
+
+      - name: Clean Oryx leftovers from previous deploys
+        run: |
+          az webapp ssh --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
+            --name "${{ needs.set-target.outputs.api_app_name }}" \
+            --timeout 30 \
+            -- "rm -f /home/site/wwwroot/oryx-manifest.toml /home/site/wwwroot/node_modules.tar.gz 2>/dev/null" || true
+
+      - name: Deploy API to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ needs.set-target.outputs.api_app_name }}
+          package: ./api-deploy
 
       - name: Warm up API (/ping)
         run: |
