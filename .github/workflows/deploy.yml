@@ -367,7 +367,8 @@ jobs:
             "type": "commonjs",
             "main": "api-server.js",
             "scripts": {
-              "start": "node api-server.js"
+              "start": "node api-server.js",
+              "postinstall": "prisma generate --schema prisma/schema.prisma"
             },
             "dependencies": {
               "@prisma/adapter-pg": "7.3.0",
@@ -439,8 +440,9 @@ jobs:
             API_KEY="${{ secrets.API_KEY }}" \
             CORS_ORIGINS="${{ needs.set-target.outputs.ui_url }}" \
             WEBSITES_PORT=8080 \
-            WEBSITE_RUN_FROM_PACKAGE=1 \
-            SCM_DO_BUILD_DURING_DEPLOYMENT=true
+            NODE_OPTIONS="--dns-result-order=ipv4first" \
+            WEBSITE_RUN_FROM_PACKAGE=0 \
+            SCM_DO_BUILD_DURING_DEPLOYMENT=false
 
       - name: Configure API Startup Command
         run: |
