@@ -324,18 +324,20 @@ jobs:
           package: ./wwwroot
           clean: true
 
-      - name: Configure UI App Settings
+      - name: Warm up UI (/)
         run: |
-          az webapp config appsettings set \
-            --resource-group "${{ needs.set-target.outputs.ui_resource_group }}" \
-            --name "${{ needs.set-target.outputs.ui_app_name }}" \
-            --settings \
-            VITE_API_KEY="${{ secrets.VITE_API_KEY }}" \
-            VITE_API_URL="${{ needs.set-target.outputs.api_url }}" \
-            API_SERVER="${{ needs.set-target.outputs.api_url }}" \
-            WEBSITES_PORT=8080
-          
-          az webapp config set --resource-group "${{ needs.set-target.outputs.ui_resource_group }}" --name "${{ needs.set-target.outputs.ui_app_name }}" --startup-file "bash /home/site/wwwroot/startup.sh"
+          URL="${{ needs.set-target.outputs.ui_url }}"
+          echo "Warming up ${URL}/"
+          for i in $(seq 1 36); do
+            CODE=$(curl -s -L -o /dev/null -w "%{http_code}" "${URL}/" || true)
+            echo "Attempt ${i}: HTTP ${CODE}"
+            if [ "${CODE}" = "200" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Warmup failed"
+          exit 1
 
   deploy-api:
     needs: [set-target, build-api]
@@ -412,56 +414,23 @@ jobs:
         with:
           creds: ${{ format('{{"clientId":"{0}","clientSecret":"{1}","subscriptionId":"{2}","tenantId":"{3}"}}', secrets.AZURE_CLIENT_ID, secrets.AZURE_CLIENT_SECRET, secrets.AZURE_SUBSCRIPTION_ID, secrets.AZURE_TENANT_ID) }}
 
-      - name: Ensure API uses Node runtime (not container)
-        run: |
-          CURRENT=$(az webapp config show --resource-group "${{ needs.set-target.outputs.api_resource_group }}" --name "${{ needs.set-target.outputs.api_app_name }}" --query linuxFxVersion -o tsv)
-          echo "Current linuxFxVersion: ${CURRENT}"
-          if [ "${CURRENT}" != "NODE|22-lts" ]; then
-            az webapp config set \
-              --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
-              --name "${{ needs.set-target.outputs.api_app_name }}" \
-              --linux-fx-version "NODE|22-lts"
-            sleep 20
-          fi
-
       - name: Deploy API to Azure App Service
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ needs.set-target.outputs.api_app_name }}
           package: ./api-deploy
 
-      - name: Configure API App Settings
+      - name: Warm up API (/ping)
         run: |
-          az webapp config appsettings delete \
-            --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
-            --name "${{ needs.set-target.outputs.api_app_name }}" \
-            --setting-names SCM_DO_BUILD_DURING_DEPLOYMENT || true
-
-          az webapp config appsettings set \
-            --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
-            --name "${{ needs.set-target.outputs.api_app_name }}" \
-            --settings \
-            DATABASE_URL="${{ needs.set-target.outputs.target_env == 'prod' && secrets.DATABASE_URL || secrets.DATABASE_URL_DEV }}" \
-            API_KEY="${{ secrets.API_KEY }}" \
-            CORS_ORIGINS="${{ needs.set-target.outputs.ui_url }}" \
-            WEBSITES_PORT=8080 \
-            NODE_OPTIONS="--dns-result-order=ipv4first" \
-            WEBSITE_RUN_FROM_PACKAGE=1
-
-          az webapp config set \
-            --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
-            --name "${{ needs.set-target.outputs.api_app_name }}" \
-            --startup-file "bash /home/site/wwwroot/startup.sh" \
-            --always-on true
-
-          az webapp config set \
-            --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
-            --name "${{ needs.set-target.outputs.api_app_name }}" \
-            --health-check-path "/ping" || true
-
-      - name: Restart API to pick up new settings
-        run: |
-          az webapp restart \
-            --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
-            --name "${{ needs.set-target.outputs.api_app_name }}"
-          sleep 30
+          URL="${{ needs.set-target.outputs.api_url }}"
+          echo "Warming up ${URL}/ping"
+          for i in $(seq 1 36); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "${URL}/ping" || true)
+            echo "Attempt ${i}: HTTP ${CODE}"
+            if [ "${CODE}" = "200" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Warmup failed"
+          exit 1
