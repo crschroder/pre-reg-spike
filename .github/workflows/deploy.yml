@@ -424,7 +424,13 @@ jobs:
             sleep 20
           fi
 
-      - name: Configure API App Settings (BEFORE deploy)
+      - name: Deploy API to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ needs.set-target.outputs.api_app_name }}
+          package: ./api-deploy
+
+      - name: Configure API App Settings
         run: |
           az webapp config appsettings delete \
             --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
@@ -442,8 +448,6 @@ jobs:
             NODE_OPTIONS="--dns-result-order=ipv4first" \
             WEBSITE_RUN_FROM_PACKAGE=1
 
-      - name: Configure API Startup Command
-        run: |
           az webapp config set \
             --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
             --name "${{ needs.set-target.outputs.api_app_name }}" \
@@ -455,45 +459,9 @@ jobs:
             --name "${{ needs.set-target.outputs.api_app_name }}" \
             --health-check-path "/ping" || true
 
-      - name: Clean Oryx leftovers from previous deploys
+      - name: Restart API to pick up new settings
         run: |
-          az webapp ssh --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
-            --name "${{ needs.set-target.outputs.api_app_name }}" \
-            --timeout 30 \
-            -- "rm -f /home/site/wwwroot/oryx-manifest.toml /home/site/wwwroot/node_modules.tar.gz 2>/dev/null" || true
-
-      - name: Deploy API to Azure App Service
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ needs.set-target.outputs.api_app_name }}
-          package: ./api-deploy
-
-      - name: Warm up API (/ping)
-        run: |
-          HOST=$(az webapp show --resource-group "${{ needs.set-target.outputs.api_resource_group }}" --name "${{ needs.set-target.outputs.api_app_name }}" --query defaultHostName -o tsv)
-          echo "Warming up https://${HOST}/ping"
-          for i in $(seq 1 36); do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://${HOST}/ping" || true)
-            echo "Attempt ${i}: HTTP ${CODE}"
-            if [ "${CODE}" = "200" ]; then
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "Warmup failed"
-          exit 1
-
-      - name: Warm up UI (/)
-        run: |
-          HOST=$(az webapp show --resource-group "${{ needs.set-target.outputs.ui_resource_group }}" --name "${{ needs.set-target.outputs.ui_app_name }}" --query defaultHostName -o tsv)
-          echo "Warming up https://${HOST}/"
-          for i in $(seq 1 36); do
-            CODE=$(curl -s -L -o /dev/null -w "%{http_code}" "https://${HOST}/" || true)
-            echo "Attempt ${i}: HTTP ${CODE}"
-            if [ "${CODE}" = "200" ]; then
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "Warmup failed"
-          exit 1
+          az webapp restart \
+            --resource-group "${{ needs.set-target.outputs.api_resource_group }}" \
+            --name "${{ needs.set-target.outputs.api_app_name }}"
+          sleep 30
