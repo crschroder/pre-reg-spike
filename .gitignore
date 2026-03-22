@@ -15,3 +15,7 @@ todos.json
 /generated/prisma
 gcm-diagnose.log
 GitHub
+_api_logs/
+_ui_logs/
+*-logs.zip
+*-current.zip
