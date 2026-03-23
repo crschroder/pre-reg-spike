@@ -1,17 +1,8 @@
 import { useMemo } from "react";
 import { useAtomValue } from "jotai";
-import { selectedRegistrationsAtom } from "@/store/selectedRegistrations";
+import { selectedRegistrationsAtom, type DrawRegistration } from "@/store/selectedRegistrations";
 
-type RegistrationRow = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  participantGender: string;
-  participantRank: string;
-  divisionName: string;
-  eventName: string;
-  eventDislayName: string;
-};
+type RegistrationRow = DrawRegistration;
 
 type TemplateSize = 4 | 8 | 16 | 32;
 
@@ -760,7 +751,7 @@ export function DivisionDraw() {
     const printMarkup = buildPrintDocumentMarkup(
       renderModel,
       titleRegistration?.divisionName || "Division",
-      titleRegistration?.eventDislayName || titleRegistration?.eventName || "",
+      titleRegistration?.eventDisplayName || titleRegistration?.eventName || "",
       registrations.length
     );
     const printBlob = new Blob([printMarkup], { type: "text/html" });
@@ -950,7 +941,7 @@ export function DivisionDraw() {
                 {titleRegistration?.divisionName || "Division"}
               </h3>
               <p className="text-sm text-gray-300 print:text-gray-600">
-                {titleRegistration?.eventDislayName || titleRegistration?.eventName || ""}
+                {titleRegistration?.eventDisplayName || titleRegistration?.eventName || ""}
               </p>
             </div>
 

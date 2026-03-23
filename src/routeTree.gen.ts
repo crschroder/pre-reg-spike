@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OrganizerDivisionsDoubleRouteImport } from './routes/organizer/divisions-double'
 import { Route as OrganizerDivisionsRouteImport } from './routes/organizer/divisions'
 import { Route as DemoTableRouteImport } from './routes/demo/table'
 import { Route as TournamentParticipantIndexRouteImport } from './routes/tournament/participant/index'
@@ -35,6 +36,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrganizerDivisionsDoubleRoute =
+  OrganizerDivisionsDoubleRouteImport.update({
+    id: '/organizer/divisions-double',
+    path: '/organizer/divisions-double',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const OrganizerDivisionsRoute = OrganizerDivisionsRouteImport.update({
   id: '/organizer/divisions',
   path: '/organizer/divisions',
@@ -154,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/demo/table': typeof DemoTableRoute
   '/organizer/divisions': typeof OrganizerDivisionsRoute
+  '/organizer/divisions-double': typeof OrganizerDivisionsDoubleRoute
   '/tournament/organizer/create': typeof TournamentOrganizerCreateRoute
   '/tournament/organizer/registration-summary': typeof TournamentOrganizerRegistrationSummaryRoute
   '/tournament/organizer': typeof TournamentOrganizerIndexRoute
@@ -176,6 +184,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/demo/table': typeof DemoTableRoute
   '/organizer/divisions': typeof OrganizerDivisionsRoute
+  '/organizer/divisions-double': typeof OrganizerDivisionsDoubleRoute
   '/tournament/organizer/create': typeof TournamentOrganizerCreateRoute
   '/tournament/organizer/registration-summary': typeof TournamentOrganizerRegistrationSummaryRoute
   '/tournament/organizer': typeof TournamentOrganizerIndexRoute
@@ -199,6 +208,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/demo/table': typeof DemoTableRoute
   '/organizer/divisions': typeof OrganizerDivisionsRoute
+  '/organizer/divisions-double': typeof OrganizerDivisionsDoubleRoute
   '/tournament/organizer/create': typeof TournamentOrganizerCreateRoute
   '/tournament/organizer/registration-summary': typeof TournamentOrganizerRegistrationSummaryRoute
   '/tournament/organizer/': typeof TournamentOrganizerIndexRoute
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
     | '/'
     | '/demo/table'
     | '/organizer/divisions'
+    | '/organizer/divisions-double'
     | '/tournament/organizer/create'
     | '/tournament/organizer/registration-summary'
     | '/tournament/organizer'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/'
     | '/demo/table'
     | '/organizer/divisions'
+    | '/organizer/divisions-double'
     | '/tournament/organizer/create'
     | '/tournament/organizer/registration-summary'
     | '/tournament/organizer'
@@ -267,6 +279,7 @@ export interface FileRouteTypes {
     | '/'
     | '/demo/table'
     | '/organizer/divisions'
+    | '/organizer/divisions-double'
     | '/tournament/organizer/create'
     | '/tournament/organizer/registration-summary'
     | '/tournament/organizer/'
@@ -290,6 +303,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DemoTableRoute: typeof DemoTableRoute
   OrganizerDivisionsRoute: typeof OrganizerDivisionsRoute
+  OrganizerDivisionsDoubleRoute: typeof OrganizerDivisionsDoubleRoute
   TournamentOrganizerCreateRoute: typeof TournamentOrganizerCreateRoute
   TournamentOrganizerRegistrationSummaryRoute: typeof TournamentOrganizerRegistrationSummaryRoute
   TournamentOrganizerIndexRoute: typeof TournamentOrganizerIndexRoute
@@ -316,6 +330,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/organizer/divisions-double': {
+      id: '/organizer/divisions-double'
+      path: '/organizer/divisions-double'
+      fullPath: '/organizer/divisions-double'
+      preLoaderRoute: typeof OrganizerDivisionsDoubleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/organizer/divisions': {
@@ -458,6 +479,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DemoTableRoute: DemoTableRoute,
   OrganizerDivisionsRoute: OrganizerDivisionsRoute,
+  OrganizerDivisionsDoubleRoute: OrganizerDivisionsDoubleRoute,
   TournamentOrganizerCreateRoute: TournamentOrganizerCreateRoute,
   TournamentOrganizerRegistrationSummaryRoute:
     TournamentOrganizerRegistrationSummaryRoute,
