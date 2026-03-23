@@ -41,6 +41,25 @@ type TemplateRoundLabel = {
   y: number;
 };
 
+type TemplateThirdPlaceBracket = {
+  labelX: number;
+  labelY: number;
+  lineStartX: number;
+  joinX: number;
+  winnerX: number;
+  topY: number;
+  bottomY: number;
+};
+
+type TemplatePlacementLine = {
+  id: string;
+  label: string;
+  labelX: number;
+  lineStartX: number;
+  lineEndX: number;
+  y: number;
+};
+
 type BracketTemplate = {
   size: TemplateSize;
   viewBoxWidth: number;
@@ -50,11 +69,14 @@ type BracketTemplate = {
   roundLabels: TemplateRoundLabel[];
   slots: TemplateSlot[];
   matches: TemplateMatch[];
+  thirdPlaceBracket: TemplateThirdPlaceBracket;
+  placementLines: TemplatePlacementLine[];
 };
 
 type TemplateConfig = {
   size: TemplateSize;
   slotStartX: number;
+  roundLabelY: number;
   topPadding: number;
   leafSpacing: number;
   firstJoinX: number;
@@ -62,6 +84,12 @@ type TemplateConfig = {
   finalLineLength: number;
   viewBoxWidth: number;
   viewBoxHeight: number;
+  sidePanelWidth: number;
+  rightColumnInset: number;
+  thirdPlaceTopY: number;
+  thirdPlaceBottomY: number;
+  placementStartY: number;
+  placementSpacing: number;
 };
 
 type PopulatedSlot = TemplateSlot & {
@@ -93,50 +121,83 @@ type TemplateRenderModel = {
   visibleMatches: RenderedMatch[];
 };
 
+const SLOT_LABEL_FONT_SIZE = 16;
+const SLOT_LABEL_OFFSET_Y = 6;
+const PLACEMENT_LABELS = ["1st", "2nd", "3rd", "4th"] as const;
+const THIRD_PLACE_OUTER_LINE_EXTENSION = 72;
+
 const TEMPLATE_CONFIGS: Record<TemplateSize, TemplateConfig> = {
   4: {
     size: 4,
     slotStartX: 24,
-    topPadding: 120,
-    leafSpacing: 180,
-    firstJoinX: 250,
-    roundSpacing: 330,
-    finalLineLength: 220,
-    viewBoxWidth: 980,
-    viewBoxHeight: 700,
+    roundLabelY: 16,
+    topPadding: 96,
+    leafSpacing: 160,
+    firstJoinX: 275,
+    roundSpacing: 340,
+    finalLineLength: 240,
+    viewBoxWidth: 880,
+    viewBoxHeight: 670,
+    sidePanelWidth: 230,
+    rightColumnInset: 32,
+    thirdPlaceTopY: 104,
+    thirdPlaceBottomY: 152,
+    placementStartY: 524,
+    placementSpacing: 38,
   },
   8: {
     size: 8,
     slotStartX: 24,
-    topPadding: 92,
-    leafSpacing: 112,
-    firstJoinX: 250,
-    roundSpacing: 280,
-    finalLineLength: 190,
+    roundLabelY: 16,
+    topPadding: 84,
+    leafSpacing: 90,
+    firstJoinX: 280,
+    roundSpacing: 320,
+    finalLineLength: 220,
     viewBoxWidth: 1120,
-    viewBoxHeight: 940,
+    viewBoxHeight: 760,
+    sidePanelWidth: 240,
+    rightColumnInset: 34,
+    thirdPlaceTopY: 98,
+    thirdPlaceBottomY: 150,
+    placementStartY: 628,
+    placementSpacing: 36,
   },
   16: {
     size: 16,
     slotStartX: 24,
-    topPadding: 82,
-    leafSpacing: 74,
-    firstJoinX: 230,
-    roundSpacing: 240,
-    finalLineLength: 170,
-    viewBoxWidth: 1360,
-    viewBoxHeight: 1320,
+    roundLabelY: 16,
+    topPadding: 62,
+    leafSpacing: 60,
+    firstJoinX: 240,
+    roundSpacing: 255,
+    finalLineLength: 180,
+    viewBoxWidth: 1180,
+    viewBoxHeight: 980,
+    sidePanelWidth: 250,
+    rightColumnInset: 34,
+    thirdPlaceTopY: 92,
+    thirdPlaceBottomY: 146,
+    placementStartY: 804,
+    placementSpacing: 40,
   },
   32: {
     size: 32,
     slotStartX: 24,
-    topPadding: 74,
-    leafSpacing: 48,
-    firstJoinX: 220,
-    roundSpacing: 210,
-    finalLineLength: 150,
-    viewBoxWidth: 1540,
-    viewBoxHeight: 1680,
+    roundLabelY: 16,
+    topPadding: 46,
+    leafSpacing: 33,
+    firstJoinX: 232,
+    roundSpacing: 235,
+    finalLineLength: 165,
+    viewBoxWidth: 1320,
+    viewBoxHeight: 1080,
+    sidePanelWidth: 270,
+    rightColumnInset: 34,
+    thirdPlaceTopY: 88,
+    thirdPlaceBottomY: 144,
+    placementStartY: 900,
+    placementSpacing: 40,
   },
 };
 
@@ -255,12 +316,35 @@ function createTemplate(config: TemplateConfig): BracketTemplate {
   }
 
   const root = build(0, config.size, totalRounds);
+  const rightPanelStartX = config.viewBoxWidth - config.sidePanelWidth;
+  const thirdPlaceLineStartX = rightPanelStartX - THIRD_PLACE_OUTER_LINE_EXTENSION;
+  const thirdPlaceWinnerX = config.viewBoxWidth - config.rightColumnInset;
+  const thirdPlaceJoinX = Math.min(rightPanelStartX + 52, thirdPlaceWinnerX - 52);
+  const thirdPlaceBracket = {
+    labelX: rightPanelStartX,
+    labelY: config.thirdPlaceTopY - 18,
+    lineStartX: thirdPlaceLineStartX,
+    joinX: thirdPlaceJoinX,
+    winnerX: thirdPlaceWinnerX,
+    topY: config.thirdPlaceTopY,
+    bottomY: config.thirdPlaceBottomY,
+  } satisfies TemplateThirdPlaceBracket;
+  const placementLines = PLACEMENT_LABELS.map((label, index) => {
+    return {
+      id: `placement-${label.toLowerCase()}`,
+      label,
+      labelX: rightPanelStartX,
+      lineStartX: rightPanelStartX + 42,
+      lineEndX: thirdPlaceWinnerX,
+      y: config.placementStartY + index * config.placementSpacing,
+    } satisfies TemplatePlacementLine;
+  });
   const roundLabels = Array.from({ length: totalRounds }, (_, index) => {
     return {
       id: `round-${index + 1}`,
       text: getRoundLabel(index, totalRounds),
       x: index === 0 ? config.slotStartX : joinXs[index - 1] + 12,
-      y: 28,
+      y: config.roundLabelY,
     } satisfies TemplateRoundLabel;
   });
 
@@ -273,6 +357,8 @@ function createTemplate(config: TemplateConfig): BracketTemplate {
     roundLabels,
     slots,
     matches,
+    thirdPlaceBracket,
+    placementLines,
   };
 }
 
@@ -434,6 +520,7 @@ function buildPrintSvgMarkup(renderModel: TemplateRenderModel) {
       return `<text x="${label.x}" y="${label.y}" fill="currentColor" font-size="13" font-weight="600">${escapeHtml(label.text)}</text>`;
     })
     .join("");
+  const thirdPlaceBracket = renderModel.template.thirdPlaceBracket;
   const matches = renderModel.visibleMatches
     .map((match) => {
       const nextLine = match.nextX
@@ -448,6 +535,21 @@ function buildPrintSvgMarkup(renderModel: TemplateRenderModel) {
       </g>`;
     })
     .join("");
+  const thirdPlaceMarkup = `<g id="third-place-match">
+      <text x="${thirdPlaceBracket.labelX}" y="${thirdPlaceBracket.labelY}" fill="currentColor" font-size="12" font-weight="600">3rd Place Match</text>
+      <line x1="${thirdPlaceBracket.lineStartX}" y1="${thirdPlaceBracket.topY}" x2="${thirdPlaceBracket.joinX}" y2="${thirdPlaceBracket.topY}" stroke="currentColor" stroke-width="2" />
+      <line x1="${thirdPlaceBracket.lineStartX}" y1="${thirdPlaceBracket.bottomY}" x2="${thirdPlaceBracket.joinX}" y2="${thirdPlaceBracket.bottomY}" stroke="currentColor" stroke-width="2" />
+      <line x1="${thirdPlaceBracket.joinX}" y1="${thirdPlaceBracket.topY}" x2="${thirdPlaceBracket.joinX}" y2="${thirdPlaceBracket.bottomY}" stroke="currentColor" stroke-width="2" />
+      <line x1="${thirdPlaceBracket.joinX}" y1="${(thirdPlaceBracket.topY + thirdPlaceBracket.bottomY) / 2}" x2="${thirdPlaceBracket.winnerX}" y2="${(thirdPlaceBracket.topY + thirdPlaceBracket.bottomY) / 2}" stroke="currentColor" stroke-width="2" />
+    </g>`;
+  const placementLinesMarkup = renderModel.template.placementLines
+    .map((line) => {
+      return `<g id="${line.id}">
+        <text x="${line.labelX}" y="${line.y - 4}" fill="currentColor" font-size="13" font-weight="600">${escapeHtml(line.label)}</text>
+        <line x1="${line.lineStartX}" y1="${line.y}" x2="${line.lineEndX}" y2="${line.y}" stroke="currentColor" stroke-width="2" />
+      </g>`;
+    })
+    .join("");
   const slotLookup = new Map(renderModel.slots.map((slot) => [slot.id, slot]));
   const labels = renderModel.visibleSlotSources
     .map((source) => {
@@ -457,7 +559,7 @@ function buildPrintSvgMarkup(renderModel: TemplateRenderModel) {
         return "";
       }
 
-      return `<text x="${source.x + 12}" y="${source.y - 12}" fill="currentColor" font-size="14">
+      return `<text x="${source.x + 12}" y="${source.y - SLOT_LABEL_OFFSET_Y}" fill="currentColor" font-size="${SLOT_LABEL_FONT_SIZE}">
         <tspan font-weight="700">${slot.seed}</tspan>
         <tspan dx="12">${escapeHtml(slot.label)}</tspan>
       </text>`;
@@ -467,6 +569,8 @@ function buildPrintSvgMarkup(renderModel: TemplateRenderModel) {
   return `<svg viewBox="0 0 ${renderModel.template.viewBoxWidth} ${renderModel.template.viewBoxHeight}" class="division-draw-svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Single elimination tournament bracket">
     <g id="round-labels">${roundLabels}</g>
     <g id="match-lines">${matches}</g>
+    ${thirdPlaceMarkup}
+    <g id="placement-lines">${placementLinesMarkup}</g>
     <g id="slot-labels">${labels}</g>
   </svg>`;
 }
@@ -486,17 +590,17 @@ function buildPrintDocumentMarkup(
         <meta charset="utf-8" />
         <title>Tournament Draw Sheet</title>
         <style>
-          @page {
-            size: letter landscape;
-            margin: 0.35in;
+            @page {
+              size: letter landscape;
+              margin: 0.2in;
           }
 
           html,
           body {
             margin: 0;
             padding: 0;
-            width: 100%;
-            min-height: 100%;
+              width: 100%;
+              min-height: 100%;
             background: #e5e7eb;
             color: #111827;
             -webkit-print-color-adjust: exact;
@@ -530,9 +634,9 @@ function buildPrintDocumentMarkup(
             cursor: pointer;
           }
 
-          .division-draw-print-root {
-            width: min(10.3in, calc(100vw - 48px));
-            height: min(7.8in, calc(100vh - 48px));
+            .division-draw-print-root {
+              width: min(10.4in, calc(100vw - 48px));
+              height: min(7.9in, calc(100vh - 48px));
             margin: 0 auto;
             background: white;
             box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
@@ -549,7 +653,7 @@ function buildPrintDocumentMarkup(
             align-items: flex-start;
             justify-content: space-between;
             gap: 0.25in;
-            padding: 0 0 0.08in;
+            padding: 0 0 0.04in;
             margin: 0;
           }
 
@@ -589,10 +693,12 @@ function buildPrintDocumentMarkup(
             html,
             body {
               background: white;
-              width: 11in;
-              height: 8.5in;
-              overflow: hidden;
+              width: auto;
+              height: auto;
+              min-height: 0;
+              overflow: visible;
               padding: 0;
+              display: block;
             }
 
             .print-preview-toolbar {
@@ -600,10 +706,13 @@ function buildPrintDocumentMarkup(
             }
 
             .division-draw-print-root {
-              width: 10.3in;
-              height: 7.8in;
+              width: 10.4in;
+              height: 7.9in;
               margin: 0;
               box-shadow: none;
+              page-break-inside: avoid;
+              break-inside: avoid-page;
+              page-break-after: avoid;
             }
           }
         </style>
@@ -612,7 +721,7 @@ function buildPrintDocumentMarkup(
         <div class="print-preview-toolbar">
           <button type="button" onclick="window.print()">Print / Save PDF</button>
         </div>
-        <div class="division-draw-print-root">
+          <div class="division-draw-print-root">
           <div class="division-draw-meta">
             <div>
               <h3>${escapeHtml(title)}</h3>
@@ -674,9 +783,9 @@ export function DivisionDraw() {
       <g key={slot.id} id={slot.id}>
         <text
           x={source.x + 12}
-          y={source.y - 12}
+          y={source.y - SLOT_LABEL_OFFSET_Y}
           fill="currentColor"
-          fontSize="14"
+          fontSize={SLOT_LABEL_FONT_SIZE}
           className="text-white print:text-black"
         >
           <tspan fontWeight="700">{slot.seed}</tspan>
@@ -730,6 +839,88 @@ export function DivisionDraw() {
     );
   }
 
+  function renderThirdPlaceBracket() {
+    const thirdPlaceBracket = renderModel.template.thirdPlaceBracket;
+    const centerY = (thirdPlaceBracket.topY + thirdPlaceBracket.bottomY) / 2;
+
+    return (
+      <g id="third-place-match">
+        <text
+          x={thirdPlaceBracket.labelX}
+          y={thirdPlaceBracket.labelY}
+          fill="currentColor"
+          fontSize="12"
+          fontWeight="600"
+          className="text-gray-300 print:text-gray-600"
+        >
+          3rd Place Match
+        </text>
+
+        <line
+          x1={thirdPlaceBracket.lineStartX}
+          y1={thirdPlaceBracket.topY}
+          x2={thirdPlaceBracket.joinX}
+          y2={thirdPlaceBracket.topY}
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+
+        <line
+          x1={thirdPlaceBracket.lineStartX}
+          y1={thirdPlaceBracket.bottomY}
+          x2={thirdPlaceBracket.joinX}
+          y2={thirdPlaceBracket.bottomY}
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+
+        <line
+          x1={thirdPlaceBracket.joinX}
+          y1={thirdPlaceBracket.topY}
+          x2={thirdPlaceBracket.joinX}
+          y2={thirdPlaceBracket.bottomY}
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+
+        <line
+          x1={thirdPlaceBracket.joinX}
+          y1={centerY}
+          x2={thirdPlaceBracket.winnerX}
+          y2={centerY}
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+      </g>
+    );
+  }
+
+  function renderPlacementLine(line: TemplatePlacementLine) {
+    return (
+      <g key={line.id} id={line.id}>
+        <text
+          x={line.labelX}
+          y={line.y - 4}
+          fill="currentColor"
+          fontSize="13"
+          fontWeight="600"
+          className="text-gray-300 print:text-gray-600"
+        >
+          {line.label}
+        </text>
+
+        <line
+          x1={line.lineStartX}
+          y1={line.y}
+          x2={line.lineEndX}
+          y2={line.y}
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+      </g>
+    );
+  }
+
   return (
     <div className="division-draw-page min-h-screen bg-gray-900 p-6 text-white print:min-h-0 print:bg-white print:p-0 print:text-black">
       <div className="division-draw-screen-header mb-6 flex items-start justify-between gap-4 print:hidden">
@@ -753,7 +944,7 @@ export function DivisionDraw() {
         <p>No registrations selected.</p>
       ) : (
         <section className="division-draw-sheet rounded-lg border border-gray-700 bg-gray-800 p-6 print:border-0 print:bg-white print:p-0">
-          <div className="division-draw-meta mb-6 flex items-start justify-between gap-4 print:mb-2">
+          <div className="division-draw-meta mb-3 flex items-start justify-between gap-4 print:mb-1">
             <div>
               <h3 className="text-xl font-semibold">
                 {titleRegistration?.divisionName || "Division"}
@@ -805,6 +996,12 @@ export function DivisionDraw() {
                         {label.text}
                       </text>
                     ))}
+                  </g>
+
+                  {renderThirdPlaceBracket()}
+
+                  <g id="placement-lines">
+                    {renderModel.template.placementLines.map((line) => renderPlacementLine(line))}
                   </g>
 
                   {renderModel.template.rounds.map((round) => {
