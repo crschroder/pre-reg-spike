@@ -14,7 +14,7 @@ import {
 import type {SortingState} from "@tanstack/react-table";
 
 // import { RankingInfo, rankItem } from "@tanstack/match-sorter-utils";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSetAtom } from "jotai";
 import { selectedRegistrationsAtom } from "@/store/selectedRegistrations";
 import { useNavigate } from "@tanstack/react-router";
@@ -61,12 +61,6 @@ export type RegistrationRow = {
 //   }
 // }
 
-function normalizeKey(value: unknown) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase();
-}
-
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value);
   addMeta?.({ itemRank });
@@ -92,6 +86,13 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
 
   const setSelectedRegistrations = useSetAtom(selectedRegistrationsAtom);
   const navigate = useNavigate();
+
+  function createDraw(route: "/organizer/divisions" | "/organizer/divisions-double") {
+    const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original);
+
+    setSelectedRegistrations(selectedRows);
+    navigate({ to: route });
+  }
 
 
     const { data: registrations, isLoading: participantLoading } = useQuery<any[]>({
@@ -419,17 +420,21 @@ const fullNameColumn = table.getColumn("fullName")
          </div>
           <div className="h-4" />
           {/* Button to set selected registrations and navigate */}
-          <div className="my-4">
+          <div className="my-4 flex flex-wrap gap-3">
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
               disabled={table.getSelectedRowModel().rows.length === 0}
-              onClick={() => {
-                const selectedRows = table.getSelectedRowModel().rows.map(row => row.original);
-                setSelectedRegistrations(selectedRows);
-                navigate({ to: "/organizer/divisions" });
-              }}
+              onClick={() => createDraw("/organizer/divisions")}
             >
-              Use Selected Registrations
+              Create Single Elimination Draw
+            </button>
+
+            <button
+              className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50"
+              disabled={table.getSelectedRowModel().rows.length === 0}
+              onClick={() => createDraw("/organizer/divisions-double")}
+            >
+              Create Double Elimination Draw
             </button>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-gray-200">
@@ -495,7 +500,11 @@ const fullNameColumn = table.getColumn("fullName")
         </select>
       </div>
       <div className="mt-4 text-gray-400">
-        {table.getPrePaginationRowModel().rows.length} Selected Registrations
+        {table.getPrePaginationRowModel().rows.length} Filtered Registrations
+        
+      </div>
+      <div className="mt-4 text-gray-400">
+        {table.getSelectedRowModel().rows.length} Selected Registrations
         
       </div>
        <div className="mt-4 text-gray-400">
