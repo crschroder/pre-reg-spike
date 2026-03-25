@@ -18,7 +18,6 @@ on:
   push:
     branches:
       - main
-      - '**'
   pull_request:
     branches:
       - '**'
@@ -71,10 +70,8 @@ jobs:
 
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             TARGET_ENV="${{ inputs.environment }}"
-          elif [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            TARGET_ENV="dev"
           else
-            # Build-only runs (PRs / non-main pushes): default to dev settings.
+            # Build-only runs (pushes / PRs): default to dev settings.
             TARGET_ENV="dev"
           fi
 
@@ -93,10 +90,7 @@ jobs:
           DEPLOY_UI="false"
           DEPLOY_API="false"
 
-          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF}" = "refs/heads/main" ]; then
-            DEPLOY_UI="true"
-            DEPLOY_API="true"
-          elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             case "${{ inputs.deploy }}" in
               ui)
                 DEPLOY_UI="true";;
@@ -204,7 +198,7 @@ jobs:
   deploy-ui:
     needs: [set-target, build-ui]
     runs-on: ubuntu-latest
-    if: ${{ needs.set-target.outputs.deploy_ui == 'true' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && needs.set-target.outputs.deploy_ui == 'true' }}
     environment: ${{ needs.set-target.outputs.target_env }}
     steps:
       - uses: actions/checkout@v4
@@ -342,7 +336,7 @@ jobs:
   deploy-api:
     needs: [set-target, build-api]
     runs-on: ubuntu-latest
-    if: ${{ needs.set-target.outputs.deploy_api == 'true' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && needs.set-target.outputs.deploy_api == 'true' }}
     environment: ${{ needs.set-target.outputs.target_env }}
     steps:
       - uses: actions/checkout@v4

@@ -283,7 +283,7 @@ const fullNameColumn = table.getColumn("fullName")
   return (
     <div className="min-h-screen bg-gray-900 p-6">
     <div>
-      <h2 className="text-3xl font-semibold mb-6 text-white">Manage Participants for Tournament ID: {tournamentId}</h2>
+      <h2 className="text-3xl font-semibold mb-6 text-white">Create Divisions for Tournament ID: {tournamentId}</h2>
       <div className="mb-4 flex flex-wrap gap-4 text-white" >
         <div className="flex items-center gap-2">
           <Filter column={fullNameColumn!} placeholder="Search full name" />
