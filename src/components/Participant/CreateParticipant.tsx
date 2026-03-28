@@ -18,6 +18,7 @@ import { ParticipantEmailSchema } from "../../../validations";
 type Props = {
   tournamentId: number;
   participantId?: number | undefined;
+  mode?: "organizer";
 };
 
 type FieldName =
@@ -131,7 +132,7 @@ function ValidationMessage({ message }: { message?: string }) {
   return <p className="mt-1 text-sm text-red-400">{message}</p>;
 }
 
-export function CreateParticipant({ tournamentId, participantId }: Props) {
+export function CreateParticipant({ tournamentId, participantId, mode }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEdit = Boolean(participantId);
@@ -241,6 +242,7 @@ export function CreateParticipant({ tournamentId, participantId }: Props) {
       if (!isEdit) {
         navigate({
           to: `/tournament/participant/register/${tournamentId}/update-participant/${result.participant.id}`,
+          search: { mode },
         });
       }
     },
@@ -328,6 +330,13 @@ export function CreateParticipant({ tournamentId, participantId }: Props) {
   const onCreateNewRegistration = () => {
     navigate({
       to: `/tournament/participant/register/${tournamentId}/create-participant`,
+      search: { mode },
+    });
+  };
+
+  const onBackToParticipants = () => {
+    navigate({
+      to: `/tournament/organizer/manage-registrants/${tournamentId}`,
     });
   };
 
@@ -339,6 +348,16 @@ export function CreateParticipant({ tournamentId, participantId }: Props) {
         </div>
       )}
       <div className="p-8 w-full max-w-6xl">
+        {mode === "organizer" && (
+          <div className="mb-4">
+            <button
+              onClick={onBackToParticipants}
+              className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            >
+              Back to Participants
+            </button>
+          </div>
+        )}
         <h1 className="text-xl font-semibold mb-6">
           {isFormLoading ? "Loading..." : `Register for tournament : ${data?.name ?? ""}`}
         </h1>

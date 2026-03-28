@@ -34,6 +34,13 @@ export function OrganizerDashboard() {
         navigate({ to: `/tournament/organizer/tournamentSummary/${id}` });
     }
 
+    function handleRegisterParticipant(id: number) {
+        navigate({
+            to: `/tournament/participant/register/${id}/create-participant`,
+            search: { mode: "organizer" },
+        });
+    }
+
     return (<div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
         <h1 className="text-3xl font-semibold mb-6">Welcome to the tournament dashboard page</h1>
         <div className="max-w-3xl mx-auto p-6">
@@ -70,6 +77,12 @@ export function OrganizerDashboard() {
                                     className="flex-1 min-w-max px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
                                 >
                                     Manage Registrants
+                                </button>
+                                <button
+                                    onClick={() => handleRegisterParticipant(t.id)}
+                                    className="flex-1 min-w-max px-3 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700 text-sm"
+                                >
+                                    Register Participant
                                 </button>
                                 <button
                                     onClick={() => handleRegistrationStats(t.id)}
