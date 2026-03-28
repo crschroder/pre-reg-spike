@@ -1,154 +1,263 @@
-import { createRegistration, getDojoList, getParticipantById, getTournamentById, getTournamentEvents, updateParticipant } from "@/api/tournaments";
+import {
+  createRegistration,
+  getDojoList,
+  getParticipantById,
+  getTournamentById,
+  getTournamentEvents,
+  updateParticipant,
+} from "@/api/tournaments";
 import { CreateRegistrationPayload, EventSelection, ParticipantUpdatePayload } from "@shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { set } from "date-fns";
-import { on } from "events";
+import { safeParse } from "valibot";
 import { useEffect, useRef, useState } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
 
+import { ParticipantEmailSchema } from "../../../validations";
 
-type props = { tournamentId: number; 
-  participantId?: number | undefined
- };
+type Props = {
+  tournamentId: number;
+  participantId?: number | undefined;
+};
 
+type FieldName =
+  | "email"
+  | "firstName"
+  | "lastName"
+  | "age"
+  | "beltRankId"
+  | "dojo"
+  | "genderId"
+  | "events";
+
+type FieldErrors = Partial<Record<FieldName, string>>;
+type TouchedFields = Partial<Record<FieldName, boolean>>;
+
+const OTHER_DOJO_ID = 18;
+const labelClassName = "block text-sm font-medium text-gray-200 mb-1";
+const baseInputClassName =
+  "w-full px-3 py-2 rounded-md bg-gray-800 text-white border focus:outline-none focus:ring-2";
 
 const beltColors = [
   { id: 1, name: "White" },
   { id: 2, name: "Yellow" },
-  { id: 3, name: "Orange" }, 
+  { id: 3, name: "Orange" },
   { id: 4, name: "Green" },
   { id: 5, name: "Purple" },
   { id: 6, name: "Blue" },
   { id: 7, name: "Brown" },
-  { id: 8, name: "Black" }
+  { id: 8, name: "Black" },
 ] as const;
 
-export function CreateParticipant({ tournamentId, participantId }: props) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["tournament", tournamentId],
-    queryFn: () => getTournamentById(tournamentId!),
-    enabled: !!tournamentId,
-  });
-  console.log("TournamentID:", tournamentId);
-  // State for form data
-  const [formData, setFormData] = useState<CreateRegistrationPayload>({
-  email: "",
-  participant: {
-    firstName: "",
-    lastName: "",
-    age: 0,
-    genderId: 0,
-    beltRankId: 0,
-    notes: "",
-    dojoId: 0,
-    otherDojoName: "",
-    paid: false,
-    checkedIn: false,
-  },
-  events: [],
-});
+function normalizeFormData(
+  formData: CreateRegistrationPayload,
+  selectedEvents: EventSelection[]
+): CreateRegistrationPayload {
+  return {
+    ...formData,
+    email: formData.email.trim(),
+    participant: {
+      ...formData.participant,
+      firstName: formData.participant.firstName.trim(),
+      lastName: formData.participant.lastName.trim(),
+      notes: formData.participant.notes?.trim() ?? "",
+      otherDojoName: formData.participant.otherDojoName?.trim() ?? "",
+      dojoId: formData.participant.dojoId ?? 0,
+    },
+    events: selectedEvents,
+  };
+}
 
-const [updateFormData, setUpdateFormData] = useState<ParticipantUpdatePayload>({});
+function validateParticipantForm(
+  formData: CreateRegistrationPayload,
+  dojoValue: { id: number | null; freeText?: string }
+): FieldErrors {
+  const errors: FieldErrors = {};
 
+  const emailResult = safeParse(ParticipantEmailSchema, formData.email);
+  if (!emailResult.success) {
+    errors.email = emailResult.issues[0]?.message ?? "Email must be a valid email address";
+  }
 
-const [dirtyList, setDirtyList] = useState<string[]>([]);
+  if (!formData.participant.firstName) {
+    errors.firstName = "Participant first name is required";
+  }
 
+  if (!formData.participant.lastName) {
+    errors.lastName = "Participant last name is required";
+  }
+
+  if (!Number.isFinite(formData.participant.age) || formData.participant.age <= 0) {
+    errors.age = "Participant age is required";
+  }
+
+  if (!formData.participant.beltRankId || formData.participant.beltRankId <= 0) {
+    errors.beltRankId = "Belt color is required";
+  }
+
+  if (!formData.participant.genderId || formData.participant.genderId <= 0) {
+    errors.genderId = "Gender is required";
+  }
+
+  if (dojoValue.id === OTHER_DOJO_ID) {
+    if (!formData.participant.otherDojoName) {
+      errors.dojo = "Dojo name is required";
+    }
+  } else if (!dojoValue.id || dojoValue.id <= 0) {
+    errors.dojo = "Dojo is required";
+  }
+
+  if (formData.events.length === 0) {
+    errors.events = "Select at least one event";
+  }
+
+  return errors;
+}
+
+function RequiredLabel({ children }: { children: string }) {
+  return (
+    <label className={labelClassName}>
+      {children}
+      <span className="ml-1 text-red-400">*</span>
+    </label>
+  );
+}
+
+function ValidationMessage({ message }: { message?: string }) {
+  if (!message) {
+    return null;
+  }
+
+  return <p className="mt-1 text-sm text-red-400">{message}</p>;
+}
+
+export function CreateParticipant({ tournamentId, participantId }: Props) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const isEdit = Boolean(participantId);
 
+  const [formData, setFormData] = useState<CreateRegistrationPayload>({
+    email: "",
+    participant: {
+      firstName: "",
+      lastName: "",
+      age: 0,
+      genderId: 0,
+      beltRankId: 0,
+      notes: "",
+      dojoId: 0,
+      otherDojoName: "",
+      paid: false,
+      checkedIn: false,
+    },
+    events: [],
+  });
+  const [dirtyList, setDirtyList] = useState<string[]>([]);
+  const [touchedFields, setTouchedFields] = useState<TouchedFields>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [selectedEvents, setSelectedEvents] = useState<EventSelection[]>([]);
+  const [savedMessage, setSavedMessage] = useState("");
+  const [dojoValue, setDojoValue] = useState<{ id: number | null; freeText?: string }>({ id: null });
 
-  const {data: dojoList} = useQuery({
+  const { data, isLoading } = useQuery({
+    queryKey: ["tournament", tournamentId],
+    queryFn: () => getTournamentById(tournamentId),
+    enabled: !!tournamentId,
+  });
+
+  const { data: dojoList } = useQuery({
     queryKey: ["dojos"],
     queryFn: () => getDojoList(),
   });
 
-  const {data: eventTypes} = useQuery({
+  const { data: eventTypes } = useQuery({
     queryKey: ["eventTypes", tournamentId],
     queryFn: () => getTournamentEvents(tournamentId),
     enabled: !!tournamentId,
   });
 
-  const mappedEvents = (eventTypes ?? []).map((item: any) => ({
-  id: item.id,
-  EventId: item.eventId,
-  Name: item.event?.name ?? "",
-}));
-
-  const [dojoInput, setDojoInput] = useState("");
-
   const { data: participantData, isLoading: isLoadingParticipant } = useQuery({
     queryKey: ["participant", participantId],
     queryFn: () => getParticipantById(participantId!),
-    enabled: isEdit, // only fetch when editing
+    enabled: isEdit,
   });
 
+  const mappedEvents = (eventTypes ?? []).map((item: any) => ({
+    id: item.id,
+    eventId: item.eventId,
+    name: item.event?.name ?? "",
+  }));
 
+  const markDirty = (fieldName: string) => {
+    setDirtyList((prev) => (prev.includes(fieldName) ? prev : [...prev, fieldName]));
+  };
 
-  const [dojoValue, setDojoValue] = useState<{ id: number | null; freeText?: string }>({ id: null });
+  const markTouched = (fieldName: FieldName) => {
+    setTouchedFields((prev) => (prev[fieldName] ? prev : { ...prev, [fieldName]: true }));
+  };
 
-  // State for selected events
-  const [selectedEvents, setSelectedEvents] = useState<number[]>([]);
-
-  const [savedMessage, setSavedMessage] = useState("");
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: (newRegistration: CreateRegistrationPayload) =>
-      isEdit ? updateParticipant(participantId!, getUpdatePayload()) :
-      createRegistration(tournamentId, newRegistration),
-    onSuccess: async(result) => {
-      setSavedMessage("Data has been saved.");
-      // Invalidate and refetch registrations after successful creation
-      queryClient.invalidateQueries({ queryKey: ["participant-summary", tournamentId] });
-      //navigate(`/tournament/${tournamentId}/participants`);
-      setTimeout(() => setSavedMessage(""), 3000);
-      if(!isEdit) {
-        navigate({
-          to: `/tournament/participant/register/${tournamentId}/update-participant/${result.id}`,         
-        });
-      }
-    }
-  });
-
-  const getUpdatePayload = (): ParticipantUpdatePayload => {
+  const getUpdatePayload = (payloadSource: CreateRegistrationPayload): ParticipantUpdatePayload => {
     const payload: ParticipantUpdatePayload = {};
+
     if (dirtyList.includes("email")) {
-      payload.email = formData.email;
+      payload.email = payloadSource.email;
     }
     if (dirtyList.includes("firstName")) {
-      payload.firstName = formData.participant.firstName;
+      payload.firstName = payloadSource.participant.firstName;
     }
     if (dirtyList.includes("lastName")) {
-      payload.lastName = formData.participant.lastName;
+      payload.lastName = payloadSource.participant.lastName;
     }
     if (dirtyList.includes("age")) {
-      payload.age = formData.participant.age;
+      payload.age = payloadSource.participant.age;
     }
     if (dirtyList.includes("genderId")) {
-      payload.genderId = formData.participant.genderId; 
+      payload.genderId = payloadSource.participant.genderId;
     }
     if (dirtyList.includes("beltRankId")) {
-      payload.beltRankId = formData.participant.beltRankId;
+      payload.beltRankId = payloadSource.participant.beltRankId;
     }
     if (dirtyList.includes("dojoId") || dirtyList.includes("otherDojoName")) {
-      payload.dojoId = formData.participant.dojoId;
-      payload.otherDojoName = formData.participant.otherDojoName;
-    } 
-    if (dirtyList.includes("events")) {
-      payload.events = formData.events;
+      payload.dojoId = payloadSource.participant.dojoId;
+      payload.otherDojoName = payloadSource.participant.otherDojoName;
     }
+    if (dirtyList.includes("events")) {
+      payload.events = payloadSource.events;
+    }
+
     return payload;
-  }
+  };
+
+  const mutation = useMutation({
+    mutationFn: (registrationPayload: CreateRegistrationPayload) =>
+      isEdit
+        ? updateParticipant(participantId!, getUpdatePayload(registrationPayload))
+        : createRegistration(tournamentId, registrationPayload),
+    onSuccess: async (result) => {
+      setSavedMessage("Data has been saved.");
+      await queryClient.invalidateQueries({ queryKey: ["participant-summary", tournamentId] });
+      window.setTimeout(() => setSavedMessage(""), 3000);
+
+      if (!isEdit) {
+        navigate({
+          to: `/tournament/participant/register/${tournamentId}/update-participant/${result.participant.id}`,
+        });
+      }
+    },
+  });
 
   useEffect(() => {
-  setFormData(prev => ({
-    ...prev,
-    events: selectedEvents
-  } as CreateRegistrationPayload));
-}, [selectedEvents]);
+    setFormData((prev) => ({
+      ...prev,
+      events: selectedEvents,
+    }));
+  }, [selectedEvents]);
 
-// prefill form when participant data is loaded for editing
-useEffect(() => {
-  if (participantData) {
-   
+  useEffect(() => {
+    if (!participantData) {
+      return;
+    }
+
     setFormData({
       email: participantData.email || "",
       participant: {
@@ -157,335 +266,356 @@ useEffect(() => {
         age: participantData.participant.age,
         genderId: participantData.participant.genderId,
         beltRankId: participantData.participant.beltRankId,
-        notes: participantData.participant.notes,
-        dojoId: participantData.participant.dojoId,
-        otherDojoName: participantData.participant.otherDojoName,
+        notes: participantData.participant.notes || "",
+        dojoId: participantData.participant.dojoId || 0,
+        otherDojoName: participantData.participant.otherDojoName || "",
         paid: participantData.participant.paid,
         checkedIn: participantData.participant.checkedIn,
       },
-      events: participantData.events || [] //.map((e) => e.eventId) || [],
-    });    
+      events: participantData.events || [],
+    });
+
     if (participantData.participant.dojoId) {
-      
-      const dojo = dojoList?.find(d => d.id === participantData.participant.dojoId);
+      const dojo = dojoList?.find((item) => item.id === participantData.participant.dojoId);
       if (dojo) {
         setDojoValue({ id: dojo.id });
       } else if (participantData.participant.otherDojoName) {
-        setDojoValue({ id: 18, freeText: participantData.participant.otherDojoName });
+        setDojoValue({ id: OTHER_DOJO_ID, freeText: participantData.participant.otherDojoName });
       }
+    } else {
+      setDojoValue({ id: null });
     }
-    if(participantData.events) {
-     
-      console.log("Participant events:", participantData.events);
-      const  a = participantData.events.some((pe: EventSelection) => pe === "kumite");
-      if(a) {        console.log("Participant is in kumite");
-      } else {
-        console.log("Participant is NOT in kumite");
-      }
 
-      const eventIds = mappedEvents
-        .filter((e: { Name: string; }) => participantData.events.some((pe: EventSelection) => pe === e.Name.toLowerCase() ))
-        .map(e => e.Name);
-       setSelectedEvents(eventIds);
+    if (participantData.events) {
+      const eventNames = (eventTypes ?? [])
+        .map((item: any) => item.event?.name?.toLowerCase())
+        .filter(Boolean)
+        .filter((name: string) =>
+          participantData.events.some((selection: EventSelection) => selection === name)
+        ) as EventSelection[];
+
+      setSelectedEvents(eventNames);
     }
-  }
-}, [participantData, dojoList]);
+  }, [dojoList, eventTypes, participantData]);
 
- 
+  const normalizedFormData = normalizeFormData(formData, selectedEvents);
+  const fieldErrors = validateParticipantForm(normalizedFormData, dojoValue);
+  const isFormValid = Object.keys(fieldErrors).length === 0;
+  const isSubmitDisabled = mutation.isPending || !isFormValid;
+  const isFormLoading = isLoading || (isEdit && isLoadingParticipant);
 
-  const navigate = useNavigate();
-  
-  const handleNext = () => {
-    // TODO, change this to handle save and proceed    
-    if (tournamentId) {
-      navigate({
-        to: `/tournament/participant/register/$id/select-events`,
-        params: { id: String(tournamentId) },
-      });
+  const shouldShowError = (fieldName: FieldName) =>
+    Boolean((submitAttempted || touchedFields[fieldName]) && fieldErrors[fieldName]);
+
+  const getInputClassName = (fieldName: FieldName) =>
+    `${baseInputClassName} ${
+      shouldShowError(fieldName)
+        ? "border-red-500 focus:ring-red-500"
+        : "border-gray-600 focus:ring-blue-500"
+    }`;
+
+  const onSubmit = () => {
+    setSubmitAttempted(true);
+
+    if (!isFormValid) {
+      return;
     }
+
+    setSavedMessage("Saving data...");
+    mutation.mutate(normalizedFormData);
   };
 
-  const handleBack = () => {
-    
+  const onCreateNewRegistration = () => {
     navigate({
-      to: `/tournament/participant`,
-
+      to: `/tournament/participant/register/${tournamentId}/create-participant`,
     });
   };
- 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-     setDirtyList((prev) => {
-    if (!prev.includes(e.target.name)) {
-      return [...prev, e.target.name];
-    }
-    return prev; // Return the same list if the item already exists
-  });
-  };
 
-  const onSubmit  = () => {
-    setSavedMessage("Saving data...");
-    mutation.mutate(formData!, {
-      onSuccess: () => {
-       
-      }
-    }); 
-  }
-  console.log("Selected events:", selectedEvents);
+  return (
+    <div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
+      {savedMessage && (
+        <div className="mb-4 p-3 bg-green-700 text-white rounded shadow text-center">
+          {savedMessage}
+        </div>
+      )}
+      <div className="p-8 w-full max-w-6xl">
+        <h1 className="text-xl font-semibold mb-6">
+          {isFormLoading ? "Loading..." : `Register for tournament : ${data?.name ?? ""}`}
+        </h1>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="col-span-1">
+            <RequiredLabel>Email</RequiredLabel>
+            <input
+              type="text"
+              name="email"
+              className={getInputClassName("email")}
+              value={formData.email}
+              placeholder="Enter participant email"
+              aria-invalid={shouldShowError("email")}
+              onBlur={() => markTouched("email")}
+              onChange={(event) => {
+                setFormData((prev) => ({ ...prev, email: event.target.value }));
+                markDirty("email");
+              }}
+            />
+            <ValidationMessage message={shouldShowError("email") ? fieldErrors.email : undefined} />
+          </div>
 
-  return (<div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
-    {savedMessage && (
-      <div className="mb-4 p-3 bg-green-700 text-white rounded shadow text-center">
-        {savedMessage}
-      </div>
-    )}
-    <div className="p-8 w-full max-w-6xl">
-      <h1 className="text-xl font-semibold mb-6">
-        {isLoading ? "Loading..." : `Register for tournament : ${data.name}`}
-      </h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-200 mb-1">
-            Email
-          </label>
-          <input
-            type="text"
-            name="email"
-            className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={formData?.email}
-            placeholder="Enter participant email"
-           onChange={(e) => {setFormData(prev => ({ ...prev, email: e.target.value } as CreateRegistrationPayload)); onChange(e);}}  
-           
-          />
-        </div>
-        <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-200 mb-1">
-            Participant First Name
-          </label>
-          <input
-            type="text"
-           
-            className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Participant first name"
-            value={formData?.participant.firstName}
-            name="firstName"
-           onChange={(e) => {setFormData(prev => ({
-              ...prev,
-              participant: {
-                ...prev?.participant,
-                firstName: e.target.value
-              }
-            } as CreateRegistrationPayload));
-          onChange(e);
-          }  }
-            
-          />
-        </div>
-        <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-200 mb-1">
-            Participant Last Name
-          </label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter participant last name"
-            name="lastName"
-            value={formData?.participant.lastName}
-            onChange={(e) => {setFormData(prev => ({
-              ...prev,
-              participant: {
-                ...prev?.participant,
-                lastName: e.target.value
-              }
-            } as CreateRegistrationPayload));
-            onChange(e);
-          }}
-          />
-        </div>
-        <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-200 mb-1">
-            Participant age
-          </label>
-          <input
-            type="number"
-            name="age"
-            className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter participant age (as of tournament date)"
-            value={formData.participant.age === 0 ? "" : formData.participant.age}
-            onChange={(e) => {setFormData(prev => ({
-              ...prev,
-              participant: {
-                ...prev?.participant,
-                age: Number(e.target.value)
-              }
-            } as CreateRegistrationPayload));
-            onChange(e);
-          }}
-          />
-        </div>
-        <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-200 mb-1">
-            Belt Color
-          </label>
-          <select
-            className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            defaultValue=""
-            name="beltRankId"
-            value={formData?.participant.beltRankId==0 ? "" : formData?.participant.beltRankId  }
-            onChange={(e) =>
-                {setFormData(prev => ({
-              ...prev,
-              participant: {
-                ...prev?.participant,
-                beltRankId: e.target.value ? Number(e.target.value) : undefined
-              }
-            } as CreateRegistrationPayload));
-            onChange(e);
-          }}
-          >
-            <option value="" disabled>
-              Select belt color 
-            </option>
-            {beltColors.map((belt) => (
-              <option key={belt.name} value={belt.id} >
-                {belt.name}
+          <div className="col-span-1">
+            <RequiredLabel>Participant First Name</RequiredLabel>
+            <input
+              type="text"
+              className={getInputClassName("firstName")}
+              placeholder="Participant first name"
+              value={formData.participant.firstName}
+              name="firstName"
+              aria-invalid={shouldShowError("firstName")}
+              onBlur={() => markTouched("firstName")}
+              onChange={(event) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  participant: {
+                    ...prev.participant,
+                    firstName: event.target.value,
+                  },
+                }));
+                markDirty("firstName");
+              }}
+            />
+            <ValidationMessage
+              message={shouldShowError("firstName") ? fieldErrors.firstName : undefined}
+            />
+          </div>
+
+          <div className="col-span-1">
+            <RequiredLabel>Participant Last Name</RequiredLabel>
+            <input
+              type="text"
+              className={getInputClassName("lastName")}
+              placeholder="Enter participant last name"
+              name="lastName"
+              value={formData.participant.lastName}
+              aria-invalid={shouldShowError("lastName")}
+              onBlur={() => markTouched("lastName")}
+              onChange={(event) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  participant: {
+                    ...prev.participant,
+                    lastName: event.target.value,
+                  },
+                }));
+                markDirty("lastName");
+              }}
+            />
+            <ValidationMessage
+              message={shouldShowError("lastName") ? fieldErrors.lastName : undefined}
+            />
+          </div>
+
+          <div className="col-span-1">
+            <RequiredLabel>Participant Age</RequiredLabel>
+            <input
+              type="number"
+              name="age"
+              className={getInputClassName("age")}
+              placeholder="Enter participant age (as of tournament date)"
+              value={formData.participant.age === 0 ? "" : formData.participant.age}
+              aria-invalid={shouldShowError("age")}
+              onBlur={() => markTouched("age")}
+              onChange={(event) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  participant: {
+                    ...prev.participant,
+                    age: event.target.value ? Number(event.target.value) : 0,
+                  },
+                }));
+                markDirty("age");
+              }}
+            />
+            <ValidationMessage message={shouldShowError("age") ? fieldErrors.age : undefined} />
+          </div>
+
+          <div className="col-span-1">
+            <RequiredLabel>Belt Color</RequiredLabel>
+            <select
+              className={getInputClassName("beltRankId")}
+              defaultValue=""
+              name="beltRankId"
+              value={formData.participant.beltRankId === 0 ? "" : formData.participant.beltRankId}
+              aria-invalid={shouldShowError("beltRankId")}
+              onBlur={() => markTouched("beltRankId")}
+              onChange={(event) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  participant: {
+                    ...prev.participant,
+                    beltRankId: event.target.value ? Number(event.target.value) : 0,
+                  },
+                }));
+                markDirty("beltRankId");
+              }}
+            >
+              <option value="" disabled>
+                Select belt color
               </option>
-            ))}
+              {beltColors.map((belt) => (
+                <option key={belt.name} value={belt.id}>
+                  {belt.name}
+                </option>
+              ))}
+            </select>
+            <ValidationMessage
+              message={shouldShowError("beltRankId") ? fieldErrors.beltRankId : undefined}
+            />
+          </div>
 
-          </select>
-        </div>
-        <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-200 mb-1">
-            Dojo
-          </label>
-          <DojoAutocomplete
-          dojoList={dojoList || []}
-          value={dojoValue}
-          onChange={(value) => {
-            setDojoValue(value);
-            setFormData(prev => ({
-              ...prev,
-              participant: {
-                ...prev?.participant,
-                dojoId: value?.id || null,
-                otherDojoName: value.id === 18 ? value.freeText : undefined
-              }
-            } as CreateRegistrationPayload));
-            onChange({ target: { name: "dojo", value: value.id } } as unknown as React.ChangeEvent<HTMLInputElement>);
-          }}
-          />
-        </div>
-        <div className="col-span-1">
-          <label className="block text-sm font-medium text-gray-200 mb-1">
-            Gender
-          </label>
-          <div className="flex items-center gap-6 mt-2">
-            <label className="inline-flex items-center">
-              <input
-                type="radio"
-                name="gender"
-                value={1}
-                checked={formData.participant.genderId === 1}
-                onChange ={(e) => {
-                
-                  setFormData(prev => ({
+          <div className="col-span-1">
+            <RequiredLabel>Dojo</RequiredLabel>
+            <DojoAutocomplete
+              dojoList={dojoList || []}
+              value={dojoValue}
+              invalid={shouldShowError("dojo")}
+              onBlur={() => markTouched("dojo")}
+              onChange={(value) => {
+                setDojoValue(value);
+                setFormData((prev) => ({
                   ...prev,
                   participant: {
-                    ...prev?.participant,
-                    genderId: Number(e.target.value)
-                  }
-                } as CreateRegistrationPayload))}}
-                className="form-radio text-blue-600"
-              />
-              <span className="ml-2 text-gray-200">Male</span>
-            </label>
-            <label className="inline-flex items-center">
-              <input
-                type="radio"
-                name="gender"
-                value={2}
-                checked={formData.participant.genderId === 2}
-                onChange ={(e) => {
-                  
-                  setFormData(prev => ({
-                  ...prev,
-                  participant: {
-                    ...prev?.participant,
-                    genderId: Number(e.target.value)
-                  }
-                } as CreateRegistrationPayload))}}
-                className="form-radio text-pink-600"
-              />
-              <span className="ml-2 text-gray-200">Female</span>
-            </label>
+                    ...prev.participant,
+                    dojoId: value.id ?? 0,
+                    otherDojoName: value.id === OTHER_DOJO_ID ? value.freeText ?? "" : "",
+                  },
+                }));
+                markDirty("dojoId");
+                markDirty("otherDojoName");
+              }}
+            />
+            <ValidationMessage message={shouldShowError("dojo") ? fieldErrors.dojo : undefined} />
+          </div>
+
+          <div className="col-span-1">
+            <RequiredLabel>Gender</RequiredLabel>
+            <div
+              className={`flex items-center gap-6 mt-2 rounded-md border px-3 py-3 ${
+                shouldShowError("genderId") ? "border-red-500" : "border-gray-700"
+              }`}
+            >
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="gender"
+                  value={1}
+                  checked={formData.participant.genderId === 1}
+                  aria-invalid={shouldShowError("genderId")}
+                  onBlur={() => markTouched("genderId")}
+                  onChange={(event) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      participant: {
+                        ...prev.participant,
+                        genderId: Number(event.target.value),
+                      },
+                    }));
+                    markDirty("genderId");
+                  }}
+                  className="form-radio text-blue-600"
+                />
+                <span className="ml-2 text-gray-200">Male</span>
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="gender"
+                  value={2}
+                  checked={formData.participant.genderId === 2}
+                  aria-invalid={shouldShowError("genderId")}
+                  onBlur={() => markTouched("genderId")}
+                  onChange={(event) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      participant: {
+                        ...prev.participant,
+                        genderId: Number(event.target.value),
+                      },
+                    }));
+                    markDirty("genderId");
+                  }}
+                  className="form-radio text-pink-600"
+                />
+                <span className="ml-2 text-gray-200">Female</span>
+              </label>
+            </div>
+            <ValidationMessage
+              message={shouldShowError("genderId") ? fieldErrors.genderId : undefined}
+            />
+          </div>
+
+          <div className="col-span-1">
+            {mappedEvents.length > 0 && (
+              <div>
+                <RequiredLabel>Events</RequiredLabel>
+                <div
+                  className={`flex flex-col gap-2 mt-1 rounded-md border px-3 py-3 ${
+                    shouldShowError("events") ? "border-red-500" : "border-gray-700"
+                  }`}
+                >
+                  {mappedEvents.map((event) => (
+                    <label key={event.id} className="inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        value={event.name.toLowerCase()}
+                        name="events"
+                        checked={selectedEvents.includes(event.name.toLowerCase())}
+                        aria-invalid={shouldShowError("events")}
+                        onBlur={() => markTouched("events")}
+                        onChange={(eventChange) => {
+                          const eventValue = eventChange.target.value as EventSelection;
+                          setSelectedEvents((prev) =>
+                            eventChange.target.checked
+                              ? [...prev, eventValue]
+                              : prev.filter((name) => name !== eventValue)
+                          );
+                          markDirty("events");
+                        }}
+                        className="form-checkbox text-green-500"
+                      />
+                      <span className="ml-2 text-gray-200">{event.name}</span>
+                    </label>
+                  ))}
+                </div>
+                <ValidationMessage
+                  message={shouldShowError("events") ? fieldErrors.events : undefined}
+                />
+              </div>
+            )}
           </div>
         </div>
-        {/* Events field in the same column as First Name and Belt Color */}
-        <div className="col-span-1">
-          {mappedEvents.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-1 mt-4">
-                Events
-              </label>
-              <div className="flex flex-col gap-2 mt-1">
-                {mappedEvents.map(event => (
-                  <label key={event.id} className="inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      value={event.Name}
-                      name="events"
-                      checked={selectedEvents.includes(event.Name)}
-                      onChange={e => {
-                        setSelectedEvents(prev =>
-                          e.target.checked
-                            ? [...prev, event.Name]
-                            : prev.filter(name => name !== event.Name)
-                        );
-                        onChange(e);
-                      }}
-                      className="form-checkbox text-green-500"
-                    />
-                    <span className="ml-2 text-gray-200">{event.Name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
       </div>
-
+      <div className="mt-8 flex gap-4 justify-center">
+        <button
+          onClick={onSubmit}
+          disabled={isSubmitDisabled}
+          className={`px-4 py-2 rounded focus:outline-none focus:ring-2 ${
+            isSubmitDisabled
+              ? "bg-gray-600 text-gray-300 cursor-not-allowed focus:ring-gray-500"
+              : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-400"
+          }`}
+        >
+          {isEdit ? "Update" : "Submit"}
+        </button>
+        {isEdit && (
+          <button
+            onClick={onCreateNewRegistration}
+            className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
+          >
+            Create New Registration
+          </button>
+        )}
+      </div>
     </div>
-    <div className="mt-8 flex gap-4 justify-center">
-      <button
-        onClick={onSubmit}
-        disabled={mutation.isPending}
-        className={`px-4 py-2 rounded 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
-          }`}
-      >
-        Submit
-      </button>
-
-
-
-      {/* <button
-        onClick={handleBack}
-        //disabled={true}
-        className={`px-4 py-2 rounded 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
-          }`}
-      >
-        Back
-      </button>
-
-
-      <button
-        onClick={handleNext}
-        disabled={!isEdit}
-        className={`px-4 py-2 rounded 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
-          }`}
-      >
-        Next
-      </button> */}
-    </div>
-  </div>)
+  );
 }
 
 interface Dojo {
@@ -496,79 +626,99 @@ interface Dojo {
 
 interface DojoAutocompleteProps {
   dojoList: Dojo[];
-   value: { id: number | null; freeText?: string };
-  onChange: (value: { id: number | null; freeText?: string }) => void;  
+  value: { id: number | null; freeText?: string };
+  onChange: (value: { id: number | null; freeText?: string }) => void;
+  onBlur?: () => void;
+  invalid?: boolean;
   placeholder?: string;
   className?: string;
 }
 
-export const DojoAutocomplete: React.FC<DojoAutocompleteProps> = ({
+export const DojoAutocomplete = ({
   dojoList,
   value,
   onChange,
+  onBlur,
+  invalid = false,
   placeholder = "Type dojo name or city",
   className = "",
-}) => {
+}: DojoAutocompleteProps) => {
   const [input, setInput] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlighted, setHighlighted] = useState<number>(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-  console.log("DojoAutocomplete value:", value);
-   const filteredDojos =
-    dojoList.filter(
-      (dojo) =>
-        dojo.name.toLowerCase().includes(input.toLowerCase()) ||
-        dojo.city.toLowerCase().includes(input.toLowerCase())
-    ) || [];
-    
   const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
-  useEffect(() => {
-  if (highlighted >= 0 && itemRefs.current[highlighted]) {
-    itemRefs.current[highlighted]?.scrollIntoView({ block: "nearest" });
-  }
-}, [highlighted]);
 
-  function handleSelectDojo(dojo: Dojo) {
+  const filteredDojos = dojoList.filter(
+    (dojo) =>
+      dojo.name.toLowerCase().includes(input.toLowerCase()) ||
+      dojo.city.toLowerCase().includes(input.toLowerCase())
+  );
+
+  useEffect(() => {
+    if (highlighted >= 0 && itemRefs.current[highlighted]) {
+      itemRefs.current[highlighted]?.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlighted]);
+
+  useEffect(() => {
+    if (value.id === OTHER_DOJO_ID && value.freeText !== undefined) {
+      setInput("Other");
+      return;
+    }
+
+    if (value.id) {
+      const dojo = dojoList.find((item) => item.id === value.id);
+      if (dojo) {
+        setInput(dojo.name);
+      }
+      return;
+    }
+
+    setInput("");
+  }, [dojoList, value]);
+
+  const handleSelectDojo = (dojo: Dojo) => {
     setInput(dojo.name);
     setShowDropdown(false);
-    if (dojo.id === 18) {
-      onChange({ id: 18, freeText: "" });
-    } else {
-      onChange({ id: dojo.id });
+
+    if (dojo.id === OTHER_DOJO_ID) {
+      onChange({ id: OTHER_DOJO_ID, freeText: "" });
+      return;
     }
-  }
 
-  function handleFreeTextChange(e: React.ChangeEvent<HTMLInputElement>) {
-    onChange({ id: 18, freeText: e.target.value });
-  }
+    onChange({ id: dojo.id, freeText: "" });
+  };
 
-  useEffect(() => {
-    if (value.id === 18 && value.freeText !== undefined) {
-      setInput("Other");
-    } else if (value.id) {
-      const dojo = dojoList.find((d) => d.id === value.id);
-      if (dojo) setInput(dojo.name);
-    }
-  }, [value, dojoList]);
+  const handleFreeTextChange = (event: ChangeEvent<HTMLInputElement>) => {
+    onChange({ id: OTHER_DOJO_ID, freeText: event.target.value });
+  };
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!showDropdown && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (!showDropdown && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
       setShowDropdown(true);
       setHighlighted(0);
       return;
     }
-    if (!filteredDojos.length) return;
 
-    if (e.key === "ArrowDown") {
+    if (!filteredDojos.length) {
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
       setHighlighted((prev) => (prev + 1) % filteredDojos.length);
-    } else if (e.key === "ArrowUp") {
+    } else if (event.key === "ArrowUp") {
       setHighlighted((prev) => (prev - 1 + filteredDojos.length) % filteredDojos.length);
-    } else if (e.key === "Enter" && highlighted >= 0) {
+    } else if (event.key === "Enter" && highlighted >= 0) {
       handleSelectDojo(filteredDojos[highlighted]);
-    } else if (e.key === "Escape") {
+    } else if (event.key === "Escape") {
       setShowDropdown(false);
     }
-  }  
+  };
+
+  const dojoInputClassName = `${baseInputClassName} ${
+    invalid ? "border-red-500 focus:ring-red-500" : "border-gray-600 focus:ring-blue-500"
+  }`;
 
   return (
     <div className={`relative ${className}`}>
@@ -576,27 +726,35 @@ export const DojoAutocomplete: React.FC<DojoAutocompleteProps> = ({
         ref={inputRef}
         type="text"
         value={input}
-        onChange={e => {
-          setInput(e.target.value);
+        onChange={(event) => {
+          setInput(event.target.value);
           setShowDropdown(true);
           setHighlighted(-1);
         }}
         onFocus={() => setShowDropdown(true)}
-         onBlur={() => setTimeout(() => setShowDropdown(false), 100)}
+        onBlur={() => {
+          window.setTimeout(() => setShowDropdown(false), 100);
+          onBlur?.();
+        }}
         onKeyDown={handleKeyDown}
-        className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className={dojoInputClassName}
         placeholder={placeholder}
         autoComplete="do-not-auto-fill"
+        aria-invalid={invalid}
       />
       {showDropdown && filteredDojos.length > 0 && (
         <ul className="absolute z-10 w-full bg-gray-800 border border-gray-700 rounded-md mt-1 max-h-48 overflow-auto">
-          {filteredDojos.map((dojo, idx) => (
+          {filteredDojos.map((dojo, index) => (
             <li
               key={dojo.id}
-              className={`px-3 py-2 cursor-pointer hover:bg-gray-700 ${highlighted === idx ? "bg-gray-700" : ""}`}
+              className={`px-3 py-2 cursor-pointer hover:bg-gray-700 ${
+                highlighted === index ? "bg-gray-700" : ""
+              }`}
               onMouseDown={() => handleSelectDojo(dojo)}
-               onMouseEnter={() => setHighlighted(idx)}
-               ref={el => { itemRefs.current[idx] = el; }}               
+              onMouseEnter={() => setHighlighted(index)}
+              ref={(element) => {
+                itemRefs.current[index] = element;
+              }}
             >
               <span className="font-medium">{dojo.name}</span>
               <span className="ml-2 text-xs text-gray-400">{dojo.city}</span>
@@ -604,14 +762,15 @@ export const DojoAutocomplete: React.FC<DojoAutocompleteProps> = ({
           ))}
         </ul>
       )}
-      {/* Show free text input if 'Other' is selected */}
-      {value.id === 18 && (
+      {value.id === OTHER_DOJO_ID && (
         <input
           type="text"
           value={value.freeText || ""}
           onChange={handleFreeTextChange}
-          className="mt-2 w-full px-3 py-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onBlur={onBlur}
+          className={`mt-2 ${dojoInputClassName}`}
           placeholder="Enter dojo name"
+          aria-invalid={invalid}
         />
       )}
     </div>
