@@ -1,9 +1,10 @@
-import { Outlet, createRootRoute } from '@tanstack/react-router'
+import { Outlet, createRootRoute, useRouterState } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import Header from '../components/Header'
+import HeaderPublic from '../components/HeaderPublic'
 
 const queryClient = new QueryClient();
 
@@ -12,9 +13,12 @@ export const Route = createRootRoute({
 })
 
 function RootLayout() {
+
+  const {matches} = useRouterState();
+  const isPublic = matches.some(match => match.staticData?.publicMode);
   return (
     <>
-      <Header />
+      {isPublic ? <HeaderPublic /> : <Header />}
       <QueryClientProvider client={queryClient}>
         <Outlet />
       </QueryClientProvider>

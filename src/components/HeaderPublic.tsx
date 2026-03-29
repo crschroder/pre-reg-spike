@@ -1,0 +1,141 @@
+import { Link } from '@tanstack/react-router'
+
+import { useState } from 'react'
+import {
+  Database,
+  Home,
+  Menu,
+  Table,
+  X,
+} from 'lucide-react'
+
+export default function HeaderPublic() {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const buildVersion = import.meta.env.VITE_BUILD_VERSION as string | undefined
+  const buildSha = import.meta.env.VITE_BUILD_SHA as string | undefined
+  const buildTime = import.meta.env.VITE_BUILD_TIME as string | undefined
+
+  const buildParts = [
+    buildVersion ? `v${buildVersion}` : undefined,
+    buildSha ? buildSha.slice(0, 8) : undefined,
+    buildTime ? new Date(buildTime).toISOString().replace(/\.\d{3}Z$/, 'Z') : undefined,
+  ].filter(Boolean)
+
+  const buildLabel = buildParts.length > 0 ? buildParts.join(' · ') : 'dev'
+
+  return (
+    <>
+      <header className="p-4 flex items-center justify-between bg-gray-800 text-white shadow-lg">
+        <div className="flex items-center gap-3">
+          
+          <h1 className="text-xl font-semibold leading-none">
+            <Link to="/" className="flex items-center gap-4">
+              <img
+                src="/KYOKAI-LOGO2.svg"
+                alt="Kyuoku Kai Logo"
+                className="h-16 w-auto"
+              />
+              <span>Kyokai Event Managerddd</span>
+            </Link>
+          </h1>
+        </div>
+
+        <div className="text-xs text-gray-400 whitespace-nowrap">
+          Build: {buildLabel}
+        </div>
+      </header>
+
+      <aside
+        className={`fixed top-0 left-0 h-full w-80 bg-gray-900 text-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <h2 className="text-xl font-bold">Navigation</h2>
+          <button
+            onClick={() => setIsOpen(false)}
+            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            aria-label="Close menu"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <nav className="flex-1 p-4 overflow-y-auto">
+          <Link
+            to="/"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+            activeProps={{
+              className:
+                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+            }}
+          >
+            <Home size={20} />
+            <span className="font-medium">Home</span>
+          </Link>
+
+          <Link
+            to="/tournament/organizer"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+            activeOptions={{ exact: true }}
+            activeProps={{
+              className:
+                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+            }}
+          >
+            <Home size={20} />
+            <span className="font-medium">Organizer Dashboard</span>
+          </Link>
+
+
+          <Link
+            to="/tournament/organizer/create"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+            activeOptions={{ exact: true }}
+            activeProps={{
+              className:
+                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+            }}
+          >
+            <Home size={20} />
+            <span className="font-medium">Create New Tournament</span>
+          </Link>
+
+          <Link
+            to="/tournament/participant"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+            activeProps={{
+              className:
+                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+            }}
+          >
+            <Database size={20} />
+            <span className="font-medium">Register Tournament</span>
+          </Link>
+
+          {/* Demo Links Start */}
+
+          {/* <Link
+            to="/demo/table"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+            activeProps={{
+              className:
+                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+            }}
+          >
+            <Table size={20} />
+            <span className="font-medium">TanStack Table</span>
+          </Link> */}
+
+          {/* Demo Links End */}
+        </nav>
+      </aside>
+    </>
+  )
+}
