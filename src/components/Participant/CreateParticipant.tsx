@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent } from "react";
 
 import { ParticipantEmailSchema } from "../../../validations";
+import { normalizeName } from "@/helpers/stringHelpers";
 
 type Props = {
   tournamentId: number;
@@ -49,6 +50,36 @@ const beltColors = [
   { id: 7, name: "Brown" },
   { id: 8, name: "Black" },
 ] as const;
+
+function formatAgeRange(minAge?: number, maxAge?: number) {
+  if (typeof minAge === "number" && typeof maxAge === "number") {
+    return `(${minAge}-${maxAge})`;
+  }
+
+  if (typeof minAge === "number") {
+    return `(min ${minAge})`;
+  }
+
+  if (typeof maxAge === "number") {
+    return `(max ${maxAge})`;
+  }
+
+  return "";
+}
+
+function formatRegisteredEventLine(event: NonNullable<CreateRegistrationPayload["registeredEvents"]>[number]) {
+  const eventCode = event.eventCode?.trim() || "Unknown";
+  const ageRange = formatAgeRange(event.minAge, event.maxAge);
+  const parts = [
+    `${normalizeName(eventCode)} - ${normalizeName(event.eventType)} ${normalizeName(event.divisionDisplayName)}`,
+    ageRange,
+    normalizeName(event.eventRank),
+    'Belt',
+    event.genderDisplayName,
+  ].filter(Boolean);
+
+  return parts.join(" ");
+}
 
 function normalizeFormData(
   formData: CreateRegistrationPayload,
@@ -183,6 +214,11 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
     enabled: isEdit,
   });
 
+  if (!isLoadingParticipant) {
+    console.log("Fetched participant data:", participantData);
+  }
+
+
   const mappedEvents = (eventTypes ?? []).map((item: any) => ({
     id: item.id,
     eventId: item.eventId,
@@ -237,6 +273,9 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
     onSuccess: async (result) => {
       setSavedMessage("Data has been saved.");
       await queryClient.invalidateQueries({ queryKey: ["participant-summary", tournamentId] });
+      if (isEdit) {
+        await queryClient.invalidateQueries({ queryKey: ["participant", participantId] });
+      }
       window.setTimeout(() => setSavedMessage(""), 3000);
 
       if (!isEdit) {
@@ -306,6 +345,8 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
   const isSubmitDisabled = mutation.isPending || !isFormValid;
   const isFormLoading = isLoading || (isEdit && isLoadingParticipant);
 
+  const registeredEvents = participantData?.registeredEvents ?? [];
+
   const shouldShowError = (fieldName: FieldName) =>
     Boolean((submitAttempted || touchedFields[fieldName]) && fieldErrors[fieldName]);
 
@@ -341,7 +382,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">
+    <div className="min-h-screen bg-gray-900 p-6 pb-24 md:pb-6 text-white flex flex-col items-center">
       {savedMessage && (
         <div className="mb-4 p-3 bg-green-700 text-white rounded shadow text-center">
           {savedMessage}
@@ -358,9 +399,18 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
             </button>
           </div>
         )}
-        <h1 className="text-xl font-semibold mb-6">
-          {isFormLoading ? "Loading..." : `Register for tournament : ${data?.name ?? ""}`}
+        <h1 className={`text-xl font-semibold ${isEdit ? "mb-2" : "mb-6"}`}>
+          {isFormLoading
+            ? "Loading..."
+            : isEdit
+              ? `Registered for ${data?.name ?? ""}`
+              : `Register for tournament: ${data?.name ?? ""}`}
         </h1>
+        {isEdit && (
+          <div className="md:hidden mb-6 text-xs text-gray-400">
+            Actions are in the bar at the bottom. Scroll down to review Events Registered.
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="col-span-1">
             <RequiredLabel>Email</RequiredLabel>
@@ -460,7 +510,6 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
             <RequiredLabel>Belt Color</RequiredLabel>
             <select
               className={getInputClassName("beltRankId")}
-              defaultValue=""
               name="beltRankId"
               value={formData.participant.beltRankId === 0 ? "" : formData.participant.beltRankId}
               aria-invalid={shouldShowError("beltRankId")}
@@ -612,7 +661,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
           </div>
         </div>
       </div>
-      <div className="mt-8 flex gap-4 justify-center">
+      <div className="mt-8 hidden md:flex gap-4 justify-center">
         <button
           onClick={onSubmit}
           disabled={isSubmitDisabled}
@@ -632,6 +681,56 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
             Create New Registration
           </button>
         )}
+      </div>
+
+      {isEdit && (
+        <div className="mt-8 w-full max-w-6xl">
+          <div className="p-4 bg-gray-800 rounded-md border border-gray-700">
+            <div className="mb-2 text-sm font-medium text-gray-200">Events Registered</div>
+            {isLoadingParticipant ? (
+              <div className="text-xs text-gray-400">Loading events...</div>
+            ) : registeredEvents.length === 0 ? (
+              <div className="text-xs text-gray-400">No events registered</div>
+            ) : (
+              <ul className="list-disc pl-5 space-y-1">
+                {registeredEvents.map((event, index) => (
+                  <li key={`${event.eventCode}-${index}`} className="text-sm text-gray-300">
+                    {formatRegisteredEventLine(event)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-gray-900 border-t border-gray-700">
+        <div className="mx-auto w-full max-w-6xl p-4 flex gap-4 justify-center">
+          <button
+            onClick={onSubmit}
+            disabled={isSubmitDisabled}
+            className={`px-4 py-2 rounded focus:outline-none focus:ring-2 ${
+              isSubmitDisabled
+                ? "bg-gray-600 text-gray-300 cursor-not-allowed focus:ring-gray-500"
+                : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-400"
+            }`}
+          >
+            {isEdit ? "Update" : "Submit"}
+          </button>
+          {isEdit && (
+            <button
+              onClick={onCreateNewRegistration}
+              disabled={mutation.isPending}
+              className={`px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-400 ${
+                mutation.isPending
+                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                  : "bg-blue-600 text-white hover:bg-gray-600"
+              }`}
+            >
+              Create New Registration
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

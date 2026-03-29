@@ -512,7 +512,7 @@ function FilterBar({ table }: FilterBarProps) {
   }
 
   return (
-    <div className="mb-4 flex flex-wrap gap-4" text-white>
+    <div className="mb-4 flex flex-wrap gap-4 text-white">
 
    
     <div className="flex items-center gap-2">

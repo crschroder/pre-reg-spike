@@ -10,6 +10,7 @@ export type CreateRegistrationPayload = {
   userId?: number; // Optional - will be looked up or created by email
   participant: ParticipantCreatePayload; // All participant fields except id
   events: EventSelection[];
+  registeredEvents?: RegisteredEvents[]; // Optional, for edit form to show current events
 };
 
 
@@ -43,3 +44,13 @@ export type ParticipantUpdatePayload = Partial<Omit<Participant, 'id'>> & {
   events?: EventSelection[];
   email?: string; // Allow updating email as well
 };
+
+export type RegisteredEvents= {
+  eventCode: string,
+  eventType: string,
+  divisionDisplayName: string,
+  genderDisplayName: string
+  eventRank: string ,
+  minAge?: number,
+  maxAge?: number 
+}

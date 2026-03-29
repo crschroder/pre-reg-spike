@@ -3,10 +3,10 @@
 @azureBaseUrlDev = https://pre-reg-spike-api-dev-gtadf8hrdme8c5ey.canadacentral-01.azurewebsites.net               
 
 # Switch this between {{localBaseUrl}} and {{azureBaseUrl}}
-@baseUrl = {{azureBaseUrlDev}}
+@baseUrl = {{localBaseUrl}}
 
 @apiKey = 37339cb4-4761-4e5f-91c0-16a5687f3ae6
-@tournamentId = 19
+@tournamentId = 26
 
 
 ### get upcoming tournaments 
@@ -23,11 +23,11 @@ X-API-Key: {{apiKey}}
 {
   "email": "michelle.schroder@example.com",
   "participant": {
-    "firstName": "Nathan",
+    "firstName": "Michelle",
     "lastName": "Schroder",
     "age": 16,
-    "genderId": 1,
-    "beltRankId": 7,
+    "genderId": 2,
+    "beltRankId": 4,
     "notes": "From Test harness", 
     "dojoId": 12,
     "otherDojoName": null
@@ -116,3 +116,7 @@ GET {{baseUrl}}/api/tournament/{{tournamentId}}/summary
 Content-Type: application/json
 X-API-Key: {{apiKey}}
 
+### get a participant info
+GET {{baseUrl}}/api/participant/1995
+Content-Type: application/json
+X-API-Key: {{apiKey}}

@@ -20,6 +20,7 @@ import type {
   EventSummary,
   EventType,
   ParticipantUpdatePayload,
+  RegisteredEvents,
   TournamentEventDivisionRow,
   TournamentEventPayload,
   TournamentEventSummary,
@@ -698,6 +699,7 @@ const divisions = await getPrisma().tournamentEventDivision.findMany({
 const selectedDivisionIds: number[] = [];
 const selectedEventIds: number[] = [];
 
+
 events.forEach(event => {
   const eventName = String(event).toLowerCase();
   
@@ -896,6 +898,7 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{ id: string }, Parti
       age,
       genderId,
       beltRankId,
+      email
     } = payload;
 
     let events: EventSelection[] = payload.events ?? [];
@@ -906,13 +909,39 @@ app.patch('/api/participant/:id', async (req: TypedRequest<{ id: string }, Parti
     const updateData: Prisma.ParticipantUpdateInput = {};
 
     for (const field of allowedFields) {
-      if (field in payload && field !== 'events') {
+      if (field in payload && field !== 'events' && field !== 'email') {
         (updateData as any)[field] = payload[field];
       }
     }
 
     // Wrap all operations in a transaction
     await getPrisma().$transaction(async (tx) => {
+
+      if (email) {
+        // check if the email is already associated with another user
+        const existingUser = await tx.user.findUnique({
+          where: { email }
+        });
+        // If we find an existing user update the participant to point to that user
+        if (existingUser) {
+          (updateData as any)['user'] = existingUser ? existingUser.id : undefined;
+        } else {
+          // If no user exists with that email, get the existing user and update their email
+          const participant = await tx.participant.findUnique({
+            where: { id: participantId },
+            include: { user: true }
+          });
+          if (participant?.user) {
+            await tx.user.update({
+              where: { id: participant.user.id },
+              data: { email }
+            });
+          }
+        }
+      }
+
+
+
       // Update the participant
       const updated = await tx.participant.update({
         where: { id: participantId },
@@ -1067,12 +1096,46 @@ app.get('/api/tournaments/:id/participant', async (req: Request, res: Response, 
     }
     const participant = await getPrisma().participant.findUnique({
       where: { id: participantId },
-      include: {events: {include: {event: true}},  
-        user : true}
+      include: {
+        events: { include: { event: true } },
+        user: true,
+        registrations: {
+          include: {
+            tournamentEventDivision: {
+              include: {
+                eventGender: true,
+                tournamentEvent: {
+                  include: { event: true }
+                },
+                division: {
+                  include: {
+                    divisionType: true,
+                    beltRank: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     });
+
+    console.log("Fetched participant for mapping:", participant);
+
+   
     if (!participant) {
       return res.status(404).json({ error: "Participant not found" });
     }
+
+    const mappedRegisteredEvents: RegisteredEvents[] = participant.registrations.map(e => ({
+      eventCode: e.tournamentEventDivision.displayName || "Unknown",
+      eventType: e.tournamentEventDivision.tournamentEvent.event.name,
+      divisionDisplayName: e.tournamentEventDivision.division.divisionType.name,
+      genderDisplayName: e.tournamentEventDivision.eventGender.description,
+      eventRank: e.tournamentEventDivision.division.beltRank?.beltColor || "Unknown",
+      minAge: e.tournamentEventDivision.division.divisionType.minAge || undefined,
+      maxAge: e.tournamentEventDivision.division.divisionType.maxAge || undefined
+    }));
 
     const mapped : CreateRegistrationPayload = {
       email: participant.user.email,
@@ -1088,7 +1151,8 @@ app.get('/api/tournaments/:id/participant', async (req: Request, res: Response, 
         paid: participant.paid || undefined,
         checkedIn: participant.checkedIn || undefined
       },
-      events: participant.events.map(e => e.event.name.toLowerCase() as EventSelection)
+      events: participant.events.map(e => e.event.name.toLowerCase() as EventSelection),
+      registeredEvents: mappedRegisteredEvents
     };  
 
     res.json(mapped);
