@@ -30,13 +30,15 @@ export default function HeaderPublic() {
         <div className="flex items-center gap-3">
           
           <h1 className="text-xl font-semibold leading-none">
-            <Link to="/" className="flex items-center gap-4">
+            <Link to="/tournament/participant/register/$id/create-participant-dayof"
+            params={{id:26}}
+            className="flex items-center gap-4">
               <img
                 src="/KYOKAI-LOGO2.svg"
                 alt="Kyuoku Kai Logo"
                 className="h-16 w-auto"
               />
-              <span>Kyokai Event Managerddd</span>
+              <span>Kyokai Event Manager</span>
             </Link>
           </h1>
         </div>
