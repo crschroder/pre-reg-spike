@@ -31,6 +31,7 @@ import { Route as TournamentParticipantRegisterIdSelectEventsRouteImport } from 
 import { Route as TournamentParticipantRegisterIdCreateParticipantDayofRouteImport } from './routes/tournament/participant/register/$id/create-participant-dayof'
 import { Route as TournamentParticipantRegisterIdCreateParticipantRouteImport } from './routes/tournament/participant/register/$id/create-participant'
 import { Route as TournamentParticipantRegisterIdUpdateParticipantParticipantIdRouteImport } from './routes/tournament/participant/register/$id/update-participant.$participantId'
+import { Route as TournamentParticipantRegisterIdUpdateParticipantDayofParticipantIdRouteImport } from './routes/tournament/participant/register/$id/update-participant-dayof.$participantId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -163,6 +164,14 @@ const TournamentParticipantRegisterIdUpdateParticipantParticipantIdRoute =
       getParentRoute: () => rootRouteImport,
     } as any,
   )
+const TournamentParticipantRegisterIdUpdateParticipantDayofParticipantIdRoute =
+  TournamentParticipantRegisterIdUpdateParticipantDayofParticipantIdRouteImport.update(
+    {
+      id: '/tournament/participant/register/$id/update-participant-dayof/$participantId',
+      path: '/tournament/participant/register/$id/update-participant-dayof/$participantId',
+      getParentRoute: () => rootRouteImport,
+    } as any,
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -186,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/tournament/participant/register/$id/submit-entry': typeof TournamentParticipantRegisterIdSubmitEntryRoute
   '/tournament/participant/register/$id/waiver-agreement': typeof TournamentParticipantRegisterIdWaiverAgreementRoute
   '/tournament/participant/register/$id': typeof TournamentParticipantRegisterIdIndexRoute
+  '/tournament/participant/register/$id/update-participant-dayof/$participantId': typeof TournamentParticipantRegisterIdUpdateParticipantDayofParticipantIdRoute
   '/tournament/participant/register/$id/update-participant/$participantId': typeof TournamentParticipantRegisterIdUpdateParticipantParticipantIdRoute
 }
 export interface FileRoutesByTo {
@@ -210,6 +220,7 @@ export interface FileRoutesByTo {
   '/tournament/participant/register/$id/submit-entry': typeof TournamentParticipantRegisterIdSubmitEntryRoute
   '/tournament/participant/register/$id/waiver-agreement': typeof TournamentParticipantRegisterIdWaiverAgreementRoute
   '/tournament/participant/register/$id': typeof TournamentParticipantRegisterIdIndexRoute
+  '/tournament/participant/register/$id/update-participant-dayof/$participantId': typeof TournamentParticipantRegisterIdUpdateParticipantDayofParticipantIdRoute
   '/tournament/participant/register/$id/update-participant/$participantId': typeof TournamentParticipantRegisterIdUpdateParticipantParticipantIdRoute
 }
 export interface FileRoutesById {
@@ -235,6 +246,7 @@ export interface FileRoutesById {
   '/tournament/participant/register/$id/submit-entry': typeof TournamentParticipantRegisterIdSubmitEntryRoute
   '/tournament/participant/register/$id/waiver-agreement': typeof TournamentParticipantRegisterIdWaiverAgreementRoute
   '/tournament/participant/register/$id/': typeof TournamentParticipantRegisterIdIndexRoute
+  '/tournament/participant/register/$id/update-participant-dayof/$participantId': typeof TournamentParticipantRegisterIdUpdateParticipantDayofParticipantIdRoute
   '/tournament/participant/register/$id/update-participant/$participantId': typeof TournamentParticipantRegisterIdUpdateParticipantParticipantIdRoute
 }
 export interface FileRouteTypes {
@@ -261,6 +273,7 @@ export interface FileRouteTypes {
     | '/tournament/participant/register/$id/submit-entry'
     | '/tournament/participant/register/$id/waiver-agreement'
     | '/tournament/participant/register/$id'
+    | '/tournament/participant/register/$id/update-participant-dayof/$participantId'
     | '/tournament/participant/register/$id/update-participant/$participantId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -285,6 +298,7 @@ export interface FileRouteTypes {
     | '/tournament/participant/register/$id/submit-entry'
     | '/tournament/participant/register/$id/waiver-agreement'
     | '/tournament/participant/register/$id'
+    | '/tournament/participant/register/$id/update-participant-dayof/$participantId'
     | '/tournament/participant/register/$id/update-participant/$participantId'
   id:
     | '__root__'
@@ -309,6 +323,7 @@ export interface FileRouteTypes {
     | '/tournament/participant/register/$id/submit-entry'
     | '/tournament/participant/register/$id/waiver-agreement'
     | '/tournament/participant/register/$id/'
+    | '/tournament/participant/register/$id/update-participant-dayof/$participantId'
     | '/tournament/participant/register/$id/update-participant/$participantId'
   fileRoutesById: FileRoutesById
 }
@@ -334,6 +349,7 @@ export interface RootRouteChildren {
   TournamentParticipantRegisterIdSubmitEntryRoute: typeof TournamentParticipantRegisterIdSubmitEntryRoute
   TournamentParticipantRegisterIdWaiverAgreementRoute: typeof TournamentParticipantRegisterIdWaiverAgreementRoute
   TournamentParticipantRegisterIdIndexRoute: typeof TournamentParticipantRegisterIdIndexRoute
+  TournamentParticipantRegisterIdUpdateParticipantDayofParticipantIdRoute: typeof TournamentParticipantRegisterIdUpdateParticipantDayofParticipantIdRoute
   TournamentParticipantRegisterIdUpdateParticipantParticipantIdRoute: typeof TournamentParticipantRegisterIdUpdateParticipantParticipantIdRoute
 }
 
@@ -493,6 +509,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TournamentParticipantRegisterIdUpdateParticipantParticipantIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tournament/participant/register/$id/update-participant-dayof/$participantId': {
+      id: '/tournament/participant/register/$id/update-participant-dayof/$participantId'
+      path: '/tournament/participant/register/$id/update-participant-dayof/$participantId'
+      fullPath: '/tournament/participant/register/$id/update-participant-dayof/$participantId'
+      preLoaderRoute: typeof TournamentParticipantRegisterIdUpdateParticipantDayofParticipantIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -530,6 +553,8 @@ const rootRouteChildren: RootRouteChildren = {
     TournamentParticipantRegisterIdWaiverAgreementRoute,
   TournamentParticipantRegisterIdIndexRoute:
     TournamentParticipantRegisterIdIndexRoute,
+  TournamentParticipantRegisterIdUpdateParticipantDayofParticipantIdRoute:
+    TournamentParticipantRegisterIdUpdateParticipantDayofParticipantIdRoute,
   TournamentParticipantRegisterIdUpdateParticipantParticipantIdRoute:
     TournamentParticipantRegisterIdUpdateParticipantParticipantIdRoute,
 }

@@ -23,9 +23,8 @@ export const Route = createFileRoute(
 })
 
 function RouteComponent() {
-  const { id } = Route.useParams();
-  const { mode } = Route.useSearch();
+  const { id } = Route.useParams(); 
   return (
-    <CreateParticipant tournamentId={id} mode={mode}/>
+    <CreateParticipant tournamentId={id} mode={'organizer'}/>
   )
 }

@@ -19,7 +19,7 @@ import { normalizeName } from "@/helpers/stringHelpers";
 type Props = {
   tournamentId: number;
   participantId?: number | undefined;
-  mode?: "organizer";
+  mode?: "organizer"|"participant" | undefined;
 };
 
 type FieldName =
@@ -307,10 +307,19 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
       window.setTimeout(() => setSavedMessage(""), 3000);
 
       if (!isEdit) {
+        
+        if(mode === "participant") {
+
         navigate({
-          to: `/tournament/participant/register/${tournamentId}/update-participant/${result.participant.id}`,
-          search: { mode },
+          to: `/tournament/participant/register/${tournamentId}/update-participant-dayof/${result.participant.id}`          
         });
+        }
+        else{
+          navigate({
+            to: `/tournament/participant/register/${tournamentId}/update-participant/${result.participant.id}`          
+          });
+
+        }
       }
     },
   });
@@ -419,11 +428,16 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
   };
 
   const onCreateNewRegistration = () => {
-    navigate({
-      to: `/tournament/participant/register/${tournamentId}/create-participant`,
-      search: { mode },
-    });
-  };
+    if (mode === 'organizer') {
+      navigate({
+        to: `/tournament/participant/register/${tournamentId}/create-participant`,
+      })
+    } else {
+      navigate({
+        to: `/tournament/participant/register/${tournamentId}/create-participant-dayof`,
+      })
+    }
+  }
 
   const onBackToParticipants = () => {
     navigate({
@@ -433,6 +447,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
 
   return (
     <div className="min-h-screen bg-gray-900 p-6 pb-24 md:pb-6 text-white flex flex-col items-center">
+      
       {isSaving && (
         <div
           className="fixed inset-0 z-50 bg-gray-900/70 flex items-center justify-center"
@@ -452,16 +467,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
         </div>
       )}
       <div className="p-8 w-full max-w-6xl">
-        {mode === "organizer" && (
-          <div className="mb-4">
-            <button
-              onClick={onBackToParticipants}
-              className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
-            >
-              Back to Participants
-            </button>
-          </div>
-        )}
+        
         <h1 className={`text-xl font-semibold ${isEdit ? "mb-2" : "mb-6"}`}>
           {isFormLoading
             ? "Loading..."
@@ -469,9 +475,14 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
               ? `Registered for ${data?.name ?? ""}`
               : `Register for tournament: ${data?.name ?? ""}`}
         </h1>
-        {isEdit && (
-          <div className="md:hidden mb-6 text-xs text-gray-400">
-            You are in update mode. Make changes to the participant details and click "Update" to save.
+        {isEdit && mode === "participant" && (
+          <div className=" mb-6 text-s text-gray-400">
+            You are in update mode. Make changes to the participant details and click "Update" to save, or click or tap "Create New Registration" to start a new registration.
+          </div>
+        )}
+         {isEdit && mode === "organizer" && (
+          <div className=" mb-6 text-s text-gray-400">
+            You are in update mode. Make changes to the participant details and click "Update" to save, or click or tap "Back to Participants" to return to the participants list.
           </div>
         )}
 
@@ -779,6 +790,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
         </div>
       </div>
 
+      {/* Desktop/tablet actions (md and up). Hidden on mobile. */}
       <div className="mt-8 hidden md:flex gap-4 justify-center">
         <button
           onClick={onSubmit}
@@ -796,7 +808,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
             <span>{isSaving ? "Saving..." : isEdit ? "Update" : "Submit"}</span>
           </span>
         </button>
-        {isEdit && (
+        {isEdit && mode &&   (
           <button
             onClick={onCreateNewRegistration}
             className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
@@ -804,8 +816,11 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
             Create New Registration
           </button>
         )}
+
+        
       </div>
 
+              {/* Mobile actions (below md). Fixed bottom action bar. */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-gray-900 border-t border-gray-700">
         <div className="mx-auto w-full max-w-6xl p-4">
           <div className="mb-2 text-center text-xs text-gray-200" role="status" aria-live="polite">
@@ -836,7 +851,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
                 <span>{isSaving ? "Saving..." : isEdit ? "Update" : "Submit"}</span>
               </span>
             </button>
-            {isEdit && (
+            {isEdit && mode == "participant" && (
               <button
                 onClick={onCreateNewRegistration}
                 disabled={mutation.isPending}
@@ -847,7 +862,15 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
                 }`}
               >
                 Create New Registration
-              </button>
+              </button>              
+            )}
+            {isEdit && mode == "organizer" && (
+               <button
+              onClick={onBackToParticipants}
+              className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            >
+              Back to Participants
+            </button>              
             )}
           </div>
         </div>

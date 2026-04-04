@@ -29,6 +29,6 @@ function RouteComponent() {
   const { mode } = Route.useSearch();
 
   return (
-    <CreateParticipant tournamentId={id} participantId={participantId} mode={mode}/>
+    <CreateParticipant tournamentId={id} participantId={participantId} mode={'organizer'}/>
   )
 }

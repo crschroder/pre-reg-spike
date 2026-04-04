@@ -282,7 +282,7 @@ export function ParticipantTable({
   const editDetails = function (tournamentId: number, participantId: number) {
     navigate({
       to: `/tournament/participant/register/${tournamentId}/update-participant/${participantId}`,
-      search: { mode: "organizer" },
+      
     });
   }
 

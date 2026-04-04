@@ -37,7 +37,7 @@ export function OrganizerDashboard() {
     function handleRegisterParticipant(id: number) {
         navigate({
             to: `/tournament/participant/register/${id}/create-participant`,
-            search: { mode: "organizer" },
+            
         });
     }
 
