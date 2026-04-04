@@ -109,6 +109,7 @@ model Participant {
   dojo          Dojo?           @relation(fields:[dojoId], references:[id])
   otherDojoName String?        @map("other_dojo_name") 
   checkedIn     Boolean        @map("checked_in") @default(false)
+  waiverAccepted Boolean       @map("waiver_accepted") @default(true)
   events        ParticipantEvent[]  
   @@map("participant")
 }

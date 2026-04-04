@@ -163,10 +163,38 @@ function ValidationMessage({ message }: { message?: string }) {
   return <p className="mt-1 text-sm text-red-400">{message}</p>;
 }
 
+function InlineSpinner({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      className={`animate-spin ${className}`}
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+      />
+    </svg>
+  );
+}
+
 export function CreateParticipant({ tournamentId, participantId, mode }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEdit = Boolean(participantId);
+
+  const [waiverAccepted, setWaiverAccepted] = useState(false);
 
   const [formData, setFormData] = useState<CreateRegistrationPayload>({
     email: "",
@@ -342,8 +370,26 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
   const normalizedFormData = normalizeFormData(formData, selectedEvents);
   const fieldErrors = validateParticipantForm(normalizedFormData, dojoValue);
   const isFormValid = Object.keys(fieldErrors).length === 0;
-  const isSubmitDisabled = mutation.isPending || !isFormValid;
+  const isWaiverValid = isEdit || waiverAccepted;
+  const isSubmitDisabled = mutation.isPending || !isFormValid || !isWaiverValid;
+  const isSaving = mutation.isPending;
   const isFormLoading = isLoading || (isEdit && isLoadingParticipant);
+
+  const waiverChecked = isEdit ? true : waiverAccepted;
+  const shouldShowWaiverError = !isEdit && submitAttempted && !waiverAccepted;
+
+  useEffect(() => {
+    if (!isSaving) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isSaving]);
 
   const registeredEvents = participantData?.registeredEvents ?? [];
 
@@ -361,6 +407,10 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
     setSubmitAttempted(true);
 
     if (!isFormValid) {
+      return;
+    }
+
+    if (!isEdit && !waiverAccepted) {
       return;
     }
 
@@ -383,8 +433,21 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
 
   return (
     <div className="min-h-screen bg-gray-900 p-6 pb-24 md:pb-6 text-white flex flex-col items-center">
+      {isSaving && (
+        <div
+          className="fixed inset-0 z-50 bg-gray-900/70 flex items-center justify-center"
+          role="status"
+          aria-live="polite"
+          aria-label="Saving"
+        >
+          <div className="px-4 py-3 rounded-md bg-gray-800 border border-gray-700 text-white inline-flex items-center gap-3">
+            <InlineSpinner className="h-5 w-5" />
+            <span>Saving...</span>
+          </div>
+        </div>
+      )}
       {savedMessage && (
-        <div className="mb-4 p-3 bg-green-700 text-white rounded shadow text-center">
+        <div className="hidden md:block mb-4 p-3 bg-green-700 text-white rounded shadow text-center">
           {savedMessage}
         </div>
       )}
@@ -408,9 +471,31 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
         </h1>
         {isEdit && (
           <div className="md:hidden mb-6 text-xs text-gray-400">
-            Actions are in the bar at the bottom. Scroll down to review Events Registered.
+            You are in update mode. Make changes to the participant details and click "Update" to save.
           </div>
         )}
+
+        {isEdit && (
+          <div className="mb-6 w-full">
+            <div className="p-4 bg-gray-800 rounded-md border border-gray-700">
+              <div className="mb-2 text-sm font-medium text-gray-200">Events Registered</div>
+              {isLoadingParticipant ? (
+                <div className="text-xs text-gray-400">Loading events...</div>
+              ) : registeredEvents.length === 0 ? (
+                <div className="text-xs text-gray-400">No events registered</div>
+              ) : (
+                <ul className="list-disc pl-5 space-y-1">
+                  {registeredEvents.map((event, index) => (
+                    <li key={`${event.eventCode}-${index}`} className="text-sm text-gray-300">
+                      {formatRegisteredEventLine(event)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="col-span-1">
             <RequiredLabel>Email</RequiredLabel>
@@ -661,17 +746,55 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
           </div>
         </div>
       </div>
+
+      <div className="mt-8 w-full max-w-6xl">
+        <div className="p-4 bg-gray-800 rounded-md border border-gray-700">
+          <RequiredLabel>Waiver</RequiredLabel>
+          <div className="mt-2 text-sm text-gray-200 whitespace-pre-line">
+            {`By submitting this digital form, I acknowledge and agree to the following:\n\nI, the undersigned participant, and if I am under the age of majority, my parent or legal guardian, hereby consent to participate in the 39th Annual Shito‑Ryu Karate‑Do Kyokai Championships. In consideration for being permitted to take part in this event, I hereby release, hold harmless, and indemnify the event organizers, officers, employees, members, instructors, volunteers, and students—whether individually or collectively—from any and all claims, demands, or causes of action of any kind.\n\nThis includes, but is not limited to, claims arising from accident, illness, injury, or death, whether occurring to myself or any other person, and whether resulting directly or indirectly from my participation in this event.\n\nI understand that by completing this digital waiver, my electronic signature has the same legal effect as a handwritten signature.`}
+          </div>
+
+          <div
+            className={`mt-4 flex items-start gap-3 rounded-md border px-3 py-3 ${
+              shouldShowWaiverError ? "border-red-500" : "border-gray-700"
+            }`}
+          >
+            <input
+              id="waiverAccepted"
+              type="checkbox"
+              checked={waiverChecked}
+              disabled={isEdit}
+              onChange={(event) => setWaiverAccepted(event.target.checked)}
+              className={`form-checkbox mt-1 text-green-500 ${isEdit ? "opacity-80" : ""}`}
+              aria-invalid={shouldShowWaiverError}
+            />
+            <label htmlFor="waiverAccepted" className="text-sm text-gray-200">
+              I have read and agree to the waiver.
+            </label>
+          </div>
+
+          <ValidationMessage
+            message={shouldShowWaiverError ? "You must accept the waiver to submit." : undefined}
+          />
+        </div>
+      </div>
+
       <div className="mt-8 hidden md:flex gap-4 justify-center">
         <button
           onClick={onSubmit}
           disabled={isSubmitDisabled}
           className={`px-4 py-2 rounded focus:outline-none focus:ring-2 ${
-            isSubmitDisabled
-              ? "bg-gray-600 text-gray-300 cursor-not-allowed focus:ring-gray-500"
-              : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-400"
+            isSaving
+              ? "bg-blue-600 text-white cursor-wait opacity-80 focus:ring-blue-400"
+              : isSubmitDisabled
+                ? "bg-gray-600 text-gray-300 cursor-not-allowed focus:ring-gray-500"
+                : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-400"
           }`}
         >
-          {isEdit ? "Update" : "Submit"}
+          <span className="inline-flex items-center gap-2">
+            {isSaving && <InlineSpinner className="h-4 w-4" />}
+            <span>{isSaving ? "Saving..." : isEdit ? "Update" : "Submit"}</span>
+          </span>
         </button>
         {isEdit && (
           <button
@@ -683,53 +806,50 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
         )}
       </div>
 
-      {isEdit && (
-        <div className="mt-8 w-full max-w-6xl">
-          <div className="p-4 bg-gray-800 rounded-md border border-gray-700">
-            <div className="mb-2 text-sm font-medium text-gray-200">Events Registered</div>
-            {isLoadingParticipant ? (
-              <div className="text-xs text-gray-400">Loading events...</div>
-            ) : registeredEvents.length === 0 ? (
-              <div className="text-xs text-gray-400">No events registered</div>
-            ) : (
-              <ul className="list-disc pl-5 space-y-1">
-                {registeredEvents.map((event, index) => (
-                  <li key={`${event.eventCode}-${index}`} className="text-sm text-gray-300">
-                    {formatRegisteredEventLine(event)}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      )}
-
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-gray-900 border-t border-gray-700">
-        <div className="mx-auto w-full max-w-6xl p-4 flex gap-4 justify-center">
-          <button
-            onClick={onSubmit}
-            disabled={isSubmitDisabled}
-            className={`px-4 py-2 rounded focus:outline-none focus:ring-2 ${
-              isSubmitDisabled
-                ? "bg-gray-600 text-gray-300 cursor-not-allowed focus:ring-gray-500"
-                : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-400"
-            }`}
-          >
-            {isEdit ? "Update" : "Submit"}
-          </button>
-          {isEdit && (
+        <div className="mx-auto w-full max-w-6xl p-4">
+          <div className="mb-2 text-center text-xs text-gray-200" role="status" aria-live="polite">
+            {isSaving ? (
+              <span className="inline-flex items-center gap-2">
+                <InlineSpinner className="h-4 w-4" />
+                <span>Saving...</span>
+              </span>
+            ) : savedMessage ? (
+              <span>{savedMessage}</span>
+            ) : null}
+          </div>
+
+          <div className="flex gap-4 justify-center">
             <button
-              onClick={onCreateNewRegistration}
-              disabled={mutation.isPending}
-              className={`px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-400 ${
-                mutation.isPending
-                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-gray-600"
+              onClick={onSubmit}
+              disabled={isSubmitDisabled}
+              className={`px-4 py-2 rounded focus:outline-none focus:ring-2 ${
+                isSaving
+                  ? "bg-blue-600 text-white cursor-wait opacity-80 focus:ring-blue-400"
+                  : isSubmitDisabled
+                    ? "bg-gray-600 text-gray-300 cursor-not-allowed focus:ring-gray-500"
+                    : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-400"
               }`}
             >
-              Create New Registration
+              <span className="inline-flex items-center gap-2">
+                {isSaving && <InlineSpinner className="h-4 w-4" />}
+                <span>{isSaving ? "Saving..." : isEdit ? "Update" : "Submit"}</span>
+              </span>
             </button>
-          )}
+            {isEdit && (
+              <button
+                onClick={onCreateNewRegistration}
+                disabled={mutation.isPending}
+                className={`px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-400 ${
+                  mutation.isPending
+                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-gray-600"
+                }`}
+              >
+                Create New Registration
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
