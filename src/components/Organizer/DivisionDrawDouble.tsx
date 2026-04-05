@@ -684,6 +684,10 @@ function getParticipantLabel(registration: DrawRegistration) {
     return `${registration.firstName} ${registration.lastName}`;
 }
 
+function buildDrawMetaTitle(title: string, eventName: string) {
+    return eventName ? `${title} - ${eventName}` : title;
+}
+
 function buildSeedOrder(size: number) {
     if (size === 1) {
         return [1];
@@ -731,17 +735,22 @@ function getLosersRoundCounts(size: TemplateSize) {
 function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTemplate {
     const totalWinnerRounds = Math.log2(config.size);
     const seedOrder = buildSeedOrder(config.size);
-    const winnerRoundLength = Math.round((config.winners.firstJoinX - config.winners.slotStartX) * 1.1);
-    const loserRoundLength = Math.round((config.losers.firstJoinX - config.losers.slotStartX) * 1.1);
+    const verticalStretch = 1.3;
+    const horizontalStretch = 1.6;
+    const winnerLeafSpacing = Math.round(config.winners.leafSpacing * verticalStretch);
+    const loserFirstRoundSpacing = Math.round(config.losers.firstRoundMatchSpacing * verticalStretch);
+    const loserFeedEntryOffset = Math.round(config.losers.feedEntryOffset * verticalStretch);
+    const winnerRoundLength = Math.round((config.winners.firstJoinX - config.winners.slotStartX) * horizontalStretch);
+    const loserRoundLength = Math.round((config.losers.firstJoinX - config.losers.slotStartX) * horizontalStretch);
     const finalRoundLength = Math.max(winnerRoundLength, loserRoundLength);
-    const losersRoundHeightScale = 0.77;
+    const losersRoundHeightScale = 0.85;
     const losersRoundHeightGrowth = Math.max(
-        Math.round(config.losers.firstRoundMatchSpacing * 0.18 * losersRoundHeightScale),
+        Math.round(loserFirstRoundSpacing * 0.18 * losersRoundHeightScale),
         16,
     );
-    const losersVerticalShift = Math.round(config.losers.firstRoundMatchSpacing * 0.1);
+    const losersVerticalShift = Math.round(loserFirstRoundSpacing * 0.1);
     const winnerBottomY =
-        config.winners.topPadding + (config.size - 1) * config.winners.leafSpacing;
+        config.winners.topPadding + (config.size - 1) * winnerLeafSpacing;
     const losersTopPadding = Math.max(config.losers.topPadding, winnerBottomY + 120) + losersVerticalShift;
     const losersHeaderY = losersTopPadding - 44;
     const losersRoundLabelY = losersTopPadding - 22;
@@ -753,7 +762,7 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
             id: `winner-slot-${seed}`,
             seed,
             x: config.winners.slotStartX,
-            y: config.winners.topPadding + index * config.winners.leafSpacing,
+            y: config.winners.topPadding + index * winnerLeafSpacing,
         } satisfies WinnerSlot;
     });
     const winnerMatchCounts: Record<number, number> = {};
@@ -820,7 +829,7 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
     for (let roundIndex = 0; roundIndex < losersRoundCounts.length; roundIndex += 1) {
         const matchCount = losersRoundCounts[roundIndex];
         const joinX = loserJoinXs[roundIndex];
-        const entryGap = Math.round(config.losers.feedEntryOffset * losersRoundHeightScale);
+        const entryGap = Math.round(loserFeedEntryOffset * losersRoundHeightScale);
         const roundMatches: RenderedMatch[] = [];
         const templateCenters =
             roundIndex === 0
@@ -828,7 +837,7 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
                         return (
                             losersTopPadding +
                             config.losers.roundOffsetY +
-                            matchIndex * config.losers.firstRoundMatchSpacing
+                            matchIndex * loserFirstRoundSpacing
                         );
                     })
                 : (() => {
@@ -927,7 +936,7 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
 
     const lastLoserRoundCenters = loserRoundCenters[loserRoundCenters.length - 1] ?? [losersTopPadding];
     const loserBracketBottomY =
-        Math.max(...lastLoserRoundCenters, ...loserRoundCenters.flat()) + config.losers.firstRoundMatchSpacing / 2 + 56;
+        Math.max(...lastLoserRoundCenters, ...loserRoundCenters.flat()) + loserFirstRoundSpacing / 2 + 56;
 
     const winnerMatchesByRound = Array.from({ length: totalWinnerRounds }, (_, index) => {
         const round = index + 1;
@@ -1315,7 +1324,7 @@ function buildPrintSvgMarkup(renderModel: DoubleRenderModel) {
         })
         .join("");
 
-    return `<svg viewBox="0 0 ${renderModel.template.viewBoxWidth} ${renderModel.template.viewBoxHeight}" class="division-draw-svg" preserveAspectRatio="xMidYMin meet" role="img" aria-label="Double elimination tournament bracket">
+    return `<svg viewBox="0 0 ${renderModel.template.viewBoxWidth} ${renderModel.template.viewBoxHeight}" class="division-draw-svg" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Double elimination tournament bracket">
         <g id="section-labels">${sectionLabels}</g>
         <g id="winners-round-labels">${winnerRoundLabels}</g>
         <g id="losers-round-labels">${loserRoundLabels}</g>
@@ -1338,6 +1347,7 @@ function buildPrintDocumentMarkup(
     competitorCount: number
 ) {
     const svgMarkup = buildPrintSvgMarkup(renderModel);
+    const metaTitle = buildDrawMetaTitle(title, eventName);
 
     return `
         <!doctype html>
@@ -1391,16 +1401,16 @@ function buildPrintDocumentMarkup(
                     }
 
                     .division-draw-print-root {
-                        width: min(10.4in, calc(100vw - 48px));
-                        height: min(8.0in, calc(100vh - 48px));
+                        width: min(10.55in, calc(100vw - 32px));
+                        height: min(8.05in, calc(100vh - 32px));
                         margin: 0 auto;
                         background: white;
                         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
                         box-sizing: border-box;
                         display: grid;
                         grid-template-rows: auto 1fr;
-                        gap: 0.08in;
-                        padding: 0.14in 0.12in 0.06in;
+                        gap: 0.03in;
+                        padding: 0.08in 0.06in 0.03in;
                         overflow: hidden;
                     }
 
@@ -1408,14 +1418,14 @@ function buildPrintDocumentMarkup(
                         display: flex;
                         align-items: flex-start;
                         justify-content: space-between;
-                        gap: 0.25in;
-                        padding: 0 0 0.06in;
+                        gap: 0.18in;
+                        padding: 0 0 0.02in;
                         margin: 0;
                     }
 
                     .division-draw-meta h3 {
                         margin: 0;
-                        font-size: 20px;
+                        font-size: 17px;
                         line-height: 1.2;
                         font-weight: 600;
                     }
@@ -1423,8 +1433,8 @@ function buildPrintDocumentMarkup(
                     .division-draw-meta p,
                     .division-draw-meta div {
                         margin: 0;
-                        font-size: 12px;
-                        line-height: 1.35;
+                        font-size: 11px;
+                        line-height: 1.2;
                     }
 
                     .division-draw-frame {
@@ -1434,11 +1444,13 @@ function buildPrintDocumentMarkup(
                         overflow: hidden;
                         display: flex;
                         align-items: flex-start;
+                        justify-content: flex-start;
                     }
 
                     .division-draw-svg {
                         width: 100%;
-                        height: 100%;
+                        height: auto;
+                        max-height: 100%;
                         display: block;
                         color: black;
                     }
@@ -1464,8 +1476,8 @@ function buildPrintDocumentMarkup(
                         }
 
                         .division-draw-print-root {
-                            width: 10.4in;
-                            height: 8.0in;
+                            width: 10.55in;
+                            height: 8.05in;
                             margin: 0;
                             box-shadow: none;
                             page-break-inside: avoid;
@@ -1482,12 +1494,10 @@ function buildPrintDocumentMarkup(
                 <div class="division-draw-print-root">
                     <div class="division-draw-meta">
                         <div>
-                            <h3>${escapeHtml(title)}</h3>
-                            <p>${escapeHtml(eventName)}</p>
+                            <h3>${escapeHtml(metaTitle)}</h3>
                         </div>
                         <div style="text-align:right;">
                             <div>${competitorCount} competitors</div>
-                            <div>${renderModel.template.size}-Competitor Template</div>
                             <div>Double Elimination</div>
                         </div>
                     </div>
@@ -1502,6 +1512,9 @@ export function DivisionDrawDouble() {
     const registrations = useAtomValue(selectedRegistrationsAtom) ?? [];
     const renderModel = useMemo(() => buildDoubleRenderModel(registrations), [registrations]);
     const titleRegistration = registrations[0];
+    const divisionTitle = titleRegistration?.divisionName || "Division";
+    const eventTitle = titleRegistration?.eventDisplayName || titleRegistration?.eventName || "";
+    const drawMetaTitle = buildDrawMetaTitle(divisionTitle, eventTitle);
 
     function handlePrint() {
         if (!renderModel) {
@@ -1510,8 +1523,8 @@ export function DivisionDrawDouble() {
 
         const printMarkup = buildPrintDocumentMarkup(
             renderModel,
-            titleRegistration?.divisionName || "Division",
-            titleRegistration?.eventDisplayName || titleRegistration?.eventName || "",
+            divisionTitle,
+            eventTitle,
             registrations.length
         );
         const printBlob = new Blob([printMarkup], { type: "text/html" });
@@ -1652,8 +1665,8 @@ export function DivisionDrawDouble() {
     }
 
     return (
-        <div className="division-draw-page min-h-screen bg-gray-900 p-6 text-white print:min-h-0 print:bg-white print:p-0 print:text-black">
-            <div className="division-draw-screen-header mb-6 flex items-start justify-between gap-4 print:hidden">
+        <div className="division-draw-page min-h-screen bg-gray-900 p-4 text-white print:min-h-0 print:bg-white print:p-0 print:text-black">
+            <div className="division-draw-screen-header mb-4 flex items-start justify-between gap-4 print:hidden">
                 <div>
                     <h2 className="text-2xl font-semibold">Double Elimination Draw Sheet</h2>
                     <p className="mt-1 text-sm text-gray-300 print:text-gray-600">
@@ -1674,30 +1687,26 @@ export function DivisionDrawDouble() {
             {registrations.length === 0 ? (
                 <p>No registrations selected.</p>
             ) : !renderModel ? (
-                <section className="division-draw-sheet rounded-lg border border-gray-700 bg-gray-800 p-6 print:border-0 print:bg-white print:p-0">
+                <section className="division-draw-sheet rounded-lg border border-gray-700 bg-gray-800 p-4 print:border-0 print:bg-white print:p-0">
                     <div className="rounded border border-gray-600 p-6 text-sm print:border-gray-400">
                         Double-elimination templates currently support up to 16 competitors.
                     </div>
                 </section>
             ) : registrations.length < 2 ? (
-                <section className="division-draw-sheet rounded-lg border border-gray-700 bg-gray-800 p-6 print:border-0 print:bg-white print:p-0">
+                <section className="division-draw-sheet rounded-lg border border-gray-700 bg-gray-800 p-4 print:border-0 print:bg-white print:p-0">
                     <div className="rounded border border-gray-600 p-6 text-sm print:border-gray-400">
                         At least 2 competitors are required to create a double-elimination draw.
                     </div>
                 </section>
             ) : (
-                <section className="division-draw-sheet rounded-lg border border-gray-700 bg-gray-800 p-6 print:border-0 print:bg-white print:p-0">
-                    <div className="division-draw-meta mb-3 flex items-start justify-between gap-4 print:mb-1">
+                <section className="division-draw-sheet rounded-lg border border-gray-700 bg-gray-800 p-4 print:border-0 print:bg-white print:p-0">
+                    <div className="division-draw-meta mb-2 flex items-start justify-between gap-4 print:mb-1">
                         <div>
-                            <h3 className="text-xl font-semibold">{titleRegistration?.divisionName || "Division"}</h3>
-                            <p className="text-sm text-gray-300 print:text-gray-600">
-                                {titleRegistration?.eventDisplayName || titleRegistration?.eventName || ""}
-                            </p>
+                            <h3 className="text-lg font-semibold">{drawMetaTitle}</h3>
                         </div>
 
                         <div className="text-right text-sm text-gray-300 print:text-gray-600">
                             <div>{registrations.length} competitors</div>
-                            <div>{renderModel.template.size}-Competitor Template</div>
                             <div>Double Elimination</div>
                         </div>
                     </div>
@@ -1713,7 +1722,7 @@ export function DivisionDrawDouble() {
                             <svg
                                 viewBox={`0 0 ${renderModel.template.viewBoxWidth} ${renderModel.template.viewBoxHeight}`}
                                 className="division-draw-svg block overflow-visible text-white print:text-black"
-                                preserveAspectRatio="xMidYMin meet"
+                                preserveAspectRatio="xMinYMin meet"
                                 role="img"
                                 aria-label="Double elimination tournament bracket"
                             >
