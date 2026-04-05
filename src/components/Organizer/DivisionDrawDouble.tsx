@@ -664,7 +664,7 @@ const DOUBLE_TEMPLATE_CONFIGS: Record<TemplateSize, DoubleTemplateConfig> = {
             slotStartX: 24,
             topPadding: 92,
             leafSpacing: 114,
-            roundLength: 400,
+            roundLength: 530,
             roundLabelY: 38,
         },
         losers: {
@@ -673,7 +673,7 @@ const DOUBLE_TEMPLATE_CONFIGS: Record<TemplateSize, DoubleTemplateConfig> = {
             firstRoundMatchSpacing: 330,
             feedEntryOffset: 66,
             roundOffsetY: 132,
-            roundLength: 300,
+            roundLength: 530,
             roundLabelY: 540,
             repeatedRoundHeightScale: 0.85,
             repeatedRoundHeightGrowth: 50,
@@ -1356,7 +1356,11 @@ function buildMatchMarkup(match: RenderedMatch) {
 function buildPrintSvgMarkup(renderModel: DoubleRenderModel) {
     const printFrameWidth = renderModel.template.printFrameWidth;
     const printFrameHeight = renderModel.template.printFrameHeight;
-    const mainBracketTransform = renderModel.template.size === 16 ? 'translate(0 -32) scale(1.08 1.015)' : undefined;
+    const mainBracketTransform =
+        renderModel.template.size === 16
+            ? 'translate(0 -32) scale(1.08 1.015)'
+            : undefined;
+    const secondPlaceTransform = renderModel.template.size === 8 ? 'translate(-72 0)' : undefined;
     const sectionLabels = SHOW_BRACKET_SECTION_LABELS
         ? renderModel.template.sectionLabels
                 .map((label) => {
@@ -1410,8 +1414,10 @@ function buildPrintSvgMarkup(renderModel: DoubleRenderModel) {
             </g>
             <g id="winner-slot-labels">${winnerLabels}</g>
         </g>
-        <g id="second-place-label"><text x="${renderModel.template.secondPlaceLabel.x}" y="${renderModel.template.secondPlaceLabel.y}" fill="currentColor" font-size="${PRINT_FONT_SIZES.secondPlaceLabel}" font-weight="700">${escapeHtml(renderModel.template.secondPlaceLabel.text)}</text></g>
-        <g id="second-place-match">${secondPlaceMatch}</g>
+        <g id="second-place"${secondPlaceTransform ? ` transform="${secondPlaceTransform}"` : ""}>
+            <g id="second-place-label"><text x="${renderModel.template.secondPlaceLabel.x}" y="${renderModel.template.secondPlaceLabel.y}" fill="currentColor" font-size="${PRINT_FONT_SIZES.secondPlaceLabel}" font-weight="700">${escapeHtml(renderModel.template.secondPlaceLabel.text)}</text></g>
+            <g id="second-place-match">${secondPlaceMatch}</g>
+        </g>
     </svg>`;
 }
 
