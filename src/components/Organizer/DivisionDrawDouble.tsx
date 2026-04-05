@@ -35,6 +35,8 @@ type SourcePoint = {
     x: number;
     y: number;
     label?: string;
+    feedMatchId?: string;
+    feedLabelPrefix?: "Loser of" | "Winner of";
 };
 
 type RenderedMatch = {
@@ -89,7 +91,9 @@ type DoubleTemplateConfig = {
     losers: {
         slotStartX: number;
         topPadding: number;
-        regionHeight: number;
+        firstRoundMatchSpacing: number;
+        feedEntryOffset: number;
+        roundOffsetY: number;
         firstJoinX: number;
         roundSpacing: number;
         roundLabelY: number;
@@ -115,10 +119,459 @@ type WinnerRenderModel = {
 type DoubleRenderModel = {
     template: DoubleEliminationTemplate;
     winners: WinnerRenderModel;
+    losers: {
+        visibleMatches: RenderedMatch[];
+    };
 };
+
+function computeVisibleViewBoxHeight(
+    template: DoubleEliminationTemplate,
+    winners: WinnerRenderModel,
+    losers: { visibleMatches: RenderedMatch[] }
+) {
+    const winnerSlotBottom = winners.visibleSlotSources.reduce((maxY, source) => Math.max(maxY, source.y), 0);
+    const winnerMatchBottom = winners.visibleMatches.reduce(
+        (maxY, match) => Math.max(maxY, match.bottom.y, match.centerY),
+        0,
+    );
+    const loserMatchBottom = losers.visibleMatches.reduce(
+        (maxY, match) => Math.max(maxY, match.bottom.y, match.centerY),
+        0,
+    );
+    const secondPlaceBottom = Math.max(
+        template.secondPlaceMatch.bottom.y,
+        template.secondPlaceMatch.centerY,
+        template.secondPlaceLabel.y,
+    );
+    const championBottom = Math.max(template.championLine.y, template.championLine.labelY);
+    const contentBottom = Math.max(
+        winnerSlotBottom,
+        winnerMatchBottom,
+        loserMatchBottom,
+        secondPlaceBottom,
+        championBottom,
+    );
+
+    return Math.max(contentBottom + 48, 720);
+}
+
+function cloneSourcePoint(source: SourcePoint): SourcePoint {
+    return {
+        ...source,
+    };
+}
+
+function cloneRenderedMatch(match: RenderedMatch): RenderedMatch {
+    return {
+        ...match,
+        top: cloneSourcePoint(match.top),
+        bottom: cloneSourcePoint(match.bottom),
+    };
+}
+
+function cloneDoubleTemplate(template: DoubleEliminationTemplate): DoubleEliminationTemplate {
+    return {
+        ...template,
+        sectionLabels: template.sectionLabels.map((label) => ({ ...label })),
+        winnersRoundLabels: template.winnersRoundLabels.map((label) => ({ ...label })),
+        losersRoundLabels: template.losersRoundLabels.map((label) => ({ ...label })),
+        winnerSlots: template.winnerSlots.map((slot) => ({ ...slot })),
+        winnerMatches: template.winnerMatches.map((match) => ({ ...match })),
+        losersMatches: template.losersMatches.map((match) => cloneRenderedMatch(match)),
+        championLine: { ...template.championLine },
+        secondPlaceLabel: { ...template.secondPlaceLabel },
+        secondPlaceMatch: cloneRenderedMatch(template.secondPlaceMatch),
+    };
+}
+
+function getLosersRoundIndex(matchId: string) {
+    const match = /^loser-r(\d+)m\d+$/.exec(matchId);
+
+    if (!match) {
+        return null;
+    }
+
+    return Number(match[1]) - 1;
+}
+
+function clearDynamicAnnotations(template: DoubleEliminationTemplate) {
+    template.winnerMatches.forEach((match) => {
+        delete match.matchNumber;
+        delete match.loserDestination;
+    });
+
+    template.losersMatches.forEach((match) => {
+        delete match.matchNumber;
+        delete match.matchLabel;
+        delete match.loserDestination;
+        delete match.top.label;
+        delete match.bottom.label;
+        delete match.top.feedMatchId;
+        delete match.bottom.feedMatchId;
+        delete match.top.feedLabelPrefix;
+        delete match.bottom.feedLabelPrefix;
+    });
+
+    delete template.secondPlaceMatch.matchNumber;
+    template.secondPlaceMatch.matchLabel = "2nd Place Match";
+    delete template.secondPlaceMatch.loserDestination;
+    delete template.secondPlaceMatch.top.label;
+    delete template.secondPlaceMatch.bottom.label;
+    delete template.secondPlaceMatch.top.feedMatchId;
+    delete template.secondPlaceMatch.bottom.feedMatchId;
+    delete template.secondPlaceMatch.top.feedLabelPrefix;
+    delete template.secondPlaceMatch.bottom.feedLabelPrefix;
+}
+
+function buildLoserRenderModel(template: DoubleEliminationTemplate) {
+    const matchesById = new Map(template.losersMatches.map((match) => [match.id, match]));
+    const resolvedSources = new Map<string, SourcePoint | null>();
+    const visibleMatches: RenderedMatch[] = [];
+
+    function resolveFeederSource(source: SourcePoint): SourcePoint | null {
+        if (!source.feedMatchId) {
+            return null;
+        }
+
+        return {
+            ...source,
+        };
+    }
+
+    function resolveSource(source: SourcePoint): SourcePoint | null {
+        if (source.kind === "feeder") {
+            return resolveFeederSource(source);
+        }
+
+        if (source.kind !== "match") {
+            return { ...source };
+        }
+
+        return resolveMatch(source.id);
+    }
+
+    function promoteSource(source: SourcePoint, match: RenderedMatch): SourcePoint {
+        if (source.kind === "feeder") {
+            return {
+                ...source,
+                x: match.joinX,
+                y: match.centerY,
+            };
+        }
+
+        return source;
+    }
+
+    function resolveMatch(matchId: string): SourcePoint | null {
+        if (resolvedSources.has(matchId)) {
+            return resolvedSources.get(matchId) ?? null;
+        }
+
+        const match = matchesById.get(matchId);
+
+        if (!match) {
+            resolvedSources.set(matchId, null);
+
+            return null;
+        }
+
+        const top = resolveSource(match.top);
+        const bottom = resolveSource(match.bottom);
+
+        if (!top && !bottom) {
+            resolvedSources.set(matchId, null);
+
+            return null;
+        }
+
+        if (!top && bottom) {
+            const promoted = promoteSource(bottom, match);
+
+            resolvedSources.set(matchId, promoted);
+
+            return promoted;
+        }
+
+        if (!bottom && top) {
+            const promoted = promoteSource(top, match);
+
+            resolvedSources.set(matchId, promoted);
+
+            return promoted;
+        }
+
+        const visibleMatch = {
+            ...match,
+            top: top!,
+            bottom: bottom!,
+        } satisfies RenderedMatch;
+        const resolved = {
+            kind: "match" as const,
+            id: match.id,
+            x: match.joinX,
+            y: match.centerY,
+        };
+
+        visibleMatches.push(visibleMatch);
+        resolvedSources.set(matchId, resolved);
+
+        return resolved;
+    }
+
+    const loserFinal = template.losersMatches[template.losersMatches.length - 1];
+
+    if (loserFinal) {
+        resolveMatch(loserFinal.id);
+    }
+
+    visibleMatches.sort((left, right) => {
+        if (left.joinX !== right.joinX) {
+            return left.joinX - right.joinX;
+        }
+
+        return left.centerY - right.centerY;
+    });
+
+    return {
+        visibleMatches,
+    };
+}
+
+function applyDynamicNumberingAndFeeds(
+    template: DoubleEliminationTemplate,
+    initialWinners: WinnerRenderModel,
+    participants: DrawRegistration[]
+) {
+    clearDynamicAnnotations(template);
+
+    const totalWinnerRounds = Math.log2(template.size);
+    const visibleWinnerIds = new Set(initialWinners.visibleMatches.map((match) => match.id));
+    const visibleWinnerMatchesByRound = Array.from({ length: totalWinnerRounds }, (_, index) => {
+        const round = index + 1;
+
+        return template.winnerMatches
+            .filter((match) => match.round === round && visibleWinnerIds.has(match.id))
+            .sort((left, right) => left.centerY - right.centerY);
+    });
+
+    const losersMatchesByRound = template.losersMatches.reduce<RenderedMatch[][]>((acc, match) => {
+        const roundIndex = getLosersRoundIndex(match.id);
+
+        if (roundIndex == null) {
+            return acc;
+        }
+
+        acc[roundIndex] ??= [];
+        acc[roundIndex].push(match);
+
+        return acc;
+    }, []);
+
+    losersMatchesByRound.forEach((matches) => matches.sort((left, right) => left.centerY - right.centerY));
+    const winnerLoserTargets = new Map<string, string>();
+
+    const firstRoundWinners = visibleWinnerMatchesByRound[0] ?? [];
+    const firstLoserRound = losersMatchesByRound[0] ?? [];
+
+    firstRoundWinners.forEach((match, index) => {
+        const targetMatch = firstLoserRound[Math.floor(index / 2)];
+
+        if (!targetMatch) {
+            return;
+        }
+
+        winnerLoserTargets.set(match.id, targetMatch.id);
+
+        if (index % 2 === 0) {
+            targetMatch.top.feedMatchId = match.id;
+            targetMatch.top.feedLabelPrefix = "Loser of";
+        } else {
+            targetMatch.bottom.feedMatchId = match.id;
+            targetMatch.bottom.feedLabelPrefix = "Loser of";
+        }
+    });
+
+    for (let round = 2; round < totalWinnerRounds; round += 1) {
+        const targetLoserRoundIndex = 2 * round - 3;
+        const targetLoserRound = losersMatchesByRound[targetLoserRoundIndex] ?? [];
+
+        visibleWinnerMatchesByRound[round - 1].forEach((match, index) => {
+            const targetMatch = targetLoserRound[index];
+
+            if (!targetMatch) {
+                return;
+            }
+
+            winnerLoserTargets.set(match.id, targetMatch.id);
+            targetMatch.top.feedMatchId = match.id;
+            targetMatch.top.feedLabelPrefix = "Loser of";
+        });
+    }
+
+    const winnerFinal = visibleWinnerMatchesByRound[totalWinnerRounds - 1]?.[0];
+
+    if (winnerFinal) {
+        template.secondPlaceMatch.bottom.feedMatchId = winnerFinal.id;
+        template.secondPlaceMatch.bottom.feedLabelPrefix = "Loser of";
+    }
+
+    const losers = buildLoserRenderModel(template);
+    const visibleLosersByRound = losers.visibleMatches.reduce<RenderedMatch[][]>((acc, match) => {
+        const roundIndex = getLosersRoundIndex(match.id);
+
+        if (roundIndex == null) {
+            return acc;
+        }
+
+        acc[roundIndex] ??= [];
+        acc[roundIndex].push(match);
+
+        return acc;
+    }, []);
+
+    visibleLosersByRound.forEach((matches) => matches.sort((left, right) => left.centerY - right.centerY));
+    const templateLoserMatchById = new Map(template.losersMatches.map((match) => [match.id, match]));
+
+    let nextMatchNumber = 1;
+
+    for (let roundIndex = 0; roundIndex < totalWinnerRounds; roundIndex += 1) {
+        for (const match of visibleWinnerMatchesByRound[roundIndex]) {
+            match.matchNumber = nextMatchNumber;
+            nextMatchNumber += 1;
+        }
+
+        const visibleLoserRound = visibleLosersByRound[roundIndex] ?? [];
+
+        for (const match of visibleLoserRound) {
+            match.matchNumber = nextMatchNumber;
+            const templateMatch = templateLoserMatchById.get(match.id);
+
+            if (templateMatch) {
+                templateMatch.matchNumber = nextMatchNumber;
+            }
+
+            nextMatchNumber += 1;
+        }
+    }
+
+    for (let roundIndex = totalWinnerRounds; roundIndex < visibleLosersByRound.length; roundIndex += 1) {
+        const visibleLoserRound = visibleLosersByRound[roundIndex] ?? [];
+
+        for (const match of visibleLoserRound) {
+            match.matchNumber = nextMatchNumber;
+            const templateMatch = templateLoserMatchById.get(match.id);
+
+            if (templateMatch) {
+                templateMatch.matchNumber = nextMatchNumber;
+            }
+
+            nextMatchNumber += 1;
+        }
+    }
+
+    template.secondPlaceMatch.matchNumber = nextMatchNumber;
+
+    const visibleLosersFinal = visibleLosersByRound[visibleLosersByRound.length - 1]?.[0];
+
+    if (visibleLosersFinal) {
+        template.secondPlaceMatch.top.feedMatchId = visibleLosersFinal.id;
+        template.secondPlaceMatch.top.feedLabelPrefix = "Winner of";
+    }
+
+    const numberByMatchId = new Map<string, number>();
+
+    template.winnerMatches.forEach((match) => {
+        if (match.matchNumber != null) {
+            numberByMatchId.set(match.id, match.matchNumber);
+        }
+    });
+
+    template.losersMatches.forEach((match) => {
+        if (match.matchNumber != null) {
+            numberByMatchId.set(match.id, match.matchNumber);
+        }
+    });
+
+    if (template.secondPlaceMatch.matchNumber != null) {
+        numberByMatchId.set(template.secondPlaceMatch.id, template.secondPlaceMatch.matchNumber);
+    }
+
+    function applySourceLabel(source: SourcePoint) {
+        if (!source.feedMatchId || !source.feedLabelPrefix) {
+            return;
+        }
+
+        const matchNumber = numberByMatchId.get(source.feedMatchId);
+
+        if (matchNumber != null) {
+            source.label = `${source.feedLabelPrefix} ${matchNumber}`;
+        }
+    }
+
+    template.losersMatches.forEach((match) => {
+        applySourceLabel(match.top);
+        applySourceLabel(match.bottom);
+    });
+
+    applySourceLabel(template.secondPlaceMatch.top);
+    applySourceLabel(template.secondPlaceMatch.bottom);
+
+    winnerLoserTargets.forEach((targetMatchId, winnerMatchId) => {
+        const winnerMatch = template.winnerMatches.find((match) => match.id === winnerMatchId);
+        const targetMatchNumber = numberByMatchId.get(targetMatchId);
+
+        if (winnerMatch && targetMatchNumber != null) {
+            winnerMatch.loserDestination = `Loser to ${targetMatchNumber}`;
+        }
+    });
+
+    if (winnerFinal?.matchNumber != null && template.secondPlaceMatch.matchNumber != null) {
+        winnerFinal.loserDestination = `Loser to ${template.secondPlaceMatch.matchNumber}`;
+    }
+
+    const winners = buildWinnerRenderModel(participants, template);
+    const finalizedLosers = buildLoserRenderModel(template);
+
+    return {
+        winners,
+        losers: finalizedLosers,
+    };
+}
 
 const SLOT_LABEL_FONT_SIZE = 16;
 const SLOT_LABEL_OFFSET_Y = 6;
+
+function getMatchNumberPosition(match: RenderedMatch) {
+    return {
+        x: match.joinX - 14,
+        y: (match.top.y + match.bottom.y) / 2 + 4,
+    };
+}
+
+function getTopFeedLabelPosition(source: SourcePoint) {
+    const isLoserLabel = source.label?.startsWith("Loser of");
+
+    return {
+        x: source.x + 6,
+        y: isLoserLabel ? source.y + 14 : source.y - 10,
+    };
+}
+
+function getBottomFeedLabelPosition(source: SourcePoint) {
+    const isLoserLabel = source.label?.startsWith("Loser of");
+
+    return {
+        x: source.x + 6,
+        y: isLoserLabel ? source.y + 14 : source.y - 10,
+    };
+}
+
+function getLoserDestinationPosition(match: RenderedMatch) {
+    return {
+        x: match.joinX + 12,
+        y: match.centerY + 24,
+    };
+}
 
 const DOUBLE_TEMPLATE_CONFIGS: Record<TemplateSize, DoubleTemplateConfig> = {
     4: {
@@ -136,7 +589,9 @@ const DOUBLE_TEMPLATE_CONFIGS: Record<TemplateSize, DoubleTemplateConfig> = {
         losers: {
             slotStartX: 120,
             topPadding: 520,
-            regionHeight: 140,
+            firstRoundMatchSpacing: 144,
+            feedEntryOffset: 42,
+            roundOffsetY: 54,
             firstJoinX: 305,
             roundSpacing: 150,
             roundLabelY: 452,
@@ -162,7 +617,9 @@ const DOUBLE_TEMPLATE_CONFIGS: Record<TemplateSize, DoubleTemplateConfig> = {
         losers: {
             slotStartX: 110,
             topPadding: 610,
-            regionHeight: 230,
+            firstRoundMatchSpacing: 238,
+            feedEntryOffset: 48,
+            roundOffsetY: 132,
             firstJoinX: 285,
             roundSpacing: 140,
             roundLabelY: 540,
@@ -188,7 +645,9 @@ const DOUBLE_TEMPLATE_CONFIGS: Record<TemplateSize, DoubleTemplateConfig> = {
         losers: {
             slotStartX: 96,
             topPadding: 760,
-            regionHeight: 330,
+            firstRoundMatchSpacing: 124,
+            feedEntryOffset: 40,
+            roundOffsetY: 88,
             firstJoinX: 250,
             roundSpacing: 125,
             roundLabelY: 690,
@@ -272,16 +731,22 @@ function getLosersRoundCounts(size: TemplateSize) {
 function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTemplate {
     const totalWinnerRounds = Math.log2(config.size);
     const seedOrder = buildSeedOrder(config.size);
+    const winnerRoundLength = Math.round((config.winners.firstJoinX - config.winners.slotStartX) * 1.1);
+    const loserRoundLength = Math.round((config.losers.firstJoinX - config.losers.slotStartX) * 1.1);
+    const finalRoundLength = Math.max(winnerRoundLength, loserRoundLength);
+    const losersRoundHeightScale = 0.77;
+    const losersRoundHeightGrowth = Math.max(
+        Math.round(config.losers.firstRoundMatchSpacing * 0.18 * losersRoundHeightScale),
+        16,
+    );
+    const losersVerticalShift = Math.round(config.losers.firstRoundMatchSpacing * 0.1);
     const winnerBottomY =
         config.winners.topPadding + (config.size - 1) * config.winners.leafSpacing;
-    const losersTopPadding = Math.max(config.losers.topPadding, winnerBottomY + 120);
-    const losersRoundLabelY = losersTopPadding - 70;
-    const viewBoxHeight = Math.max(
-        config.viewBoxHeight,
-        losersTopPadding + config.losers.regionHeight + 120,
-    );
+    const losersTopPadding = Math.max(config.losers.topPadding, winnerBottomY + 120) + losersVerticalShift;
+    const losersHeaderY = losersTopPadding - 44;
+    const losersRoundLabelY = losersTopPadding - 22;
     const winnerJoinXs = Array.from({ length: totalWinnerRounds }, (_, index) => {
-        return config.winners.firstJoinX + index * config.winners.roundSpacing;
+        return config.winners.slotStartX + winnerRoundLength * (index + 1);
     });
     const winnerSlots = seedOrder.map((seed, index) => {
         return {
@@ -338,30 +803,57 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
     });
 
     const losersRoundCounts = getLosersRoundCounts(config.size);
+    const loserJoinXs = Array.from({ length: losersRoundCounts.length }, (_, index) => {
+        return config.losers.slotStartX + loserRoundLength * (index + 1);
+    });
     const losersMatchesByRound: RenderedMatch[][] = [];
+    const loserRoundCenters: number[][] = [];
     const losersRoundLabels = losersRoundCounts.map((_, index) => {
         return {
             id: `loser-round-${index + 1}`,
             text: `L${index + 1}`,
-            x: index === 0 ? config.losers.slotStartX : config.losers.firstJoinX + (index - 1) * config.losers.roundSpacing + 12,
+            x: index === 0 ? config.losers.slotStartX : loserJoinXs[index - 1] + 12,
             y: losersRoundLabelY,
         } satisfies TextLabel;
     });
 
     for (let roundIndex = 0; roundIndex < losersRoundCounts.length; roundIndex += 1) {
         const matchCount = losersRoundCounts[roundIndex];
-        const joinX = config.losers.firstJoinX + roundIndex * config.losers.roundSpacing;
-        const interval = config.losers.regionHeight / matchCount;
-        const entryGap = Math.max(16, Math.min(34, interval / 4));
+        const joinX = loserJoinXs[roundIndex];
+        const entryGap = Math.round(config.losers.feedEntryOffset * losersRoundHeightScale);
         const roundMatches: RenderedMatch[] = [];
+        const templateCenters =
+            roundIndex === 0
+                ? Array.from({ length: matchCount }, (_, matchIndex) => {
+                        return (
+                            losersTopPadding +
+                            config.losers.roundOffsetY +
+                            matchIndex * config.losers.firstRoundMatchSpacing
+                        );
+                    })
+                : (() => {
+                        const previousCenters = loserRoundCenters[roundIndex - 1];
+                        const previousCount = losersRoundCounts[roundIndex - 1];
+
+                        if (matchCount === previousCount) {
+                            return [...previousCenters];
+                        }
+
+                        return Array.from({ length: matchCount }, (_, matchIndex) => {
+                            return (previousCenters[matchIndex * 2] + previousCenters[matchIndex * 2 + 1]) / 2;
+                        });
+                    })();
+
+        const actualRoundCenters: number[] = [];
 
         for (let matchIndex = 0; matchIndex < matchCount; matchIndex += 1) {
-            const centerY = losersTopPadding + interval * (matchIndex + 0.5);
             const matchId = `loser-r${roundIndex + 1}m${matchIndex + 1}`;
             let top: SourcePoint;
             let bottom: SourcePoint;
+            let centerY: number;
 
             if (roundIndex === 0) {
+                centerY = templateCenters[matchIndex];
                 top = {
                     kind: "feeder",
                     id: `${matchId}-top-feeder`,
@@ -380,22 +872,29 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
 
                 if (matchCount === previousCount) {
                     const previousMatch = previousRound[matchIndex];
+                    const previousMatchHeight = Math.abs(previousMatch.bottom.y - previousMatch.top.y);
+                    const nextMatchHeight = Math.round((previousMatchHeight + losersRoundHeightGrowth) * losersRoundHeightScale);
+                    const feederY = previousMatch.centerY - nextMatchHeight;
+
+                    centerY = (feederY + previousMatch.centerY) / 2;
 
                     top = {
+                        kind: "feeder",
+                        id: `${matchId}-top-feeder`,
+                        x: joinX - loserRoundLength,
+                        y: feederY,
+                    };
+                    bottom = {
                         kind: "match",
                         id: previousMatch.id,
                         x: previousMatch.joinX,
                         y: previousMatch.centerY,
                     };
-                    bottom = {
-                        kind: "feeder",
-                        id: `${matchId}-bottom-feeder`,
-                        x: joinX - config.losers.feederOffset,
-                        y: centerY + entryGap,
-                    };
                 } else {
                     const previousTop = previousRound[matchIndex * 2];
                     const previousBottom = previousRound[matchIndex * 2 + 1];
+
+                    centerY = (previousTop.centerY + previousBottom.centerY) / 2;
 
                     top = {
                         kind: "match",
@@ -412,6 +911,7 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
                 }
             }
 
+            actualRoundCenters.push(centerY);
             roundMatches.push({
                 id: matchId,
                 joinX,
@@ -421,8 +921,13 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
             });
         }
 
+        loserRoundCenters.push(actualRoundCenters);
         losersMatchesByRound.push(roundMatches);
     }
+
+    const lastLoserRoundCenters = loserRoundCenters[loserRoundCenters.length - 1] ?? [losersTopPadding];
+    const loserBracketBottomY =
+        Math.max(...lastLoserRoundCenters, ...loserRoundCenters.flat()) + config.losers.firstRoundMatchSpacing / 2 + 56;
 
     const winnerMatchesByRound = Array.from({ length: totalWinnerRounds }, (_, index) => {
         const round = index + 1;
@@ -458,27 +963,30 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
     const losersMatches = losersMatchesByRound.flat();
     const losersFinal = losersMatchesByRound[losersMatchesByRound.length - 1][0];
     const winnerFinal = winnerMatchesByRound[totalWinnerRounds - 1][0];
+    const championEndX = winnerFinal.joinX + finalRoundLength;
+    const secondPlaceJoinX = Math.max(winnerFinal.joinX, losersFinal.joinX) + finalRoundLength;
+    const secondPlaceWinnerX = secondPlaceJoinX + finalRoundLength;
     const secondPlaceCenterY = (winnerFinal.centerY + losersFinal.centerY) / 2 + 20;
     const secondPlaceEntryGap = 34;
     const secondPlaceMatch = {
         id: "second-place-match",
-        joinX: config.grandFinal.joinX,
+        joinX: secondPlaceJoinX,
         centerY: secondPlaceCenterY,
         top: {
             kind: "feeder",
             id: "second-place-top-feeder",
-            x: config.grandFinal.joinX - 120,
+            x: secondPlaceJoinX - finalRoundLength,
             y: secondPlaceCenterY - secondPlaceEntryGap,
             label: "",
         },
         bottom: {
             kind: "feeder",
             id: "second-place-bottom-feeder",
-            x: config.grandFinal.joinX - 120,
+            x: secondPlaceJoinX - finalRoundLength,
             y: secondPlaceCenterY + secondPlaceEntryGap,
             label: "",
         },
-        nextX: config.grandFinal.winnerX,
+        nextX: secondPlaceWinnerX,
         matchNumber: secondPlaceMatchNumber,
         matchLabel: "2nd Place Match",
     } satisfies RenderedMatch;
@@ -506,7 +1014,7 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
             const targetMatch = losersMatchesByRound[targetLoserRoundIndex][index];
 
             match.loserDestination = `Loser to ${targetMatch.matchNumber}`;
-            targetMatch.bottom.label = `Loser of ${match.matchNumber}`;
+            targetMatch.top.label = `Loser of ${match.matchNumber}`;
         });
     }
 
@@ -516,16 +1024,23 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
 
     const championLine = {
         startX: winnerFinal.joinX,
-        endX: config.grandFinal.winnerX,
+        endX: championEndX,
         y: winnerFinal.centerY,
-        labelX: config.grandFinal.joinX + 12,
+        labelX: championEndX - finalRoundLength + 12,
         labelY: winnerFinal.centerY - 14,
         label: "1st Place",
     } satisfies ChampionLine;
 
+    const viewBoxHeight = Math.max(
+        config.viewBoxHeight,
+        loserBracketBottomY,
+        secondPlaceCenterY + 84,
+    );
+    const viewBoxWidth = Math.max(config.viewBoxWidth, secondPlaceWinnerX + 40);
+
     return {
         size: config.size,
-        viewBoxWidth: config.viewBoxWidth,
+        viewBoxWidth,
         viewBoxHeight,
         sectionLabels: [
             {
@@ -538,7 +1053,7 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
                 id: "losers-label",
                 text: "Losers Bracket",
                 x: config.losers.slotStartX,
-                y: losersRoundLabelY - 20,
+                y: losersHeaderY,
             },
         ],
         winnersRoundLabels,
@@ -551,7 +1066,7 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
         secondPlaceLabel: {
             id: "second-place-label",
             text: "2nd Place Match",
-            x: config.grandFinal.joinX - 24,
+            x: secondPlaceJoinX - 24,
             y: secondPlaceCenterY - 82,
         },
         secondPlaceMatch,
@@ -706,11 +1221,15 @@ function buildDoubleRenderModel(participants: DrawRegistration[]): DoubleRenderM
         return null;
     }
 
-    const template = DOUBLE_TEMPLATES[templateSize];
+    const template = cloneDoubleTemplate(DOUBLE_TEMPLATES[templateSize]);
+    const initialWinners = buildWinnerRenderModel(participants, template);
+    const { winners, losers } = applyDynamicNumberingAndFeeds(template, initialWinners, participants);
+    template.viewBoxHeight = computeVisibleViewBoxHeight(template, winners, losers);
 
     return {
         template,
-        winners: buildWinnerRenderModel(participants, template),
+        winners,
+        losers,
     };
 }
 
@@ -727,18 +1246,22 @@ function buildMatchMarkup(match: RenderedMatch) {
     const nextLine = match.nextX
         ? `<line x1="${match.joinX}" y1="${match.centerY}" x2="${match.nextX}" y2="${match.centerY}" stroke="currentColor" stroke-width="2" />`
         : "";
+    const numberPosition = getMatchNumberPosition(match);
+    const topLabelPosition = match.top.label ? getTopFeedLabelPosition(match.top) : null;
+    const bottomLabelPosition = match.bottom.label ? getBottomFeedLabelPosition(match.bottom) : null;
+    const loserDestinationPosition = match.loserDestination ? getLoserDestinationPosition(match) : null;
     const numberMarkup =
         match.matchNumber != null
-            ? `<text x="${match.joinX + 6}" y="${match.centerY - 10}" fill="currentColor" font-size="11" font-weight="600">${match.matchNumber}</text>`
+            ? `<text x="${numberPosition.x}" y="${numberPosition.y}" fill="currentColor" font-size="11" font-weight="700" text-anchor="middle">${match.matchNumber}</text>`
             : "";
     const topLabel = match.top.label
-        ? `<text x="${match.top.x + 4}" y="${match.top.y - 8}" fill="currentColor" font-size="11" font-style="italic">${escapeHtml(match.top.label)}</text>`
+        ? `<text x="${topLabelPosition!.x}" y="${topLabelPosition!.y}" fill="currentColor" font-size="11" font-weight="600" font-style="italic">${escapeHtml(match.top.label)}</text>`
         : "";
     const bottomLabel = match.bottom.label
-        ? `<text x="${match.bottom.x + 4}" y="${match.bottom.y - 8}" fill="currentColor" font-size="11" font-style="italic">${escapeHtml(match.bottom.label)}</text>`
+        ? `<text x="${bottomLabelPosition!.x}" y="${bottomLabelPosition!.y}" fill="currentColor" font-size="11" font-weight="600" font-style="italic">${escapeHtml(match.bottom.label)}</text>`
         : "";
     const loserDestination = match.loserDestination
-        ? `<text x="${match.joinX + 8}" y="${match.centerY + 18}" fill="currentColor" font-size="11" font-style="italic">${escapeHtml(match.loserDestination)}</text>`
+        ? `<text x="${loserDestinationPosition!.x}" y="${loserDestinationPosition!.y}" fill="currentColor" font-size="11" font-style="italic">${escapeHtml(match.loserDestination)}</text>`
         : "";
     const matchLabel = match.matchLabel
         ? `<text x="${match.joinX - 18}" y="${match.centerY - 52}" fill="currentColor" font-size="14" font-weight="700">${escapeHtml(match.matchLabel)}</text>`
@@ -774,7 +1297,7 @@ function buildPrintSvgMarkup(renderModel: DoubleRenderModel) {
         })
         .join("");
     const winnerMatches = renderModel.winners.visibleMatches.map((match) => buildMatchMarkup(match)).join("");
-    const loserMatches = renderModel.template.losersMatches.map((match) => buildMatchMarkup(match)).join("");
+    const loserMatches = renderModel.losers.visibleMatches.map((match) => buildMatchMarkup(match)).join("");
     const secondPlaceMatch = buildMatchMarkup(renderModel.template.secondPlaceMatch);
     const slotLookup = new Map(renderModel.winners.slots.map((slot) => [slot.id, slot]));
     const winnerLabels = renderModel.winners.visibleSlotSources
@@ -792,7 +1315,7 @@ function buildPrintSvgMarkup(renderModel: DoubleRenderModel) {
         })
         .join("");
 
-    return `<svg viewBox="0 0 ${renderModel.template.viewBoxWidth} ${renderModel.template.viewBoxHeight}" class="division-draw-svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Double elimination tournament bracket">
+    return `<svg viewBox="0 0 ${renderModel.template.viewBoxWidth} ${renderModel.template.viewBoxHeight}" class="division-draw-svg" preserveAspectRatio="xMidYMin meet" role="img" aria-label="Double elimination tournament bracket">
         <g id="section-labels">${sectionLabels}</g>
         <g id="winners-round-labels">${winnerRoundLabels}</g>
         <g id="losers-round-labels">${loserRoundLabels}</g>
@@ -869,7 +1392,7 @@ function buildPrintDocumentMarkup(
 
                     .division-draw-print-root {
                         width: min(10.4in, calc(100vw - 48px));
-                        height: min(7.9in, calc(100vh - 48px));
+                        height: min(8.0in, calc(100vh - 48px));
                         margin: 0 auto;
                         background: white;
                         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
@@ -877,7 +1400,7 @@ function buildPrintDocumentMarkup(
                         display: grid;
                         grid-template-rows: auto 1fr;
                         gap: 0.08in;
-                        padding: 0;
+                        padding: 0.14in 0.12in 0.06in;
                         overflow: hidden;
                     }
 
@@ -886,7 +1409,7 @@ function buildPrintDocumentMarkup(
                         align-items: flex-start;
                         justify-content: space-between;
                         gap: 0.25in;
-                        padding: 0 0 0.04in;
+                        padding: 0 0 0.06in;
                         margin: 0;
                     }
 
@@ -909,6 +1432,8 @@ function buildPrintDocumentMarkup(
                         height: 100%;
                         min-height: 0;
                         overflow: hidden;
+                        display: flex;
+                        align-items: flex-start;
                     }
 
                     .division-draw-svg {
@@ -940,7 +1465,7 @@ function buildPrintDocumentMarkup(
 
                         .division-draw-print-root {
                             width: 10.4in;
-                            height: 7.9in;
+                            height: 8.0in;
                             margin: 0;
                             box-shadow: none;
                             page-break-inside: avoid;
@@ -1015,48 +1540,73 @@ export function DivisionDrawDouble() {
                 )}
 
                 {match.matchNumber != null && (
+                    (() => {
+                        const numberPosition = getMatchNumberPosition(match);
+
+                        return (
                     <text
-                        x={match.joinX + 6}
-                        y={match.centerY - 10}
+                        x={numberPosition.x}
+                        y={numberPosition.y}
                         fill="currentColor"
                         fontSize="11"
-                        fontWeight="600"
+                        fontWeight="700"
+                        textAnchor="middle"
                         className="text-gray-400 print:text-gray-700"
                     >
                         {match.matchNumber}
                     </text>
+                        );
+                    })()
                 )}
 
                 {match.top.label && (
+                    (() => {
+                        const labelPosition = getTopFeedLabelPosition(match.top);
+
+                        return (
                     <text
-                        x={match.top.x + 4}
-                        y={match.top.y - 8}
+                        x={labelPosition.x}
+                        y={labelPosition.y}
                         fill="currentColor"
                         fontSize="11"
+                        fontWeight="600"
                         fontStyle="italic"
                         className="text-gray-300 print:text-gray-600"
                     >
                         {match.top.label}
                     </text>
+                        );
+                    })()
                 )}
 
                 {match.bottom.label && (
+                    (() => {
+                        const labelPosition = getBottomFeedLabelPosition(match.bottom);
+
+                        return (
                     <text
-                        x={match.bottom.x + 4}
-                        y={match.bottom.y - 8}
+                        x={labelPosition.x}
+                        y={labelPosition.y}
                         fill="currentColor"
                         fontSize="11"
+                        fontWeight="600"
                         fontStyle="italic"
                         className="text-gray-300 print:text-gray-600"
                     >
                         {match.bottom.label}
                     </text>
+                        );
+                    })()
                 )}
 
                 {match.loserDestination && (
+                    (() => {
+                        const labelPosition = getLoserDestinationPosition(match);
+
+                        return (
                     <text
-                        x={match.joinX + 8}
-                        y={match.centerY + 18}
+                        x={labelPosition.x}
+                        y={labelPosition.y}
                         fill="currentColor"
                         fontSize="11"
                         fontStyle="italic"
@@ -1064,6 +1614,8 @@ export function DivisionDrawDouble() {
                     >
                         {match.loserDestination}
                     </text>
+                        );
+                    })()
                 )}
 
                 <line x1={match.top.x} y1={match.top.y} x2={match.joinX} y2={match.top.y} stroke="currentColor" strokeWidth="2" />
@@ -1161,7 +1713,7 @@ export function DivisionDrawDouble() {
                             <svg
                                 viewBox={`0 0 ${renderModel.template.viewBoxWidth} ${renderModel.template.viewBoxHeight}`}
                                 className="division-draw-svg block overflow-visible text-white print:text-black"
-                                preserveAspectRatio="xMidYMid meet"
+                                preserveAspectRatio="xMidYMin meet"
                                 role="img"
                                 aria-label="Double elimination tournament bracket"
                             >
@@ -1218,7 +1770,7 @@ export function DivisionDrawDouble() {
                                 </g>
 
                                 <g id="loser-matches">
-                                    {renderModel.template.losersMatches.map((match) => renderMatch(match))}
+                                    {renderModel.losers.visibleMatches.map((match) => renderMatch(match))}
                                 </g>
 
                                 <g id="champion-line">
