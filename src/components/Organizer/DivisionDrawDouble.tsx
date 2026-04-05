@@ -64,6 +64,8 @@ type DoubleEliminationTemplate = {
     size: TemplateSize;
     viewBoxWidth: number;
     viewBoxHeight: number;
+    printFrameWidth: number;
+    printFrameHeight: number;
     sectionLabels: TextLabel[];
     winnersRoundLabels: TextLabel[];
     losersRoundLabels: TextLabel[];
@@ -80,12 +82,15 @@ type DoubleTemplateConfig = {
     size: TemplateSize;
     viewBoxWidth: number;
     viewBoxHeight: number;
+    print: {
+        frameWidth: number;
+        frameHeight: number;
+    };
     winners: {
         slotStartX: number;
         topPadding: number;
         leafSpacing: number;
-        firstJoinX: number;
-        roundSpacing: number;
+        roundLength: number;
         roundLabelY: number;
     };
     losers: {
@@ -94,16 +99,25 @@ type DoubleTemplateConfig = {
         firstRoundMatchSpacing: number;
         feedEntryOffset: number;
         roundOffsetY: number;
-        firstJoinX: number;
-        roundSpacing: number;
+        roundLength: number;
         roundLabelY: number;
-        feederOffset: number;
+        repeatedRoundHeightScale: number;
+        repeatedRoundHeightGrowth: number;
+        verticalShift: number;
+        headerOffsetY: number;
+        roundLabelOffsetY: number;
     };
     grandFinal: {
-        joinX: number;
-        winnerX: number;
+        roundLength: number;
+        matchOffsetY: number;
+        entryGap: number;
+        labelOffsetX: number;
+        labelOffsetY: number;
     };
 };
+
+const PRINT_FRAME_WIDTH_IN = 10.72;
+const PRINT_FRAME_HEIGHT_IN = 8.22;
 
 type PopulatedWinnerSlot = WinnerSlot & {
     competitor: DrawRegistration | null;
@@ -152,7 +166,7 @@ function computeVisibleViewBoxHeight(
         championBottom,
     );
 
-    return Math.max(contentBottom + 48, 720);
+    return Math.max(template.viewBoxHeight, contentBottom + 48, 720);
 }
 
 function cloneSourcePoint(source: SourcePoint): SourcePoint {
@@ -538,8 +552,34 @@ function applyDynamicNumberingAndFeeds(
     };
 }
 
-const SLOT_LABEL_FONT_SIZE = 16;
+const LIVE_FONT_SIZES = {
+    sectionLabel: 17,
+    roundLabel: 14,
+    matchNumber: 12,
+    feedLabel: 12,
+    matchLabel: 15,
+    championLabel: 15,
+    secondPlaceLabel: 16,
+    slotLabel: 17,
+} as const;
+
+const PRINT_FONT_SIZES = {
+    sectionLabel: 23,
+    roundLabel: 20,
+    matchNumber: 18,
+    feedLabel: 18,
+    matchLabel: 21,
+    championLabel: 21,
+    secondPlaceLabel: 22,
+    slotLabel: 23,
+} as const;
+
+const SHOW_BRACKET_SECTION_LABELS = false;
+const SHOW_BRACKET_ROUND_LABELS = false;
 const SLOT_LABEL_OFFSET_Y = 6;
+const LOSERS_HEADER_LIFT = 58;
+const LOSERS_ROUND_LABEL_LIFT = 66;
+const LOSER_FEED_LABEL_OFFSET_Y = 20;
 
 function getMatchNumberPosition(match: RenderedMatch) {
     return {
@@ -550,10 +590,11 @@ function getMatchNumberPosition(match: RenderedMatch) {
 
 function getTopFeedLabelPosition(source: SourcePoint) {
     const isLoserLabel = source.label?.startsWith("Loser of");
+    const isWinnerLabel = source.label?.startsWith("Winner of");
 
     return {
         x: source.x + 6,
-        y: isLoserLabel ? source.y + 14 : source.y - 10,
+        y: isLoserLabel || isWinnerLabel ? source.y + LOSER_FEED_LABEL_OFFSET_Y : source.y - 10,
     };
 }
 
@@ -562,7 +603,7 @@ function getBottomFeedLabelPosition(source: SourcePoint) {
 
     return {
         x: source.x + 6,
-        y: isLoserLabel ? source.y + 14 : source.y - 10,
+        y: isLoserLabel ? source.y + LOSER_FEED_LABEL_OFFSET_Y : source.y - 10,
     };
 }
 
@@ -578,84 +619,111 @@ const DOUBLE_TEMPLATE_CONFIGS: Record<TemplateSize, DoubleTemplateConfig> = {
         size: 4,
         viewBoxWidth: 1120,
         viewBoxHeight: 860,
+        print: {
+            frameWidth: 1650,
+            frameHeight: 1300,
+        },
         winners: {
             slotStartX: 24,
             topPadding: 110,
-            leafSpacing: 150,
-            firstJoinX: 250,
-            roundSpacing: 170,
+            leafSpacing: 205,
+            roundLength: 390,
             roundLabelY: 42,
         },
         losers: {
             slotStartX: 120,
             topPadding: 520,
-            firstRoundMatchSpacing: 144,
-            feedEntryOffset: 42,
+            firstRoundMatchSpacing: 198,
+            feedEntryOffset: 58,
             roundOffsetY: 54,
-            firstJoinX: 305,
-            roundSpacing: 150,
+            roundLength: 318,
             roundLabelY: 452,
-            feederOffset: 72,
+            repeatedRoundHeightScale: 0.85,
+            repeatedRoundHeightGrowth: 31,
+            verticalShift: 22,
+            headerOffsetY: 44,
+            roundLabelOffsetY: 22,
         },
         grandFinal: {
-            joinX: 965,
-            winnerX: 1075,
+            roundLength: 390,
+            matchOffsetY: 20,
+            entryGap: 42,
+            labelOffsetX: 24,
+            labelOffsetY: 82,
         },
     },
     8: {
         size: 8,
         viewBoxWidth: 1400,
         viewBoxHeight: 980,
+        print: {
+            frameWidth: 2080,
+            frameHeight: 1760,
+        },
         winners: {
             slotStartX: 24,
             topPadding: 92,
-            leafSpacing: 82,
-            firstJoinX: 260,
-            roundSpacing: 150,
+            leafSpacing: 114,
+            roundLength: 400,
             roundLabelY: 38,
         },
         losers: {
             slotStartX: 110,
             topPadding: 610,
-            firstRoundMatchSpacing: 238,
-            feedEntryOffset: 48,
+            firstRoundMatchSpacing: 330,
+            feedEntryOffset: 66,
             roundOffsetY: 132,
-            firstJoinX: 285,
-            roundSpacing: 140,
+            roundLength: 300,
             roundLabelY: 540,
-            feederOffset: 72,
+            repeatedRoundHeightScale: 0.85,
+            repeatedRoundHeightGrowth: 50,
+            verticalShift: 34,
+            headerOffsetY: 44,
+            roundLabelOffsetY: 22,
         },
         grandFinal: {
-            joinX: 1225,
-            winnerX: 1360,
+            roundLength: 400,
+            matchOffsetY: 20,
+            entryGap: 42,
+            labelOffsetX: 24,
+            labelOffsetY: 82,
         },
     },
     16: {
         size: 16,
         viewBoxWidth: 1680,
         viewBoxHeight: 1220,
+        print: {
+            frameWidth: 2180,
+            frameHeight: 2120,
+        },
         winners: {
             slotStartX: 24,
             topPadding: 88,
-            leafSpacing: 52,
-            firstJoinX: 230,
-            roundSpacing: 130,
+            leafSpacing: 76,
+            roundLength: 492,
             roundLabelY: 34,
         },
         losers: {
             slotStartX: 96,
             topPadding: 760,
-            firstRoundMatchSpacing: 124,
-            feedEntryOffset: 40,
+            firstRoundMatchSpacing: 184,
+            feedEntryOffset: 56,
             roundOffsetY: 88,
-            firstJoinX: 250,
-            roundSpacing: 125,
+            roundLength: 396,
             roundLabelY: 690,
-            feederOffset: 68,
+            repeatedRoundHeightScale: 0.85,
+            repeatedRoundHeightGrowth: 30,
+            verticalShift: 28,
+            headerOffsetY: 44,
+            roundLabelOffsetY: 22,
         },
         grandFinal: {
-            joinX: 1485,
-            winnerX: 1640,
+            roundLength: 492,
+            matchOffsetY: 20,
+            entryGap: 42,
+            labelOffsetX: 24,
+            labelOffsetY: 82,
         },
     },
 };
@@ -735,25 +803,19 @@ function getLosersRoundCounts(size: TemplateSize) {
 function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTemplate {
     const totalWinnerRounds = Math.log2(config.size);
     const seedOrder = buildSeedOrder(config.size);
-    const verticalStretch = 1.3;
-    const horizontalStretch = 1.6;
-    const winnerLeafSpacing = Math.round(config.winners.leafSpacing * verticalStretch);
-    const loserFirstRoundSpacing = Math.round(config.losers.firstRoundMatchSpacing * verticalStretch);
-    const loserFeedEntryOffset = Math.round(config.losers.feedEntryOffset * verticalStretch);
-    const winnerRoundLength = Math.round((config.winners.firstJoinX - config.winners.slotStartX) * horizontalStretch);
-    const loserRoundLength = Math.round((config.losers.firstJoinX - config.losers.slotStartX) * horizontalStretch);
-    const finalRoundLength = Math.max(winnerRoundLength, loserRoundLength);
-    const losersRoundHeightScale = 0.85;
-    const losersRoundHeightGrowth = Math.max(
-        Math.round(loserFirstRoundSpacing * 0.18 * losersRoundHeightScale),
-        16,
-    );
-    const losersVerticalShift = Math.round(loserFirstRoundSpacing * 0.1);
+    const winnerLeafSpacing = config.winners.leafSpacing;
+    const winnerRoundLength = config.winners.roundLength;
+    const loserFirstRoundSpacing = config.losers.firstRoundMatchSpacing;
+    const loserFeedEntryOffset = config.losers.feedEntryOffset;
+    const loserRoundLength = config.losers.roundLength;
+    const finalRoundLength = config.grandFinal.roundLength;
+    const losersRoundHeightScale = config.losers.repeatedRoundHeightScale;
+    const losersRoundHeightGrowth = config.losers.repeatedRoundHeightGrowth;
     const winnerBottomY =
         config.winners.topPadding + (config.size - 1) * winnerLeafSpacing;
-    const losersTopPadding = Math.max(config.losers.topPadding, winnerBottomY + 120) + losersVerticalShift;
-    const losersHeaderY = losersTopPadding - 44;
-    const losersRoundLabelY = losersTopPadding - 22;
+    const losersTopPadding = Math.max(config.losers.topPadding, winnerBottomY + 120) + config.losers.verticalShift;
+    const losersHeaderY = losersTopPadding - config.losers.headerOffsetY - LOSERS_HEADER_LIFT;
+    const losersRoundLabelY = losersTopPadding - config.losers.roundLabelOffsetY - LOSERS_ROUND_LABEL_LIFT;
     const winnerJoinXs = Array.from({ length: totalWinnerRounds }, (_, index) => {
         return config.winners.slotStartX + winnerRoundLength * (index + 1);
     });
@@ -975,8 +1037,8 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
     const championEndX = winnerFinal.joinX + finalRoundLength;
     const secondPlaceJoinX = Math.max(winnerFinal.joinX, losersFinal.joinX) + finalRoundLength;
     const secondPlaceWinnerX = secondPlaceJoinX + finalRoundLength;
-    const secondPlaceCenterY = (winnerFinal.centerY + losersFinal.centerY) / 2 + 20;
-    const secondPlaceEntryGap = 34;
+    const secondPlaceCenterY = (winnerFinal.centerY + losersFinal.centerY) / 2 + config.grandFinal.matchOffsetY;
+    const secondPlaceEntryGap = config.grandFinal.entryGap;
     const secondPlaceMatch = {
         id: "second-place-match",
         joinX: secondPlaceJoinX,
@@ -1051,6 +1113,8 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
         size: config.size,
         viewBoxWidth,
         viewBoxHeight,
+        printFrameWidth: config.print.frameWidth,
+        printFrameHeight: config.print.frameHeight,
         sectionLabels: [
             {
                 id: "winners-label",
@@ -1075,8 +1139,8 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
         secondPlaceLabel: {
             id: "second-place-label",
             text: "2nd Place Match",
-            x: secondPlaceJoinX - 24,
-            y: secondPlaceCenterY - 82,
+            x: secondPlaceJoinX - config.grandFinal.labelOffsetX,
+            y: secondPlaceCenterY - config.grandFinal.labelOffsetY,
         },
         secondPlaceMatch,
     };
@@ -1261,19 +1325,19 @@ function buildMatchMarkup(match: RenderedMatch) {
     const loserDestinationPosition = match.loserDestination ? getLoserDestinationPosition(match) : null;
     const numberMarkup =
         match.matchNumber != null
-            ? `<text x="${numberPosition.x}" y="${numberPosition.y}" fill="currentColor" font-size="11" font-weight="700" text-anchor="middle">${match.matchNumber}</text>`
+            ? `<text x="${numberPosition.x}" y="${numberPosition.y}" fill="currentColor" font-size="${PRINT_FONT_SIZES.matchNumber}" font-weight="700" text-anchor="middle">${match.matchNumber}</text>`
             : "";
     const topLabel = match.top.label
-        ? `<text x="${topLabelPosition!.x}" y="${topLabelPosition!.y}" fill="currentColor" font-size="11" font-weight="600" font-style="italic">${escapeHtml(match.top.label)}</text>`
+        ? `<text x="${topLabelPosition!.x}" y="${topLabelPosition!.y}" fill="currentColor" font-size="${PRINT_FONT_SIZES.feedLabel}" font-weight="600" font-style="italic">${escapeHtml(match.top.label)}</text>`
         : "";
     const bottomLabel = match.bottom.label
-        ? `<text x="${bottomLabelPosition!.x}" y="${bottomLabelPosition!.y}" fill="currentColor" font-size="11" font-weight="600" font-style="italic">${escapeHtml(match.bottom.label)}</text>`
+        ? `<text x="${bottomLabelPosition!.x}" y="${bottomLabelPosition!.y}" fill="currentColor" font-size="${PRINT_FONT_SIZES.feedLabel}" font-weight="600" font-style="italic">${escapeHtml(match.bottom.label)}</text>`
         : "";
     const loserDestination = match.loserDestination
-        ? `<text x="${loserDestinationPosition!.x}" y="${loserDestinationPosition!.y}" fill="currentColor" font-size="11" font-style="italic">${escapeHtml(match.loserDestination)}</text>`
+        ? `<text x="${loserDestinationPosition!.x}" y="${loserDestinationPosition!.y}" fill="currentColor" font-size="${PRINT_FONT_SIZES.feedLabel}" font-style="italic">${escapeHtml(match.loserDestination)}</text>`
         : "";
     const matchLabel = match.matchLabel
-        ? `<text x="${match.joinX - 18}" y="${match.centerY - 52}" fill="currentColor" font-size="14" font-weight="700">${escapeHtml(match.matchLabel)}</text>`
+        ? `<text x="${match.joinX - 18}" y="${match.centerY - 52}" fill="currentColor" font-size="${PRINT_FONT_SIZES.matchLabel}" font-weight="700">${escapeHtml(match.matchLabel)}</text>`
         : "";
 
     return `<g id="${match.id}">
@@ -1290,21 +1354,30 @@ function buildMatchMarkup(match: RenderedMatch) {
 }
 
 function buildPrintSvgMarkup(renderModel: DoubleRenderModel) {
-    const sectionLabels = renderModel.template.sectionLabels
-        .map((label) => {
-            return `<text x="${label.x}" y="${label.y}" fill="currentColor" font-size="16" font-weight="700">${escapeHtml(label.text)}</text>`;
-        })
-        .join("");
-    const winnerRoundLabels = renderModel.template.winnersRoundLabels
-        .map((label) => {
-            return `<text x="${label.x}" y="${label.y}" fill="currentColor" font-size="13" font-weight="600">${escapeHtml(label.text)}</text>`;
-        })
-        .join("");
-    const loserRoundLabels = renderModel.template.losersRoundLabels
-        .map((label) => {
-            return `<text x="${label.x}" y="${label.y}" fill="currentColor" font-size="13" font-weight="600">${escapeHtml(label.text)}</text>`;
-        })
-        .join("");
+    const printFrameWidth = renderModel.template.printFrameWidth;
+    const printFrameHeight = renderModel.template.printFrameHeight;
+    const mainBracketTransform = renderModel.template.size === 16 ? 'translate(0 -32) scale(1.08 1.015)' : undefined;
+    const sectionLabels = SHOW_BRACKET_SECTION_LABELS
+        ? renderModel.template.sectionLabels
+                .map((label) => {
+                    return `<text x="${label.x}" y="${label.y}" fill="currentColor" font-size="${PRINT_FONT_SIZES.sectionLabel}" font-weight="700">${escapeHtml(label.text)}</text>`;
+                })
+                .join("")
+        : "";
+    const winnerRoundLabels = SHOW_BRACKET_ROUND_LABELS
+        ? renderModel.template.winnersRoundLabels
+                .map((label) => {
+                    return `<text x="${label.x}" y="${label.y}" fill="currentColor" font-size="${PRINT_FONT_SIZES.roundLabel}" font-weight="600">${escapeHtml(label.text)}</text>`;
+                })
+                .join("")
+        : "";
+    const loserRoundLabels = SHOW_BRACKET_ROUND_LABELS
+        ? renderModel.template.losersRoundLabels
+                .map((label) => {
+                    return `<text x="${label.x}" y="${label.y}" fill="currentColor" font-size="${PRINT_FONT_SIZES.roundLabel}" font-weight="600">${escapeHtml(label.text)}</text>`;
+                })
+                .join("")
+        : "";
     const winnerMatches = renderModel.winners.visibleMatches.map((match) => buildMatchMarkup(match)).join("");
     const loserMatches = renderModel.losers.visibleMatches.map((match) => buildMatchMarkup(match)).join("");
     const secondPlaceMatch = buildMatchMarkup(renderModel.template.secondPlaceMatch);
@@ -1317,26 +1390,28 @@ function buildPrintSvgMarkup(renderModel: DoubleRenderModel) {
                 return "";
             }
 
-            return `<text x="${source.x + 12}" y="${source.y - SLOT_LABEL_OFFSET_Y}" fill="currentColor" font-size="${SLOT_LABEL_FONT_SIZE}">
+            return `<text x="${source.x + 12}" y="${source.y - SLOT_LABEL_OFFSET_Y}" fill="currentColor" font-size="${PRINT_FONT_SIZES.slotLabel}">
                 <tspan font-weight="700">${slot.seed}</tspan>
                 <tspan dx="12">${escapeHtml(slot.label)}</tspan>
             </text>`;
         })
         .join("");
 
-    return `<svg viewBox="0 0 ${renderModel.template.viewBoxWidth} ${renderModel.template.viewBoxHeight}" class="division-draw-svg" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Double elimination tournament bracket">
-        <g id="section-labels">${sectionLabels}</g>
-        <g id="winners-round-labels">${winnerRoundLabels}</g>
-        <g id="losers-round-labels">${loserRoundLabels}</g>
-        <g id="winner-matches">${winnerMatches}</g>
-        <g id="loser-matches">${loserMatches}</g>
-        <g id="champion-line">
-            <text x="${renderModel.template.championLine.labelX}" y="${renderModel.template.championLine.labelY}" fill="currentColor" font-size="14" font-weight="700">${escapeHtml(renderModel.template.championLine.label)}</text>
-            <line x1="${renderModel.template.championLine.startX}" y1="${renderModel.template.championLine.y}" x2="${renderModel.template.championLine.endX}" y2="${renderModel.template.championLine.y}" stroke="currentColor" stroke-width="2" />
+    return `<svg viewBox="0 0 ${printFrameWidth} ${printFrameHeight}" class="division-draw-svg" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Double elimination tournament bracket">
+        <g id="main-bracket"${mainBracketTransform ? ` transform="${mainBracketTransform}"` : ""}>
+            <g id="section-labels">${sectionLabels}</g>
+            <g id="winners-round-labels">${winnerRoundLabels}</g>
+            <g id="losers-round-labels">${loserRoundLabels}</g>
+            <g id="winner-matches">${winnerMatches}</g>
+            <g id="loser-matches">${loserMatches}</g>
+            <g id="champion-line">
+                <text x="${renderModel.template.championLine.labelX}" y="${renderModel.template.championLine.labelY}" fill="currentColor" font-size="${PRINT_FONT_SIZES.championLabel}" font-weight="700">${escapeHtml(renderModel.template.championLine.label)}</text>
+                <line x1="${renderModel.template.championLine.startX}" y1="${renderModel.template.championLine.y}" x2="${renderModel.template.championLine.endX}" y2="${renderModel.template.championLine.y}" stroke="currentColor" stroke-width="2" />
+            </g>
+            <g id="winner-slot-labels">${winnerLabels}</g>
         </g>
-        <g id="second-place-label"><text x="${renderModel.template.secondPlaceLabel.x}" y="${renderModel.template.secondPlaceLabel.y}" fill="currentColor" font-size="15" font-weight="700">${escapeHtml(renderModel.template.secondPlaceLabel.text)}</text></g>
+        <g id="second-place-label"><text x="${renderModel.template.secondPlaceLabel.x}" y="${renderModel.template.secondPlaceLabel.y}" fill="currentColor" font-size="${PRINT_FONT_SIZES.secondPlaceLabel}" font-weight="700">${escapeHtml(renderModel.template.secondPlaceLabel.text)}</text></g>
         <g id="second-place-match">${secondPlaceMatch}</g>
-        <g id="winner-slot-labels">${winnerLabels}</g>
     </svg>`;
 }
 
@@ -1358,7 +1433,7 @@ function buildPrintDocumentMarkup(
                 <style>
                     @page {
                         size: letter landscape;
-                        margin: 0.2in;
+                        margin: 0.1in;
                     }
 
                     html,
@@ -1401,16 +1476,16 @@ function buildPrintDocumentMarkup(
                     }
 
                     .division-draw-print-root {
-                        width: min(10.55in, calc(100vw - 32px));
-                        height: min(8.05in, calc(100vh - 32px));
+                        width: min(${PRINT_FRAME_WIDTH_IN}in, calc(100vw - 32px));
+                        height: min(${PRINT_FRAME_HEIGHT_IN}in, calc(100vh - 32px));
                         margin: 0 auto;
                         background: white;
                         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
                         box-sizing: border-box;
                         display: grid;
                         grid-template-rows: auto 1fr;
-                        gap: 0.03in;
-                        padding: 0.08in 0.06in 0.03in;
+                        gap: 0.02in;
+                        padding: 0.04in 0.03in 0.02in;
                         overflow: hidden;
                     }
 
@@ -1419,22 +1494,22 @@ function buildPrintDocumentMarkup(
                         align-items: flex-start;
                         justify-content: space-between;
                         gap: 0.18in;
-                        padding: 0 0 0.02in;
+                        padding: 0 0 0.01in;
                         margin: 0;
                     }
 
                     .division-draw-meta h3 {
                         margin: 0;
-                        font-size: 17px;
-                        line-height: 1.2;
+                        font-size: 16px;
+                        line-height: 1.1;
                         font-weight: 600;
                     }
 
                     .division-draw-meta p,
                     .division-draw-meta div {
                         margin: 0;
-                        font-size: 11px;
-                        line-height: 1.2;
+                        font-size: 10px;
+                        line-height: 1.1;
                     }
 
                     .division-draw-frame {
@@ -1449,8 +1524,7 @@ function buildPrintDocumentMarkup(
 
                     .division-draw-svg {
                         width: 100%;
-                        height: auto;
-                        max-height: 100%;
+                        height: 100%;
                         display: block;
                         color: black;
                     }
@@ -1476,8 +1550,8 @@ function buildPrintDocumentMarkup(
                         }
 
                         .division-draw-print-root {
-                            width: 10.55in;
-                            height: 8.05in;
+                            width: ${PRINT_FRAME_WIDTH_IN}in;
+                            height: ${PRINT_FRAME_HEIGHT_IN}in;
                             margin: 0;
                             box-shadow: none;
                             page-break-inside: avoid;
@@ -1544,7 +1618,7 @@ export function DivisionDrawDouble() {
                         x={match.joinX - 18}
                         y={match.centerY - 52}
                         fill="currentColor"
-                        fontSize="14"
+                        fontSize={LIVE_FONT_SIZES.matchLabel}
                         fontWeight="700"
                         className="text-gray-100 print:text-black"
                     >
@@ -1561,7 +1635,7 @@ export function DivisionDrawDouble() {
                         x={numberPosition.x}
                         y={numberPosition.y}
                         fill="currentColor"
-                        fontSize="11"
+                        fontSize={LIVE_FONT_SIZES.matchNumber}
                         fontWeight="700"
                         textAnchor="middle"
                         className="text-gray-400 print:text-gray-700"
@@ -1581,7 +1655,7 @@ export function DivisionDrawDouble() {
                         x={labelPosition.x}
                         y={labelPosition.y}
                         fill="currentColor"
-                        fontSize="11"
+                        fontSize={LIVE_FONT_SIZES.feedLabel}
                         fontWeight="600"
                         fontStyle="italic"
                         className="text-gray-300 print:text-gray-600"
@@ -1601,7 +1675,7 @@ export function DivisionDrawDouble() {
                         x={labelPosition.x}
                         y={labelPosition.y}
                         fill="currentColor"
-                        fontSize="11"
+                        fontSize={LIVE_FONT_SIZES.feedLabel}
                         fontWeight="600"
                         fontStyle="italic"
                         className="text-gray-300 print:text-gray-600"
@@ -1621,7 +1695,7 @@ export function DivisionDrawDouble() {
                         x={labelPosition.x}
                         y={labelPosition.y}
                         fill="currentColor"
-                        fontSize="11"
+                        fontSize={LIVE_FONT_SIZES.feedLabel}
                         fontStyle="italic"
                         className="text-gray-300 print:text-gray-600"
                     >
@@ -1654,7 +1728,7 @@ export function DivisionDrawDouble() {
                     x={source.x + 12}
                     y={source.y - SLOT_LABEL_OFFSET_Y}
                     fill="currentColor"
-                    fontSize={SLOT_LABEL_FONT_SIZE}
+                    fontSize={LIVE_FONT_SIZES.slotLabel}
                     className="text-white print:text-black"
                 >
                     <tspan fontWeight="700">{slot.seed}</tspan>
@@ -1726,53 +1800,59 @@ export function DivisionDrawDouble() {
                                 role="img"
                                 aria-label="Double elimination tournament bracket"
                             >
-                                <g id="section-labels">
-                                    {renderModel.template.sectionLabels.map((label) => (
-                                        <text
-                                            key={label.id}
-                                            x={label.x}
-                                            y={label.y}
-                                            fill="currentColor"
-                                            fontSize="16"
-                                            fontWeight="700"
-                                            className="text-gray-100 print:text-black"
-                                        >
-                                            {label.text}
-                                        </text>
-                                    ))}
-                                </g>
+                                {SHOW_BRACKET_SECTION_LABELS && (
+                                    <g id="section-labels">
+                                        {renderModel.template.sectionLabels.map((label) => (
+                                            <text
+                                                key={label.id}
+                                                x={label.x}
+                                                y={label.y}
+                                                fill="currentColor"
+                                                fontSize={LIVE_FONT_SIZES.sectionLabel}
+                                                fontWeight="700"
+                                                className="text-gray-100 print:text-black"
+                                            >
+                                                {label.text}
+                                            </text>
+                                        ))}
+                                    </g>
+                                )}
 
-                                <g id="winner-round-labels">
-                                    {renderModel.template.winnersRoundLabels.map((label) => (
-                                        <text
-                                            key={label.id}
-                                            x={label.x}
-                                            y={label.y}
-                                            fill="currentColor"
-                                            fontSize="13"
-                                            fontWeight="600"
-                                            className="text-gray-300 print:text-gray-600"
-                                        >
-                                            {label.text}
-                                        </text>
-                                    ))}
-                                </g>
+                                {SHOW_BRACKET_ROUND_LABELS && (
+                                    <g id="winner-round-labels">
+                                        {renderModel.template.winnersRoundLabels.map((label) => (
+                                            <text
+                                                key={label.id}
+                                                x={label.x}
+                                                y={label.y}
+                                                fill="currentColor"
+                                                fontSize={LIVE_FONT_SIZES.roundLabel}
+                                                fontWeight="600"
+                                                className="text-gray-300 print:text-gray-600"
+                                            >
+                                                {label.text}
+                                            </text>
+                                        ))}
+                                    </g>
+                                )}
 
-                                <g id="loser-round-labels">
-                                    {renderModel.template.losersRoundLabels.map((label) => (
-                                        <text
-                                            key={label.id}
-                                            x={label.x}
-                                            y={label.y}
-                                            fill="currentColor"
-                                            fontSize="13"
-                                            fontWeight="600"
-                                            className="text-gray-300 print:text-gray-600"
-                                        >
-                                            {label.text}
-                                        </text>
-                                    ))}
-                                </g>
+                                {SHOW_BRACKET_ROUND_LABELS && (
+                                    <g id="loser-round-labels">
+                                        {renderModel.template.losersRoundLabels.map((label) => (
+                                            <text
+                                                key={label.id}
+                                                x={label.x}
+                                                y={label.y}
+                                                fill="currentColor"
+                                                fontSize={LIVE_FONT_SIZES.roundLabel}
+                                                fontWeight="600"
+                                                className="text-gray-300 print:text-gray-600"
+                                            >
+                                                {label.text}
+                                            </text>
+                                        ))}
+                                    </g>
+                                )}
 
                                 <g id="winner-matches">
                                     {renderModel.winners.visibleMatches.map((match) => renderMatch(match))}
@@ -1787,7 +1867,7 @@ export function DivisionDrawDouble() {
                                         x={renderModel.template.championLine.labelX}
                                         y={renderModel.template.championLine.labelY}
                                         fill="currentColor"
-                                        fontSize="14"
+                                        fontSize={LIVE_FONT_SIZES.championLabel}
                                         fontWeight="700"
                                         className="text-gray-100 print:text-black"
                                     >
@@ -1809,7 +1889,7 @@ export function DivisionDrawDouble() {
                                         x={renderModel.template.secondPlaceLabel.x}
                                         y={renderModel.template.secondPlaceLabel.y}
                                         fill="currentColor"
-                                        fontSize="15"
+                                        fontSize={LIVE_FONT_SIZES.secondPlaceLabel}
                                         fontWeight="700"
                                         className="text-gray-100 print:text-black"
                                     >
