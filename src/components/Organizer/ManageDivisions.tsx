@@ -2,21 +2,24 @@ import { getTournamentRegistrations } from "@/api/tournaments";
 import { useQuery } from "@tanstack/react-query";
 import {
   ColumnDef,
+  ColumnFiltersState,
   flexRender,
+  functionalUpdate,
   getCoreRowModel,
   useReactTable,
   getFilteredRowModel,
   getPaginationRowModel,
   Column,
+  RowSelectionState,
   Table
   , getSortedRowModel 
 } from "@tanstack/react-table";
 import type {SortingState} from "@tanstack/react-table";
 
 // import { RankingInfo, rankItem } from "@tanstack/match-sorter-utils";
-import { useMemo, useState } from "react";
-import { useSetAtom } from "jotai";
-import { selectedRegistrationsAtom } from "@/store/selectedRegistrations";
+import { useEffect, useMemo, useState } from "react";
+import { useAtom } from "jotai";
+import { selectedRegistrationsAtom, type DrawRegistration } from "@/store/selectedRegistrations";
 import { useNavigate } from "@tanstack/react-router";
 import { CheckboxFilter } from "../Custom/CheckboxFilter";
 //import { CheckboxFilterPopover } from "../Custom/CheckBoxFilterPopover";
@@ -36,6 +39,7 @@ import { IndeterminateCheckbox, PillButton } from "@/components/Custom/";
 
 export type RegistrationRow = {
   id: number
+  registrationId: number
   firstName: string
   lastName: string
   participantGender: string
@@ -51,6 +55,102 @@ export type RegistrationRow = {
   maxAge: number | null
   eventDisplayName: string  
   eventName: string
+}
+
+export type ManageDivisionsSearch = {
+  fullName?: string
+  eventDisplayName?: string[]
+  divisionName?: string[]
+  eventName?: string[]
+  participantRank?: string[]
+  participantGender?: string[]
+  checkedIn?: boolean[]
+  isPaid?: boolean[]
+}
+
+const FILTER_IDS = [
+  "fullName",
+  "eventDisplayName",
+  "divisionName",
+  "eventName",
+  "participantRank",
+  "participantGender",
+  "checkedIn",
+  "isPaid",
+] as const
+
+type FilterId = (typeof FILTER_IDS)[number]
+
+const isSameArray = <T,>(left: T[] | undefined, right: T[] | undefined) => {
+  if (!left && !right) return true
+  if (!left || !right) return false
+  if (left.length !== right.length) return false
+
+  return left.every((value, index) => value === right[index])
+}
+
+const isSameSearch = (left: ManageDivisionsSearch, right: ManageDivisionsSearch) => (
+  left.fullName === right.fullName
+  && isSameArray(left.eventDisplayName, right.eventDisplayName)
+  && isSameArray(left.divisionName, right.divisionName)
+  && isSameArray(left.eventName, right.eventName)
+  && isSameArray(left.participantRank, right.participantRank)
+  && isSameArray(left.participantGender, right.participantGender)
+  && isSameArray(left.checkedIn, right.checkedIn)
+  && isSameArray(left.isPaid, right.isPaid)
+)
+
+const buildColumnFiltersFromSearch = (search: ManageDivisionsSearch): ColumnFiltersState => {
+  const filters: ColumnFiltersState = []
+
+  if (search.fullName) {
+    filters.push({ id: "fullName", value: search.fullName })
+  }
+
+  for (const id of FILTER_IDS) {
+    if (id === "fullName") continue
+
+    const value = search[id]
+    if (Array.isArray(value) && value.length > 0) {
+      filters.push({ id, value })
+    }
+  }
+
+  return filters
+}
+
+const buildSearchFromColumnFilters = (columnFilters: ColumnFiltersState): ManageDivisionsSearch => {
+  const search: ManageDivisionsSearch = {}
+
+  for (const filter of columnFilters) {
+    if (!FILTER_IDS.includes(filter.id as FilterId)) {
+      continue
+    }
+
+    if (filter.id === "fullName") {
+      const value = typeof filter.value === "string" ? filter.value.trim() : ""
+      if (value) {
+        search.fullName = value
+      }
+      continue
+    }
+
+    if (Array.isArray(filter.value) && filter.value.length > 0) {
+      ;(search as Record<string, unknown>)[filter.id] = filter.value
+    }
+  }
+
+  return search
+}
+
+const buildRowSelectionFromRegistrations = (registrations: DrawRegistration[]): RowSelectionState => {
+  const rowSelection: RowSelectionState = {}
+
+  for (const registration of registrations) {
+    rowSelection[String(registration.registrationId)] = true
+  }
+
+  return rowSelection
 }
 // declare module '@tanstack/react-table' {
 //   interface FilterFns {
@@ -82,17 +182,16 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
 // }
 
 
-export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
+export function ManageDivisions({
+  tournamentId,
+  search,
+}: {
+  tournamentId: number
+  search: ManageDivisionsSearch
+}) {
 
-  const setSelectedRegistrations = useSetAtom(selectedRegistrationsAtom);
+  const [selectedRegistrations, setSelectedRegistrations] = useAtom(selectedRegistrationsAtom);
   const navigate = useNavigate();
-
-  function createDraw(route: "/organizer/divisions" | "/organizer/divisions-double") {
-    const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original);
-
-    setSelectedRegistrations(selectedRows);
-    navigate({ to: route });
-  }
 
 
     const { data: registrations, isLoading: participantLoading } = useQuery<any[]>({
@@ -153,7 +252,7 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
           },
         },
         {
-          header: 'Gender',
+          header: 'Participant Gender',
           accessorKey: 'participantGender',
           filterFn: (row, columnId, filterValue) => {
             if (!filterValue || filterValue.length === 0) return true
@@ -235,6 +334,7 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
   return registrations.flatMap((p: any) =>
     (p.registrations ?? []).map((r: any) => ({
       id: p.id,
+      registrationId: r.id,
       firstName: p.firstName,
       lastName: p.lastName,
 
@@ -260,14 +360,87 @@ export function ManageDivisions({ tournamentId }: { tournamentId: number }) {
     if (!flattened) return [] as string[];
     return Array.from(new Set(flattened.map((r: any) => r.eventDisplayName))).sort((a: string, b: string) => a.localeCompare(b));
   }, [flattened]);
+  const rowSelection = useMemo(
+    () => buildRowSelectionFromRegistrations(selectedRegistrations),
+    [selectedRegistrations],
+  )
 
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(() => buildColumnFiltersFromSearch(search));
+
+  useEffect(() => {
+    if (participantLoading) {
+      return
+    }
+
+    const registrationsById = new Map(flattened.map((registration) => [registration.registrationId, registration]))
+
+    setSelectedRegistrations((currentSelectedRegistrations) => {
+      const nextSelectedRegistrations = currentSelectedRegistrations.flatMap((registration) => {
+        const nextRegistration = registrationsById.get(registration.registrationId)
+        return nextRegistration ? [nextRegistration] : []
+      })
+
+      if (
+        nextSelectedRegistrations.length === currentSelectedRegistrations.length
+        && nextSelectedRegistrations.every(
+          (registration, index) => registration.registrationId === currentSelectedRegistrations[index]?.registrationId,
+        )
+      ) {
+        return currentSelectedRegistrations
+      }
+
+      return nextSelectedRegistrations
+    })
+  }, [flattened, participantLoading, setSelectedRegistrations])
+
+  useEffect(() => {
+    const nextColumnFilters = buildColumnFiltersFromSearch(search)
+
+    setColumnFilters((currentColumnFilters) => {
+      const currentSearch = buildSearchFromColumnFilters(currentColumnFilters)
+      const nextSearch = buildSearchFromColumnFilters(nextColumnFilters)
+
+      return isSameSearch(currentSearch, nextSearch) ? currentColumnFilters : nextColumnFilters
+    })
+  }, [search])
+
+  function createDraw(route: "/organizer/divisions" | "/organizer/divisions-double") {
+    navigate({ to: route });
+  }
 
    const table = useReactTable({
        data: flattened ?? [],
        columns,
-       state: { sorting },
+       state: { sorting, columnFilters, rowSelection },
        onSortingChange: setSorting,
+       onColumnFiltersChange: (updater) => {
+        setColumnFilters((currentColumnFilters) => {
+          const nextColumnFilters = functionalUpdate(updater, currentColumnFilters)
+          const nextSearch = buildSearchFromColumnFilters(nextColumnFilters)
+
+          if (!isSameSearch(search, nextSearch)) {
+            navigate({
+              to: "/tournament/organizer/manage-divisions/$id",
+              params: { id: tournamentId },
+              search: nextSearch,
+              replace: true,
+            })
+          }
+
+          return nextColumnFilters
+        })
+       },
+       onRowSelectionChange: (updater) => {
+        const nextRowSelection = functionalUpdate(updater, rowSelection)
+        const nextSelectedRegistrations = flattened.filter(
+          (registration) => nextRowSelection[String(registration.registrationId)],
+        )
+
+        setSelectedRegistrations(nextSelectedRegistrations)
+       },
+       getRowId: (row) => String(row.registrationId),
+       enableRowSelection: true,
        getCoreRowModel: getCoreRowModel(),
        getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
@@ -423,7 +596,7 @@ const fullNameColumn = table.getColumn("fullName")
           <div className="my-4 flex flex-wrap gap-3">
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-              disabled={table.getSelectedRowModel().rows.length === 0}
+              disabled={selectedRegistrations.length === 0}
               onClick={() => createDraw("/organizer/divisions")}
             >
               Create Single Elimination Draw
@@ -431,7 +604,7 @@ const fullNameColumn = table.getColumn("fullName")
 
             <button
               className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50"
-              disabled={table.getSelectedRowModel().rows.length === 0}
+              disabled={selectedRegistrations.length === 0}
               onClick={() => createDraw("/organizer/divisions-double")}
             >
               Create Double Elimination Draw
@@ -504,7 +677,7 @@ const fullNameColumn = table.getColumn("fullName")
         
       </div>
       <div className="mt-4 text-gray-400">
-        {table.getSelectedRowModel().rows.length} Selected Registrations
+        {selectedRegistrations.length} Selected Registrations
         
       </div>
        <div className="mt-4 text-gray-400">

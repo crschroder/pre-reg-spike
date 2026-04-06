@@ -2,6 +2,7 @@ import { atom } from "jotai";
 
 export type DrawRegistration = {
 	id: number;
+	registrationId: number;
 	firstName: string;
 	lastName: string;
 	participantGender: string;
