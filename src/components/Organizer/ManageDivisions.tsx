@@ -158,6 +158,226 @@ const eventNumberCollator = new Intl.Collator(undefined, {
   numeric: true,
   sensitivity: "base",
 })
+
+const textCollator = new Intl.Collator(undefined, {
+  sensitivity: "base",
+})
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+}
+
+function buildSelectedListPrintDocumentMarkup(
+  registrations: DrawRegistration[],
+  tournamentId: number,
+) {
+  const sortedRegistrations = [...registrations].sort((left, right) => {
+    const leftEvent = left.eventDisplayName || left.eventName || ""
+    const rightEvent = right.eventDisplayName || right.eventName || ""
+    const eventCompare = eventNumberCollator.compare(leftEvent, rightEvent)
+
+    if (eventCompare !== 0) {
+      return eventCompare
+    }
+
+    const lastNameCompare = textCollator.compare(left.lastName, right.lastName)
+    if (lastNameCompare !== 0) {
+      return lastNameCompare
+    }
+
+    return textCollator.compare(left.firstName, right.firstName)
+  })
+
+  const rowsMarkup = sortedRegistrations
+    .map((registration) => {
+      const fullName = `${registration.firstName} ${registration.lastName}`
+      const eventNumber = registration.eventDisplayName || registration.eventName || ""
+
+      return `<tr>
+        <td>${escapeHtml(fullName)}</td>
+        <td>${escapeHtml(eventNumber)}</td>
+        <td>${escapeHtml(registration.participantRank)}</td>
+        <td class="checkbox-cell"><span class="checkbox-box"></span></td>
+      </tr>`
+    })
+    .join("")
+
+  return `
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Selected Registration List</title>
+        <style>
+          @page {
+            size: letter portrait;
+            margin: 0.5in;
+          }
+
+          html,
+          body {
+            margin: 0;
+            padding: 0;
+            background: #f3f4f6;
+            color: #111827;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+              "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+            padding: 24px;
+            box-sizing: border-box;
+          }
+
+          .print-preview-toolbar {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            gap: 12px;
+            z-index: 10;
+          }
+
+          .print-preview-toolbar button {
+            border: 1px solid #111827;
+            background: white;
+            color: #111827;
+            padding: 10px 14px;
+            font-size: 14px;
+            line-height: 1;
+            border-radius: 6px;
+            cursor: pointer;
+          }
+
+          .selected-list-print-root {
+            max-width: 8in;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+            padding: 24px;
+            box-sizing: border-box;
+          }
+
+          .selected-list-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+          }
+
+          .selected-list-header h1 {
+            margin: 0;
+            font-size: 24px;
+            line-height: 1.2;
+          }
+
+          .selected-list-header p,
+          .selected-list-header div {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.4;
+          }
+
+          .selected-list-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+          }
+
+          .selected-list-table th,
+          .selected-list-table td {
+            border: 1px solid #111827;
+            padding: 10px 12px;
+            font-size: 14px;
+            text-align: left;
+            vertical-align: middle;
+          }
+
+          .selected-list-table th {
+            background: #e5e7eb;
+            font-weight: 700;
+          }
+
+          .selected-list-table tr {
+            page-break-inside: avoid;
+            break-inside: avoid-page;
+          }
+
+          .checkbox-cell {
+            width: 64px;
+            text-align: center;
+          }
+
+          .checkbox-box {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #111827;
+            box-sizing: border-box;
+          }
+
+          @media print {
+            html,
+            body {
+              background: white;
+              padding: 0;
+            }
+
+            .print-preview-toolbar {
+              display: none !important;
+            }
+
+            .selected-list-print-root {
+              max-width: none;
+              margin: 0;
+              box-shadow: none;
+              padding: 0;
+            }
+
+            thead {
+              display: table-header-group;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-preview-toolbar">
+          <button type="button" onclick="window.print()">Print / Save PDF</button>
+        </div>
+        <div class="selected-list-print-root">
+          <div class="selected-list-header">
+            <div>
+              <h1>Selected Registration Checklist</h1>
+              <p>Tournament ID: ${tournamentId}</p>
+            </div>
+            <div style="text-align:right;">
+              <div>${sortedRegistrations.length} selected</div>
+            </div>
+          </div>
+          <table class="selected-list-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Event Number</th>
+                <th>Rank</th>
+                <th>Present</th>
+              </tr>
+            </thead>
+            <tbody>${rowsMarkup}</tbody>
+          </table>
+        </div>
+      </body>
+    </html>
+  `
+}
 // declare module '@tanstack/react-table' {
 //   interface FilterFns {
 //     fuzzy: FilterFn<unknown>
@@ -423,6 +643,21 @@ export function ManageDivisions({
     navigate({ to: route });
   }
 
+  function handlePrintSelectedList() {
+    if (selectedRegistrations.length === 0) {
+      return
+    }
+
+    const printMarkup = buildSelectedListPrintDocumentMarkup(selectedRegistrations, tournamentId)
+    const printBlob = new Blob([printMarkup], { type: "text/html" })
+    const printUrl = URL.createObjectURL(printBlob)
+    const printWindow = window.open(printUrl, "_blank")
+
+    if (!printWindow) {
+      URL.revokeObjectURL(printUrl)
+    }
+  }
+
    const table = useReactTable({
        data: flattened ?? [],
        columns,
@@ -662,6 +897,14 @@ function onParticipantGenderChanged(value: string) {
           <div className="h-4" />
           {/* Button to set selected registrations and navigate */}
           <div className="my-4 flex flex-wrap gap-3">
+            <button
+              className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 disabled:opacity-50"
+              disabled={selectedRegistrations.length === 0}
+              onClick={handlePrintSelectedList}
+            >
+              Print Selected List
+            </button>
+
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
               disabled={selectedRegistrations.length === 0}
