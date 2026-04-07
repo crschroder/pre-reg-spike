@@ -15,7 +15,8 @@ export function ReactSelectMulti({ options, selected = [], onChange, placeholder
   return (
     <div className="min-w-[220px]">
       <Select
-        options={opts}   
+        options={opts}
+        value={value}
         onChange={(v) => onChange(Array.isArray(v) ? v.map((x) => x.value) : [])}
         isMulti
         isClearable

@@ -1,9 +1,14 @@
 import React from "react";
 
+export type SegmentedButtonOption = {
+  label: string;
+  value: string;
+};
+
 interface SegmentedButtonProps {
-  value: number; // 0, 1, or 2
-  onChange: (value: number) => void;
-  labels: [string, string, string];
+  value: string;
+  onChange: (value: string) => void;
+  options: SegmentedButtonOption[];
   disabled?: boolean;
   className?: string;
 }
@@ -11,29 +16,33 @@ interface SegmentedButtonProps {
 export const SegmentedButton: React.FC<SegmentedButtonProps> = ({
   value,
   onChange,
-  labels,
+  options,
   disabled = false,
   className = "",
 }) => {
+  if (options.length === 0) {
+    return null;
+  }
+
   return (
     <div className={`inline-flex rounded-full bg-gray-800 border border-gray-700 overflow-hidden ${className}`}>
-      {labels.map((label, idx) => (
+      {options.map((option, idx) => (
         <button
-          key={label}
+          key={option.value}
           type="button"
           className={
             `px-4 py-2 text-sm font-medium focus:outline-none transition-colors ` +
-            (value === idx
+            (value === option.value
               ? "bg-emerald-600 text-white "
               : "bg-gray-800 text-gray-300 hover:bg-gray-700 ") +
             (idx === 0 ? "rounded-l-full " : "") +
-            (idx === 2 ? "rounded-r-full " : "")
+            (idx === options.length - 1 ? "rounded-r-full " : "")
           }
-          onClick={() => !disabled && onChange(idx)}
+          onClick={() => !disabled && onChange(option.value)}
           disabled={disabled}
-          aria-pressed={value === idx}
+          aria-pressed={value === option.value}
         >
-          {label}
+          {option.label}
         </button>
       ))}
     </div>

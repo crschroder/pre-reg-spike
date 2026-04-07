@@ -34,7 +34,7 @@ import { ReactSelectMulti } from "../Custom/ReactSelectMulti";
 import { normalizeName } from "@/helpers/stringHelpers";
 import { rankItem } from '@tanstack/match-sorter-utils';
 import type { FilterFn } from '@tanstack/react-table';
-import { IndeterminateCheckbox, PillButton } from "@/components/Custom/";
+import { IndeterminateCheckbox, PillButton, SegmentedButton } from "@/components/Custom/";
 
 
 export type RegistrationRow = {
@@ -44,6 +44,7 @@ export type RegistrationRow = {
   lastName: string
   participantGender: string
   participantRank: string
+  participantRankOrder: number
   isPaid: boolean
   checkedIn: boolean
 
@@ -152,6 +153,11 @@ const buildRowSelectionFromRegistrations = (registrations: DrawRegistration[]): 
 
   return rowSelection
 }
+
+const eventNumberCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: "base",
+})
 // declare module '@tanstack/react-table' {
 //   interface FilterFns {
 //     fuzzy: FilterFn<unknown>
@@ -262,6 +268,8 @@ export function ManageDivisions({
         {
           header: 'Rank',
           accessorKey: 'participantRank',
+          sortingFn: (rowA, rowB) =>
+            rowA.original.participantRankOrder - rowB.original.participantRankOrder,
           filterFn: (row, columnId, filterValue) => {
             if (!filterValue || filterValue.length === 0) return true
             return filterValue.includes(row.getValue(columnId))
@@ -340,10 +348,13 @@ export function ManageDivisions({
 
       participantGender: p.gender.description,
       participantRank: p.rank.beltColor,
+      participantRankOrder: p.rank.sortOrder,
       isPaid: p.paid,
       checkedIn: p.checkedIn,
 
-      divisionGender: r.tournamentEventDivision.eventGender.description,
+      divisionGender: r.tournamentEventDivision.eventGender.description?.toLowerCase() === "both"
+    ? "Coed"
+    : r.tournamentEventDivision.eventGender.description,
       divisionName: normalizeName(r.tournamentEventDivision.division.divisionType.name),
       divisionRank: r.tournamentEventDivision.division.beltRank.beltColor,
       divisionBeltOrder: r.tournamentEventDivision.division.beltRank.sortOrder,
@@ -356,9 +367,12 @@ export function ManageDivisions({
   )
 }, [registrations])
 
+
+
+
   const eventOptions = useMemo(() => {
     if (!flattened) return [] as string[];
-    return Array.from(new Set(flattened.map((r: any) => r.eventDisplayName))).sort((a: string, b: string) => a.localeCompare(b));
+    return Array.from(new Set(flattened.map((r: any) => r.eventDisplayName))).sort((a: string, b: string) => eventNumberCollator.compare(a, b));
   }, [flattened]);
   const rowSelection = useMemo(
     () => buildRowSelectionFromRegistrations(selectedRegistrations),
@@ -451,14 +465,49 @@ export function ManageDivisions({
     });   
 
 
-const fullNameColumn = table.getColumn("fullName")
+const fullNameColumn = table.getColumn("fullName");
+const eventNameColumn = table.getColumn("eventName");
+const eventSegmentValue = (() => {
+  const filterValue = eventNameColumn?.getFilterValue();
+
+  if (Array.isArray(filterValue) && filterValue.length === 1 && typeof filterValue[0] === "string") {
+    return filterValue[0];
+  }
+
+  return "all";
+})();
+
+function onEventChanged(value: string) {
+  if (!eventNameColumn) {
+    return;
+  }
+  eventNameColumn.setFilterValue(value === "all" ? undefined : [value]);
+}
+
+const participantGenderColumn = table.getColumn("participantGender");
+const participantGenderSegmentValue = (() => {  
+  const filterValue = participantGenderColumn?.getFilterValue();
+
+  if (Array.isArray(filterValue) && filterValue.length === 1 && typeof filterValue[0] === "string") {
+    return filterValue[0];
+  }
+
+  return "all";
+})();
+
+function onParticipantGenderChanged(value: string) {
+  if (!participantGenderColumn) {
+    return;
+  }
+  participantGenderColumn.setFilterValue(value === "all" ? undefined : [value]);
+}
 
   return (
     <div className="min-h-screen bg-gray-900 p-6">
     <div>
       <h2 className="text-3xl font-semibold mb-6 text-white">Create Divisions for Tournament ID: {tournamentId}</h2>
-      <div className="mb-4 flex flex-wrap gap-4 text-white" >
-        <div className="flex items-center gap-2">
+      <div className="mb-4 flex flex-wrap gap-4 items-center text-white" >
+        {/* <div className="flex items-center gap-2"> */}
           <Filter column={fullNameColumn!} placeholder="Search full name" />
             <ReactSelectMulti
             options={eventOptions}
@@ -466,7 +515,26 @@ const fullNameColumn = table.getColumn("fullName")
             onChange={(vals) => table.getColumn("eventDisplayName")?.setFilterValue(vals)}
             placeholder="Event numbers"
             />
-        </div>
+        {/* </div> */}
+        <SegmentedButton 
+        value={eventSegmentValue}
+        onChange={onEventChanged}
+        options={[
+          { label: "All", value: "all" },
+          { label: "Kata", value: "Kata" },
+          { label: "Kumite", value: "Kumite" },
+          { label: "Kobudo", value: "Kobudo" },
+        ]}
+        />
+        <SegmentedButton 
+        value={participantGenderSegmentValue}
+        onChange={onParticipantGenderChanged}
+        options={[
+          { label: "All", value: "all" },
+          { label: "Male", value: "Male" },
+          { label: "Female", value: "Female" },
+        ]}
+        />
         <FilterBar table={table} />
 </div>
 
@@ -722,16 +790,10 @@ function FilterBar({ table }: FilterBarProps) {
             {table.getColumn("divisionName") && (
               <CheckboxFilter
                 column={table.getColumn("divisionName")!}
-                options={['Junior', 'Adult', 'Masters', 'Senior', 'Pee-Wee', 'Youth']}
+                options={['Pee-Wee','Junior',  'Youth', 'Adult', 'Masters', 'Senior', 'Kids Weapons', 'Adult Weapons']}
               />
             )}
 
-            {table.getColumn("eventName") && (
-              <CheckboxFilter
-                column={table.getColumn("eventName")!}
-                options={['Kumite', 'Kata','Kobudo']}
-              />
-            )}
 
             {table.getColumn("participantRank") && (
               <CheckboxFilter
@@ -740,12 +802,7 @@ function FilterBar({ table }: FilterBarProps) {
               />
             )}
 
-            {table.getColumn("participantGender") && (
-              <CheckboxFilter
-                column={table.getColumn("participantGender")!}
-                options={['Male', 'Female', 'Coed']}
-              />
-            )}
+            
               {table.getColumn("checkedIn") && (
               <CheckboxFilter
                 column={table.getColumn("checkedIn")!}

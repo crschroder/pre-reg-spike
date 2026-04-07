@@ -483,29 +483,27 @@ type FilterBarProps = {
 function FilterBar({ table }: FilterBarProps) {
   const nameColumn = table.getColumn("fullName");
   const columnFilterValue = nameColumn?.getFilterValue()
-  const [paidFilterValue, setPaidFilterValue] = useState(0); // 0 = all, 1 = not paid, 2 = paid
-  const [checkedInFilterValue, setCheckedInFilterValue] = useState(0); // 0 = all, 1 = not checked in, 2 = checked in
+  const [paidFilterValue, setPaidFilterValue] = useState("all");
+  const [checkedInFilterValue, setCheckedInFilterValue] = useState("all");
 
-  const onPaidFilterChange = (value: number) => {
-    // 0 = all, 1 = not paid, 2 = paid
-    if (value === 0) {
+  const onPaidFilterChange = (value: string) => {
+    if (value === "all") {
       table.setColumnFilters(old => old.filter(f => f.id !== "paid"))
-    } else if (value === 1) {
+    } else if (value === "unpaid") {
       table.setColumnFilters(old => [...old.filter(f => f.id !== "paid"), { id: "paid", value: false }])
-    } else if (value === 2) {
+    } else if (value === "paid") {
       table.setColumnFilters(old => [...old.filter(f => f.id !== "paid"), { id: "paid", value: true }])
     }
     setPaidFilterValue(value);
 
   }
 
-  const onCheckedInFilterChange = (value: number) => {
-    // 0 = all, 1 = not checked in, 2 = checked in
-    if (value === 0) {
+  const onCheckedInFilterChange = (value: string) => {
+    if (value === "all") {
       table.setColumnFilters(old => old.filter(f => f.id !== "checkedIn"))
-    } else if (value === 1) {
+    } else if (value === "notCheckedIn") {
       table.setColumnFilters(old => [...old.filter(f => f.id !== "checkedIn"), { id: "checkedIn", value: false }])
-    } else if (value === 2) {
+    } else if (value === "checkedIn") {
       table.setColumnFilters(old => [...old.filter(f => f.id !== "checkedIn"), { id: "checkedIn", value: true }])
     }
     setCheckedInFilterValue(value);
@@ -529,13 +527,21 @@ function FilterBar({ table }: FilterBarProps) {
     <SegmentedButton
       value={paidFilterValue}
       onChange={onPaidFilterChange}
-      labels={["All","Not Paid","Paid"]}
+      options={[
+        { label: "All", value: "all" },
+        { label: "Not Paid", value: "unpaid" },
+        { label: "Paid", value: "paid" },
+      ]}
       
     />
     <SegmentedButton
       value={checkedInFilterValue}
       onChange={onCheckedInFilterChange}
-      labels={["All","Not Checked In","Checked In"]}
+      options={[
+        { label: "All", value: "all" },
+        { label: "Not Checked In", value: "notCheckedIn" },
+        { label: "Checked In", value: "checkedIn" },
+      ]}
     />
     </div>
   );
