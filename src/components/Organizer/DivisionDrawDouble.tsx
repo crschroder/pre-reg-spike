@@ -1592,8 +1592,8 @@ export function DivisionDrawDouble() {
     const registrations = useAtomValue(selectedRegistrationsAtom) ?? [];
     const renderModel = useMemo(() => buildDoubleRenderModel(registrations), [registrations]);
     const titleRegistration = registrations[0];
-    const divisionTitle = titleRegistration?.divisionName || "Division";
-    const eventTitle = titleRegistration?.eventDisplayName || titleRegistration?.eventName || "";
+    const divisionTitle = Array.from(new Set(registrations.map((r) => r.divisionName))).join(" / ");//titleRegistration?.divisionName || "Division";
+    const eventTitle = Array.from(new Set(registrations.map((r) => r.eventDisplayName || r.eventName))).sort().join(" / ");//titleRegistration?.eventDisplayName || titleRegistration?.eventName || "";
     const drawMetaTitle = buildDrawMetaTitle(divisionTitle, eventTitle);
 
     function handlePrint() {

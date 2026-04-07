@@ -734,6 +734,10 @@ export function DivisionDraw() {
   const registrations = useAtomValue(selectedRegistrationsAtom) ?? [];
   const renderModel = useMemo(() => buildTemplateRenderModel(registrations), [registrations]);
   const titleRegistration = registrations[0];
+  const divisionNames = Array.from(new Set(registrations.map((r) => r.divisionName))).join(" / ");
+  const displayEventNames = Array.from(new Set(registrations.map((r) => r.eventDisplayName || r.eventName))).join(" / ");
+
+
   const matchesByRound = useMemo(() => {
     const grouped = new Map<number, RenderedMatch[]>();
 
@@ -750,8 +754,8 @@ export function DivisionDraw() {
   function handlePrint() {
     const printMarkup = buildPrintDocumentMarkup(
       renderModel,
-      titleRegistration?.divisionName || "Division",
-      titleRegistration?.eventDisplayName || titleRegistration?.eventName || "",
+      divisionNames || "Division",
+      displayEventNames || "",
       registrations.length
     );
     const printBlob = new Blob([printMarkup], { type: "text/html" });
@@ -938,10 +942,10 @@ export function DivisionDraw() {
           <div className="division-draw-meta mb-3 flex items-start justify-between gap-4 print:mb-1">
             <div>
               <h3 className="text-xl font-semibold">
-                {titleRegistration?.divisionName || "Division"}
+                {divisionNames || "Division"}
               </h3>
               <p className="text-sm text-gray-300 print:text-gray-600">
-                {titleRegistration?.eventDisplayName || titleRegistration?.eventName || ""}
+                {displayEventNames || titleRegistration?.eventName || ""}
               </p>
             </div>
 
