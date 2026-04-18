@@ -202,11 +202,15 @@ app.get(
       }
 
       const now = new Date();
+      const upcomingCutoff = new Date(now);
+      upcomingCutoff.setDate(upcomingCutoff.getDate() -3);
+
+
       let where: any = {};
 
       switch (status) {
         case TournamentStatus.Upcoming:
-         where = {date: { gt: now }};
+         where = {date: { gt: upcomingCutoff }};
           break;
 
         case TournamentStatus.Past:
