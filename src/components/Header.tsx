@@ -48,7 +48,7 @@ export default function Header() {
           </h1>
         </div>
 
-        <div className="text-xs text-gray-400 whitespace-nowrap">
+        <div className="hidden md:block text-xs text-gray-400 whitespace-nowrap">
           Build: {buildLabel}
         </div>
       </header>
