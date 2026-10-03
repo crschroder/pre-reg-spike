@@ -13,6 +13,7 @@
     "start": "vite preview --host 0.0.0.0 --port 8080"
   },
   "dependencies": {
+    "@auth0/auth0-react": "^2.27.0",
     "@faker-js/faker": "^10.0.0",
     "@prisma/adapter-pg": "7.3.0",
     "@prisma/client": "7.3.0",

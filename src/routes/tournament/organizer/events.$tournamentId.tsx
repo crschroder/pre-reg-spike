@@ -1,5 +1,6 @@
-import CreateEvents from '@/components/Create/CreateEvents';
+import CreateEvents from '@/components/Create/CreateEvents'
 import { createFileRoute } from '@tanstack/react-router'
+import { RequireAllowedEmail } from '@/auth/RequireAllowedEmail'
 
 export const Route = createFileRoute('/tournament/organizer/events/$tournamentId')({
   params: {
@@ -10,11 +11,11 @@ export const Route = createFileRoute('/tournament/organizer/events/$tournamentId
       tournamentId: String(params.tournamentId),
     }),
   },
-  component: EventsCreatedPage,
+  component: RequireAllowedEmail(EventsCreatedPage),
 })
 
 function EventsCreatedPage() {
-  console.log("Rendering EventsCreatedPage");
-  const { tournamentId } = Route.useParams();
-  return <CreateEvents tournamentId={tournamentId} />;  
+  console.log('Rendering EventsCreatedPage')
+  const { tournamentId } = Route.useParams()
+  return <CreateEvents tournamentId={tournamentId} />
 }

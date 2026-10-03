@@ -1,3 +1,4 @@
+import { useAuth0 } from '@auth0/auth0-react'
 import { createFileRoute } from '@tanstack/react-router'
 import {
   Zap,
@@ -11,6 +12,8 @@ import {
 export const Route = createFileRoute('/')({ component: App })
 
 function App() {
+  const { isAuthenticated, loginWithRedirect, logout, user, isLoading } = useAuth0()
+
   const features = [
     {
       icon: <Zap className="w-12 h-12 text-cyan-400" />,
@@ -75,15 +78,36 @@ function App() {
             The purpose of this application is to move the pre-registration process for our tournaments online. It is built using the latest web technologies, including React, TypeScript, and Tailwind CSS, to provide a modern and responsive user experience.
           </p>
           <div className="flex flex-col items-center gap-4">
-            {/* <a
-              href="https://tanstack.com/start"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-8 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-cyan-500/50"
-            >
-              Documentation
-            </a> */}
-            
+            {isLoading ? (
+              <div className="text-gray-300">Loading…</div>
+            ) : isAuthenticated ? (
+              <>
+                <div className="text-lg text-cyan-300">
+                  Signed in as {user?.name ?? user?.email ?? 'member'}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+                  className="px-8 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-colors"
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  loginWithRedirect({
+                    authorizationParams: {
+                      screen_hint: 'signup',
+                    },
+                  })
+                }
+                className="px-8 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-cyan-500/50"
+              >
+                Sign up / log in
+              </button>
+            )}
           </div>
         </div>
       </section>
