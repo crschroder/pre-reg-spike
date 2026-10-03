@@ -1,13 +1,14 @@
-import { getTournamentRegistrations } from '@/api/tournaments';
-import { useQuery } from '@tanstack/react-query';
+import { getTournamentRegistrations } from '@/api/tournaments'
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMemo } from 'react';
-import { ParticipantsPivotTables } from '@/components/Organizer/ParticipantsPivotTables';
+import { useMemo } from 'react'
+import { ParticipantsPivotTables } from '@/components/Organizer/ParticipantsPivotTables'
+import { RequireAllowedEmail } from '@/auth/RequireAllowedEmail'
 
 export const Route = createFileRoute(
   '/tournament/organizer/registrationStats/$id',
 )({
-    params: {
+  params: {
     parse: (params) => ({
       id: Number(params.id),
     }),
@@ -15,7 +16,7 @@ export const Route = createFileRoute(
       id: String(params.id),
     }),
   },
-  component: RouteComponent,
+  component: RequireAllowedEmail(RouteComponent),
 })
 
 function RouteComponent() {

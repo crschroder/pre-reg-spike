@@ -24,10 +24,35 @@ model User {
   id           Int           @id @default(autoincrement())
   email        String        @unique
   role         String
+  userRoles    UserRoles[]
   tournaments  Tournament[]
   participants Participant[]
 
   @@map("user")
+}
+
+model Roles {
+  id           Int         @id @default(autoincrement())
+  name         String      @unique
+  description  String
+  isSystemRole Boolean     @map("is_system_role")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  userRoles    UserRoles[]
+
+  @@map("roles")
+}
+
+model UserRoles {
+  userId    Int      @map("user_id")
+  roleId    Int      @map("role_id")
+  user      User     @relation(fields: [userId], references: [id])
+  role      Roles    @relation(fields: [roleId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([userId, roleId])
+  @@map("user_roles")
 }
 
 model Tournament {

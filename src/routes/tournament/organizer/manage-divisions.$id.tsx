@@ -1,8 +1,9 @@
 import {
   ManageDivisions,
   type ManageDivisionsSearch,
-} from '@/components/Organizer/ManageDivisions';
+} from '@/components/Organizer/ManageDivisions'
 import { createFileRoute } from '@tanstack/react-router'
+import { RequireAllowedEmail } from '@/auth/RequireAllowedEmail'
 
 const toStringArray = (value: unknown): string[] | undefined => {
   if (Array.isArray(value)) {
@@ -77,7 +78,7 @@ export const Route = createFileRoute(
     checkedIn: toBooleanArray(search.checkedIn),
     isPaid: toBooleanArray(search.isPaid),
   }),
-  component: RouteComponent,
+  component: RequireAllowedEmail(RouteComponent),
 })
 
 function RouteComponent() {

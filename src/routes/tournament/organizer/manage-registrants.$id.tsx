@@ -1,14 +1,14 @@
-import { ParticipantSummary } from '@/components/Organizer/ParticipantSummmary';
+import { ParticipantSummary } from '@/components/Organizer/ParticipantSummmary'
 import { createFileRoute } from '@tanstack/react-router'
+import { RequireAllowedEmail } from '@/auth/RequireAllowedEmail'
 
 export const Route = createFileRoute(
   '/tournament/organizer/manage-registrants/$id',
 )({
-  
-  component: RouteComponent,
+  component: RequireAllowedEmail(RouteComponent),
 })
 
 function RouteComponent() {
- const { id } = Route.useParams();
-   return <ParticipantSummary tournamentId={Number(id)} />;
+  const { id } = Route.useParams()
+  return <ParticipantSummary tournamentId={Number(id)} />
 }
