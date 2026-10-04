@@ -1,4 +1,5 @@
 export * from "./Accordian";
+export * from "./AppModal";
 export * from "./CheckboxFilter";
 export * from "./CheckboxFilterPopover";
 //export * from "./ComboBox";
