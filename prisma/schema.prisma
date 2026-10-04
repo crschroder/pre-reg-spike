@@ -62,6 +62,7 @@ model Tournament {
   location     String?
   organizerId  Int               @map("organizer_id")
   organizer    User              @relation(fields: [organizerId], references: [id])
+  etransferEmail String?          @map("etransfer_email")
   events       TournamentEvent[]
   participants Participant[]
 

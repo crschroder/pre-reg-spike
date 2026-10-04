@@ -259,7 +259,7 @@ app.get('/tournament/api/tournment/events', async (_req: Request, res: Response,
 // Create a new tournament
 app.post('/api/tournaments', async (req, res, next) => {
   try {
-    const { name, date, location, organizerId } = req.body;
+    const { name, date, location, organizerId, etransferEmail } = req.body;
 
       const result = safeParse(TournamentSchema, req.body);
 
@@ -284,7 +284,8 @@ app.post('/api/tournaments', async (req, res, next) => {
         name,
         date: new Date(date),
         location,
-        organizerId
+        organizerId,
+        etransferEmail,
       }
     });
 
@@ -407,7 +408,7 @@ app.put('/api/tournaments/:id', async (req, res, next) => {
     const { id } = req.params;
     const tournamentId = Number(id);
     
-    const { name, date, location, organizerId } = req.body;
+    const { name, date, location, organizerId, etransferEmail } = req.body;
 
     // ✅ Validate input
     const result = safeParse(TournamentSchema, req.body);

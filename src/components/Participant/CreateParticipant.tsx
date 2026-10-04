@@ -11,10 +11,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { safeParse } from "valibot";
 import { useEffect, useRef, useState } from "react";
-import type { ChangeEvent, KeyboardEvent } from "react";
+import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 
 import { ParticipantEmailSchema } from "../../../validations";
 import { normalizeName } from "@/helpers/stringHelpers";
+import { AppModal } from "@/components/Custom/AppModal";
 
 type Props = {
   tournamentId: number;
@@ -189,12 +190,24 @@ function InlineSpinner({ className = "" }: { className?: string }) {
   );
 }
 
+type ModalState = {
+  isOpen: boolean;
+  title: string;
+  content: ReactNode;
+};
+
 export function CreateParticipant({ tournamentId, participantId, mode }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEdit = Boolean(participantId);
 
   const [waiverAccepted, setWaiverAccepted] = useState(false);
+  const [copiedEtransferEmail, setCopiedEtransferEmail] = useState(false);
+  const [modalState, setModalState] = useState<ModalState>({
+    isOpen: false,
+    title: "",
+    content: null,
+  });
 
   const [formData, setFormData] = useState<CreateRegistrationPayload>({
     email: "",
@@ -387,8 +400,18 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
   const waiverChecked = isEdit ? true : waiverAccepted;
   const shouldShowWaiverError = !isEdit && submitAttempted && !waiverAccepted;
 
+  const isModalOpen = modalState.isOpen;
+
+  const closeModal = () => {
+    setModalState({ isOpen: false, title: "", content: null });
+  };
+
+  const openModal = (title: string, content: ReactNode) => {
+    setModalState({ isOpen: true, title, content });
+  };
+
   useEffect(() => {
-    if (!isSaving) {
+    if (!isSaving && !isModalOpen) {
       return;
     }
 
@@ -398,7 +421,25 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [isSaving]);
+  }, [isModalOpen, isSaving]);
+
+  useEffect(() => {
+    if (!isModalOpen) {
+      return;
+    }
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeModal();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscapeKey);
+
+    return () => {
+      window.removeEventListener("keydown", handleEscapeKey);
+    };
+  }, [isModalOpen]);
 
   const registeredEvents = participantData?.registeredEvents ?? [];
 
@@ -445,6 +486,77 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
     });
   };
 
+  const onCopyEtransferEmail = async () => {
+    const etransferEmail = data?.etransferEmail?.trim();
+    if (!etransferEmail) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(etransferEmail);
+      setCopiedEtransferEmail(true);
+      window.setTimeout(() => setCopiedEtransferEmail(false), 2000);
+    } catch (error) {
+      console.error("Unable to copy e-transfer email", error);
+    }
+  };
+
+  const onOpenFeeChart = () => {
+    openModal(
+      "Fee Chart",
+      <div className="space-y-4">
+        <p className="text-gray-100">Fees are as follows:</p>
+        <div className="rounded border border-gray-700 p-3">
+          <div className="font-semibold text-white">Before October 20</div>
+          <ul className="mt-2 list-disc pl-5 text-gray-200 space-y-1">
+            <li>$45 per person</li>
+            <li>Family: $75 for 2 members</li>
+            <li>Additional family members: $25 each</li>
+          </ul>
+        </div>
+        <div className="rounded border border-gray-700 p-3">
+          <div className="font-semibold text-white">On or after October 22</div>
+          <ul className="mt-2 list-disc pl-5 text-gray-200 space-y-1">
+            <li>$60 per person</li>
+            <li>Family: $90 for 2 members</li>
+            <li>Additional family members: $30 each</li>
+          </ul>
+        </div>
+      </div>
+    );
+  };
+
+  const onOpenFeeExample = () => {
+    openModal(
+      "Fee Chart",
+      <div className="space-y-4">
+        <p className="text-gray-100">Fees are as follows:</p>
+        <div className="rounded border border-gray-700 p-3">
+          <div className="font-semibold text-white">Before October 20</div>
+          <ul className="mt-2 list-disc pl-5 text-gray-200 space-y-1">
+            <li>1 Member: $45</li>
+            <li>2 Family Members: $75</li>
+            <li>3 Family Members: $100</li>
+            <li>4 Family Members: $125</li>
+            <li>5 Family Members: $150</li>
+          </ul>
+        </div>
+        <div className="rounded border border-gray-700 p-3">
+          <div className="font-semibold text-white">On or after October 22</div>
+          <ul className="mt-2 list-disc pl-5 text-gray-200 space-y-1">
+            <li>1 Member: $60</li>
+            <li>2 Family Members: $90</li>
+            <li>3 Family Members: $120</li>
+            <li>4 Family Members: $150</li>
+            <li>5 Family Members: $180</li>
+          </ul>
+        </div>
+      </div>
+    );
+  };
+
+
+
   return (
     <div className="min-h-screen bg-gray-900 p-6 pb-24 md:pb-6 text-white flex flex-col items-center">
       
@@ -476,12 +588,44 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
               : `Register for tournament: ${data?.name ?? ""}`}
         </h1>
         {isEdit && mode === "participant" && (
-          <div className=" mb-6 text-s text-gray-400">
-            You are in update mode. Make changes to the participant details and click "Update" to save, or click or tap "Create New Registration" to start a new registration.
-          </div>
-        )}
+            <div className="mb-6 text-sm text-gray-200">
+              <p>Please review your form and make any necessary changes.</p>
+              <p className="mt-2">
+                Click <strong>Update</strong> to save your changes, or click or tap{" "}
+                <strong>Create New Registration</strong> to start a new registration.
+                The buttons are at the bottom.
+              </p>
+              <p className="mt-4">
+                Once you have completed all registrations, payment can be e-transferred to{" "}
+                <strong>{data?.etransferEmail ?? ""}</strong>
+                <button
+                  type="button"
+                  onClick={onCopyEtransferEmail}
+                  disabled={!data?.etransferEmail}
+                  className="ml-2 inline-flex items-center rounded border border-gray-500 px-2 py-0.5 text-[0.55rem] text-gray-200 transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {copiedEtransferEmail ? "Copied" : "Copy"}
+                </button>
+                
+              </p>
+              <p className="mt-4 text-sm text-gray-200">
+                Please include all the participants' names in the e-transfer message.
+              </p>
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={onOpenFeeExample}
+                  className="rounded border border-gray-500 px-2 py-1 text-xs text-gray-200 transition hover:bg-gray-800"
+                >
+                  View Fees
+                </button>
+              </div>
+            </div>
+          )}
          {isEdit && mode === "organizer" && (
-          <div className=" mb-6 text-s text-gray-400">
+          <div className=" mb-6 text-gray-100  whitespace-pre-line">
+            {`Please review your form and make any necessary changes.\nClick "Update" to save your changes or "Back to Participants" to return to the participants list.`}
+            
             You are in update mode. Make changes to the participant details and click "Update" to save, or click or tap "Back to Participants" to return to the participants list.
           </div>
         )}
@@ -762,7 +906,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
         <div className="p-4 bg-gray-800 rounded-md border border-gray-700">
           <RequiredLabel>Waiver</RequiredLabel>
           <div className="mt-2 text-sm text-gray-200 whitespace-pre-line">
-            {`By submitting this digital form, I acknowledge and agree to the following:\n\nI, the undersigned participant, and if I am under the age of majority, my parent or legal guardian, hereby consent to participate in the 39th Annual Shito‑Ryu Karate‑Do Kyokai Championships. In consideration for being permitted to take part in this event, I hereby release, hold harmless, and indemnify the event organizers, officers, employees, members, instructors, volunteers, and students—whether individually or collectively—from any and all claims, demands, or causes of action of any kind.\n\nThis includes, but is not limited to, claims arising from accident, illness, injury, or death, whether occurring to myself or any other person, and whether resulting directly or indirectly from my participation in this event.\n\nI understand that by completing this digital waiver, my electronic signature has the same legal effect as a handwritten signature.`}
+            {`By submitting this digital form, I acknowledge and agree to the following:\n\nI, the undersigned participant, and if I am under the age of majority, my parent or legal guardian, hereby consent to participate in the ${data?.name ?? ""}. In consideration for being permitted to take part in this event, I hereby release, hold harmless, and indemnify the event organizers, officers, employees, members, instructors, volunteers, and students—whether individually or collectively—from any and all claims, demands, or causes of action of any kind.\n\nThis includes, but is not limited to, claims arising from accident, illness, injury, or death, whether occurring to myself or any other person, and whether resulting directly or indirectly from my participation in this event.\n\nI understand that by completing this digital waiver, my electronic signature has the same legal effect as a handwritten signature.`}
           </div>
 
           <div
@@ -789,6 +933,14 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
           />
         </div>
       </div>
+
+      <AppModal
+        isOpen={modalState.isOpen}
+        title={modalState.title}
+        onClose={closeModal}
+      >
+        {modalState.content}
+      </AppModal>
 
       {/* Desktop/tablet actions (md and up). Hidden on mobile. */}
       <div className="mt-8 hidden md:flex gap-4 justify-center">
@@ -955,7 +1107,7 @@ export const DojoAutocomplete = ({
     onChange({ id: OTHER_DOJO_ID, freeText: event.target.value });
   };
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (!showDropdown && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
       setShowDropdown(true);
       setHighlighted(0);

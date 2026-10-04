@@ -24,4 +24,5 @@ export interface TournamentInput {
   date: string;
   location: string;
   organizerId: number;
+  etransferEmail: string;
 }

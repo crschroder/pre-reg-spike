@@ -66,6 +66,7 @@ export default function CreateTournament ({tournamentId}:Props) {
     date: "",
     location: "",
     organizerId: 1,
+    etransferEmail: "",
   });
 
       // Prefill when editing
@@ -76,6 +77,7 @@ export default function CreateTournament ({tournamentId}:Props) {
         date: data.date.slice(0, 10),
         location: data.location,
         organizerId: data.organizerId,
+        etransferEmail: data.etransferEmail,
       });
     }
   }, [data]);
@@ -190,6 +192,19 @@ export default function CreateTournament ({tournamentId}:Props) {
             className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 
                        focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Enter tournament location"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-200 mb-1">
+            E-Transfer Email
+          </label>
+          <input
+            type="text"
+             value={form.etransferEmail}
+             onChange={(e) => setForm({ ...form, etransferEmail: e.target.value })}
+            className="w-full px-3 py-2 rounded-md bg-gray-800 text-white border border-gray-600 
+                       focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter e-transfer email"
           />
         </div>
         <div>
