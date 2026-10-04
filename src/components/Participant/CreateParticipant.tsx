@@ -532,7 +532,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
       <div className="space-y-4">
         <p className="text-gray-100">Fees are as follows:</p>
         <div className="rounded border border-gray-700 p-3">
-          <div className="font-semibold text-white">Before October 20</div>
+          <div className="font-semibold text-white">Before or on October 20</div>
           <ul className="mt-2 list-disc pl-5 text-gray-200 space-y-1">
             <li>1 Member: $45</li>
             <li>2 Family Members: $75</li>
@@ -542,7 +542,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
           </ul>
         </div>
         <div className="rounded border border-gray-700 p-3">
-          <div className="font-semibold text-white">On or after October 22</div>
+          <div className="font-semibold text-white">After October 20</div>
           <ul className="mt-2 list-disc pl-5 text-gray-200 space-y-1">
             <li>1 Member: $60</li>
             <li>2 Family Members: $90</li>
