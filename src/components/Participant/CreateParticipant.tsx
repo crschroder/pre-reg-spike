@@ -573,7 +573,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
           </div>
         </div>
       )}
-      {savedMessage && (
+      {isSaving && (
         <div className="hidden md:block mb-4 p-3 bg-green-700 text-white rounded shadow text-center">
           {savedMessage}
         </div>
@@ -626,7 +626,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
           <div className=" mb-6 text-gray-100  whitespace-pre-line">
             {`Please review your form and make any necessary changes.\nClick "Update" to save your changes or "Back to Participants" to return to the participants list.`}
             
-            You are in update mode. Make changes to the participant details and click "Update" to save, or click or tap "Back to Participants" to return to the participants list.
+            
           </div>
         )}
 

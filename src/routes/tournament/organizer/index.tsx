@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { RequireAllowedEmail } from '@/auth/RequireAllowedEmail'
 
 export const Route = createFileRoute('/tournament/organizer/')({
-  component: RequireAllowedEmail(RouteComponent, ['organizer', 'admin']),
+  component: RequireAllowedEmail(RouteComponent, ['organizer', 'administrator']),
 })
 
 function RouteComponent() {

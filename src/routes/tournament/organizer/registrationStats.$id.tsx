@@ -16,7 +16,7 @@ export const Route = createFileRoute(
       id: String(params.id),
     }),
   },
-  component: RequireAllowedEmail(RouteComponent, ['organizer', 'admin']),
+  component: RequireAllowedEmail(RouteComponent, ['organizer', 'administrator']),
 })
 
 function RouteComponent() {

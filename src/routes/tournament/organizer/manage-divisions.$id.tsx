@@ -78,7 +78,7 @@ export const Route = createFileRoute(
     checkedIn: toBooleanArray(search.checkedIn),
     isPaid: toBooleanArray(search.isPaid),
   }),
-  component: RequireAllowedEmail(RouteComponent, ['organizer', 'admin']),
+  component: RequireAllowedEmail(RouteComponent, ['organizer', 'administrator']),
 })
 
 function RouteComponent() {
