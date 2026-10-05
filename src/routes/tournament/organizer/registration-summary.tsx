@@ -4,7 +4,7 @@ import { RequireAllowedEmail } from '@/auth/RequireAllowedEmail'
 export const Route = createFileRoute(
   '/tournament/organizer/registration-summary',
 )({
-  component: RequireAllowedEmail(RouteComponent),
+  component: RequireAllowedEmail(RouteComponent, ['organizer', 'administrator']),
 })
 
 function RouteComponent() {

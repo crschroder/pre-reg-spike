@@ -1207,6 +1207,59 @@ app.get('/api/tournament/:id/summary', async (req: Request, res: Response, next:
     next(err);
   }
 });
+
+app.get('/api/me/roles', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const email = typeof req.query.email === 'string' ? req.query.email.trim().toLowerCase() : ''
+
+    if (!email) {
+      return res.json({ email: null, roles: [] })
+    }
+
+    const user = await getPrisma().user.findUnique({
+      where: { email },
+      include: {
+        userRoles: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    })
+
+    const roles = user?.userRoles.map((userRole) => userRole.role.name.toLowerCase()) ?? []
+
+    return res.json({
+      email,
+      roles,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+app.get('/api/userRoles/:userId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = Number(req.params.userId)
+
+    if (!Number.isInteger(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID' })
+    }
+
+    const userRoles = await getPrisma().userRoles.findMany({
+      where: { userId },
+      include: { role: true },
+    })
+
+    return res.json({
+      userId,
+      roles: userRoles.map((userRole) => userRole.role.name),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
 app.use(errorHandler);
 
 const PORT = Number(process.env.PORT ?? process.env.WEBSITES_PORT ?? 4000);

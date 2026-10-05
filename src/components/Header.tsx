@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
+import { useAuth0 } from '@auth0/auth0-react'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Database,
   Home,
@@ -9,8 +10,56 @@ import {
   X,
 } from 'lucide-react'
 
+import api from '@/api/axios'
+
+const normalizeRoles = (roles: unknown): string[] =>
+  Array.isArray(roles)
+    ? roles.map((role) => String(role).trim().toLowerCase()).filter(Boolean)
+    : []
+
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
+  const [userRoles, setUserRoles] = useState<string[]>([])
+  const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0()
+
+  const userEmail = user?.email?.trim().toLowerCase() ?? ''
+
+  useEffect(() => {
+    if (!isAuthenticated || !userEmail) {
+      setUserRoles([])
+      return
+    }
+
+    let cancelled = false
+
+    const loadRoles = async () => {
+      try {
+        const response = await api.get('/api/me/roles', {
+          params: { email: userEmail },
+        })
+
+        if (!cancelled) {
+          setUserRoles(normalizeRoles(response.data?.roles))
+        }
+      } catch (error) {
+        console.error('Failed to load user roles for header', error)
+        if (!cancelled) {
+          setUserRoles([])
+        }
+      }
+    }
+
+    void loadRoles()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthenticated, userEmail])
+
+  const hasOrganizerAccess = useMemo(
+    () => userRoles.includes('organizer') || userRoles.includes('administrator'),
+    [userRoles],
+  )
 
   const buildVersion = import.meta.env.VITE_BUILD_VERSION as string | undefined
   const buildSha = import.meta.env.VITE_BUILD_SHA as string | undefined
@@ -48,8 +97,37 @@ export default function Header() {
           </h1>
         </div>
 
-        <div className="hidden md:block text-xs text-gray-400 whitespace-nowrap">
-          Build: {buildLabel}
+        <div className="hidden md:flex items-center gap-4 text-xs text-gray-400 whitespace-nowrap">
+          {isAuthenticated && (
+            <>
+              <span>Build: {buildLabel}</span>
+              <span className="text-cyan-300">Signed in as {user?.name ?? user?.email ?? 'member'}</span>
+            </>
+          )}
+
+          {isAuthenticated ? (
+            <button
+              type="button"
+              onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+              className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+            >
+              Log out
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                loginWithRedirect({
+                  authorizationParams: {
+                    screen_hint: 'login',
+                  },
+                })
+              }
+              className="px-3 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg transition-colors"
+            >
+              Log in
+            </button>
+          )}
         </div>
       </header>
 
@@ -83,34 +161,37 @@ export default function Header() {
             <span className="font-medium">Home</span>
           </Link>
 
-          <Link
-            to="/tournament/organizer"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
-            activeOptions={{ exact: true }}
-            activeProps={{
-              className:
-                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
-            }}
-          >
-            <Home size={20} />
-            <span className="font-medium">Organizer Dashboard</span>
-          </Link>
+          {hasOrganizerAccess && (
+            <Link
+              to="/tournament/organizer"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+              activeOptions={{ exact: true }}
+              activeProps={{
+                className:
+                  'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+              }}
+            >
+              <Home size={20} />
+              <span className="font-medium">Organizer Dashboard</span>
+            </Link>
+          )}
 
-
-          <Link
-            to="/tournament/organizer/create"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
-            activeOptions={{ exact: true }}
-            activeProps={{
-              className:
-                'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
-            }}
-          >
-            <Home size={20} />
-            <span className="font-medium">Create New Tournament</span>
-          </Link>
+          {hasOrganizerAccess && (
+            <Link
+              to="/tournament/organizer/create"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+              activeOptions={{ exact: true }}
+              activeProps={{
+                className:
+                  'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+              }}
+            >
+              <Home size={20} />
+              <span className="font-medium">Create New Tournament</span>
+            </Link>
+          )}
 
           <Link
             to="/tournament/participant"

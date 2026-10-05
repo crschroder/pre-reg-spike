@@ -11,7 +11,7 @@ export const Route = createFileRoute('/tournament/organizer/created/$id')({
       id: String(params.id),
     }),
   },
-  component: RequireAllowedEmail(TournamentCreatedPage),
+  component: RequireAllowedEmail(TournamentCreatedPage, ['organizer', 'administrator']),
 })
 
 function TournamentCreatedPage() {

@@ -18,7 +18,8 @@ function RootLayout() {
   const isPublic = matches.some(match => match.staticData?.publicMode);
   return (
     <>
-      {isPublic ? <HeaderPublic /> : <Header />}
+      {/* {isPublic ? <HeaderPublic /> : <Header />} */}
+      <Header />
       <QueryClientProvider client={queryClient}>
         <Outlet />
       </QueryClientProvider>

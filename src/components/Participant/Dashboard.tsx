@@ -18,7 +18,7 @@ export function ParticipantDashboard() {
   });
 
   function handleCreateRegistration(id: number) {
-    navigate({ to: `/tournament/participant/register/${id}/create-participant` });
+    navigate({ to: `/tournament/participant/register/${id}/create-participant-dayof` });
   }
 
   return (<div className="min-h-screen bg-gray-900 p-6 text-white flex flex-col items-center">

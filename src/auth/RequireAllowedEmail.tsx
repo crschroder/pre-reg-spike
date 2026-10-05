@@ -1,21 +1,35 @@
 import { useAuth0 } from '@auth0/auth0-react'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ComponentType } from 'react'
 
-const getAllowedEmails = (): string[] => {
-  const raw = import.meta.env.VITE_ALLOWED_EMAILS ?? ''
+import api from '@/api/axios'
 
-  return raw
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean)
+const normalizeRoles = (roles: unknown): string[] =>
+  Array.isArray(roles)
+    ? roles.map((role) => String(role).trim().toLowerCase()).filter(Boolean)
+    : []
+
+export function NoAccess() {
+  return (
+    <div className="min-h-screen bg-slate-900 p-6 text-white">
+      You do not have access to this page Please contact the administrator if you think you recieved message by mistake.
+    </div>
+  )
 }
 
-export function RequireAllowedEmail<P extends object>(Component: ComponentType<P>) {
+export function RequireAllowedEmail<P extends object>(
+  Component: ComponentType<P>,
+  requiredRoles: string[] = ['organizer', 'admin'],
+) {
   const WrappedComponent = (props: P) => {
     const { isAuthenticated, isLoading, user, loginWithRedirect } = useAuth0()
+    const [userRoles, setUserRoles] = useState<string[]>([])
+    const [isCheckingRoles, setIsCheckingRoles] = useState(false)
 
-    const allowedEmails = useMemo(() => getAllowedEmails(), [])
+    const normalizedRequiredRoles = useMemo(
+      () => requiredRoles.map((role) => role.trim().toLowerCase()).filter(Boolean),
+      [requiredRoles],
+    )
     const userEmail = user?.email?.trim().toLowerCase() ?? ''
 
     useEffect(() => {
@@ -28,7 +42,45 @@ export function RequireAllowedEmail<P extends object>(Component: ComponentType<P
       }
     }, [isAuthenticated, isLoading, loginWithRedirect])
 
-    if (isLoading) {
+    useEffect(() => {
+      if (!isAuthenticated || !userEmail) {
+        setUserRoles([])
+        setIsCheckingRoles(false)
+        return
+      }
+
+      let cancelled = false
+      setIsCheckingRoles(true)
+
+      const loadRoles = async () => {
+        try {
+          const response = await api.get('/api/me/roles', {
+            params: { email: userEmail },
+          })
+
+          if (!cancelled) {
+            setUserRoles(normalizeRoles(response.data?.roles))
+          }
+        } catch (error) {
+          console.error('Failed to load user roles', error)
+          if (!cancelled) {
+            setUserRoles([])
+          }
+        } finally {
+          if (!cancelled) {
+            setIsCheckingRoles(false)
+          }
+        }
+      }
+
+      void loadRoles()
+
+      return () => {
+        cancelled = true
+      }
+    }, [isAuthenticated, userEmail])
+
+    if (isLoading || (isAuthenticated && userEmail && isCheckingRoles)) {
       return <div className="min-h-screen bg-slate-900 p-6 text-white">Checking access…</div>
     }
 
@@ -40,20 +92,10 @@ export function RequireAllowedEmail<P extends object>(Component: ComponentType<P
       return <div className="min-h-screen bg-slate-900 p-6 text-white">No email was found for this account.</div>
     }
 
-    if (allowedEmails.length === 0) {
-      return (
-        <div className="min-h-screen bg-slate-900 p-6 text-white">
-          Access is not configured. Add VITE_ALLOWED_EMAILS to your local .env file.
-        </div>
-      )
-    }
+    const hasRequiredRole = normalizedRequiredRoles.some((role) => userRoles.includes(role))
 
-    if (!allowedEmails.includes(userEmail)) {
-      return (
-        <div className="min-h-screen bg-slate-900 p-6 text-white">
-          Access denied for {userEmail}. Please contact the administrator.
-        </div>
-      )
+    if (!hasRequiredRole) {
+      return <NoAccess />
     }
 
     return <Component {...props} />
