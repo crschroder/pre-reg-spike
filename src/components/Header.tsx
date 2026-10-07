@@ -97,11 +97,11 @@ export default function Header() {
           </h1>
         </div>
 
-        <div className="hidden md:flex items-center gap-4 text-xs text-gray-400 whitespace-nowrap">
+        <div className="flex items-center gap-2 text-xs text-gray-400 whitespace-nowrap sm:gap-4">
           {isAuthenticated && (
             <>
-              <span>Build: {buildLabel}</span>
-              <span className="text-cyan-300">Signed in as {user?.name ?? user?.email ?? 'member'}</span>
+              <span className="hidden md:inline">Build: {buildLabel}</span>
+              <span className="hidden md:inline text-cyan-300">Signed in as {user?.name ?? user?.email ?? 'member'}</span>
             </>
           )}
 
