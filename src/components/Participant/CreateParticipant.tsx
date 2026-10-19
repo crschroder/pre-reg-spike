@@ -16,6 +16,7 @@ import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, ReactNode } from
 import { ParticipantEmailSchema } from "../../../validations";
 import { normalizeName } from "@/helpers/stringHelpers";
 import { AppModal } from "@/components/Custom/AppModal";
+import { RegistrationClosed } from "./RegistrationClosed";
 
 type Props = {
   tournamentId: number;
@@ -259,6 +260,23 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
     console.log("Fetched participant data:", participantData);
   }
 
+  const isPreRegistrationClosed = (() => {
+    if (!data?.preRegistrationCloseDate || !data?.date) {
+      return false;
+    }
+
+    const closeDate = new Date(data.preRegistrationCloseDate);
+    const tournamentDate = new Date(data.date);
+    const now = new Date();
+    const isAfterCloseDate = now >= closeDate;
+
+    const isDayOfTournament = now < tournamentDate;
+    
+    return isAfterCloseDate && isDayOfTournament;
+  })();
+  if (!isLoading) {
+    console.log("Fetched tournament data:", data);
+  }
 
   const mappedEvents = (eventTypes ?? []).map((item: any) => ({
     id: item.id,
@@ -555,7 +573,9 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
     );
   };
 
-
+  if (isPreRegistrationClosed) {
+  return <RegistrationClosed tournamentName={data?.name} />;
+}
 
   return (
     <div className="min-h-screen bg-gray-900 p-6 pb-24 md:pb-6 text-white flex flex-col items-center">
