@@ -63,6 +63,8 @@ model Tournament {
   organizerId  Int               @map("organizer_id")
   organizer    User              @relation(fields: [organizerId], references: [id])
   etransferEmail String?          @map("etransfer_email")
+  preRegistrationOpenDate DateTime?
+  preRegistrationCloseDate DateTime?
   events       TournamentEvent[]
   participants Participant[]
 
