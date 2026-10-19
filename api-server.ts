@@ -1238,6 +1238,153 @@ app.get('/api/me/roles', async (req: Request, res: Response, next: NextFunction)
   }
 })
 
+app.get('/api/users/by-email', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const email = typeof req.query.email === 'string' ? req.query.email.trim().toLowerCase() : ''
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' })
+    }
+
+    const user = await getPrisma().user.findUnique({
+      where: { email },
+      include: {
+        userRoles: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    })
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    return res.json({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      roles: user.userRoles.map((userRole) => userRole.role.name.toLowerCase()),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+app.post('/api/volunteers', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : ''
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' })
+    }
+
+    const result = await getPrisma().$transaction(async (tx) => {
+      let user = await tx.user.findUnique({ where: { email } })
+      let createdUser = false
+
+      if (!user) {
+        user = await tx.user.create({
+          data: {
+            email,
+            role: 'volunteer',
+          },
+        })
+        createdUser = true
+      }
+
+      const volunteerRole = await tx.roles.findFirst({
+        where: {
+          name: {
+            equals: 'volunteer',
+            mode: 'insensitive',
+          },
+        },
+      })
+
+      if (!volunteerRole) {
+        return {
+          kind: 'missing_role' as const,
+          user,
+          createdUser,
+        }
+      }
+
+      const existingUserRole = await tx.userRoles.findUnique({
+        where: {
+          userId_roleId: {
+            userId: user.id,
+            roleId: volunteerRole.id,
+          },
+        },
+      })
+
+      if (existingUserRole) {
+        return {
+          kind: 'already_volunteer' as const,
+          user,
+          createdUser,
+          roleName: volunteerRole.name,
+        }
+      }
+
+      await tx.userRoles.create({
+        data: {
+          userId: user.id,
+          roleId: volunteerRole.id,
+        },
+      })
+
+      if (user.role.toLowerCase() !== 'volunteer') {
+        user = await tx.user.update({
+          where: { id: user.id },
+          data: { role: 'volunteer' },
+        })
+      }
+
+      return {
+        kind: 'created' as const,
+        user,
+        createdUser,
+        roleName: volunteerRole.name,
+      }
+    })
+
+    if (result.kind === 'missing_role') {
+      return res.status(404).json({
+        error: 'Volunteer role not found',
+      })
+    }
+
+    if (result.kind === 'already_volunteer') {
+      return res.status(409).json({
+        error: 'User already has Volunteer role',
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          role: result.user.role,
+        },
+        role: result.roleName,
+      })
+    }
+
+    return res.status(201).json({
+      message: result.createdUser
+        ? 'Volunteer user created and role assigned'
+        : 'Volunteer role assigned',
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        role: result.user.role,
+      },
+      role: result.roleName,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
 app.get('/api/userRoles/:userId', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = Number(req.params.userId)

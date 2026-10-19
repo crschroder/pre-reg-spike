@@ -1,11 +1,9 @@
 // src/api/tournaments.ts some comment 
-import { P } from "node_modules/@faker-js/faker/dist/airline-DF6RqYmq";
 import  api  from "./axios";
 import type {
   ParticipantUpdatePayload,
   TournamentEventPayload,
   TournamentInput,
-  TournamentStatus,
   TournamentStatusType,
   DojoResponse,
   CreateRegistrationPayload,
@@ -13,6 +11,23 @@ import type {
   EventAllowedDivision,
   TournamentEventSummary
 } from "@shared/index";
+
+export type UserByEmailResponse = {
+  id: number;
+  email: string;
+  role: string | null;
+  roles: string[];
+};
+
+export type CreateVolunteerResponse = {
+  message: string;
+  user: {
+    id: number;
+    email: string;
+    role: string;
+  };
+  role: string;
+};
 
 
 
@@ -149,4 +164,16 @@ export function updateParticipant(participantId: number, participantData: Partic
 export function getTournamentEventSummary(tournamentId: number): Promise<TournamentEventSummary> {
   return api.get(`/api/tournament/${tournamentId}/summary`)
     .then(res => res.data as TournamentEventSummary);
+}
+
+export function getUserByEmail(email: string): Promise<UserByEmailResponse> {
+  return api.get('/api/users/by-email', {
+    params: { email },
+  })
+    .then(res => res.data as UserByEmailResponse);
+}
+
+export function createVolunteerByEmail(email: string): Promise<CreateVolunteerResponse> {
+  return api.post('/api/volunteers', { email })
+    .then(res => res.data as CreateVolunteerResponse);
 }

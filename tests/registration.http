@@ -120,3 +120,21 @@ X-API-Key: {{apiKey}}
 GET {{baseUrl}}/api/participant/1995
 Content-Type: application/json
 X-API-Key: {{apiKey}}
+
+### Create volunteer by email (test 1)
+POST {{baseUrl}}/api/volunteers
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+
+{
+  "email": "chrisrs@telusplanet.net"
+}
+
+### Create volunteer by email (test 2)
+POST {{baseUrl}}/api/volunteers
+Content-Type: application/json
+X-API-Key: {{apiKey}}
+
+{
+  "email": "chrisrss@hotmail.com"
+}
