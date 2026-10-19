@@ -76,7 +76,7 @@ function App() {
               <div className="flex flex-col gap-1 md:flex-row md:items-start">
                 <span className="min-w-[120px] font-black uppercase tracking-wide text-white">Cost:</span>
                 <span>
-                  - Pre-reg prices (October 1 to 20): $45 for 1 person, $75 for 2 family members, add $25 for each additional family member<br />
+                  - Pre-reg prices (October 1 to 22): $45 for 1 person, $75 for 2 family members, add $25 for each additional family member<br />
                   - Day of prices (Oct 24): $60 for 1 person/$90 for 2 family members, add $30 for each additional family member
                 </span>
               </div>
