@@ -9,6 +9,7 @@ import {
 import { CreateRegistrationPayload, EventSelection, ParticipantUpdatePayload } from "@shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { useAuth0 } from '@auth0/auth0-react'
 import { safeParse } from "valibot";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
@@ -16,6 +17,7 @@ import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, ReactNode } from
 import { ParticipantEmailSchema } from "../../../validations";
 import { normalizeName } from "@/helpers/stringHelpers";
 import { AppModal } from "@/components/Custom/AppModal";
+import { useUserRoles } from '@/hooks/useUserRoles'
 import { RegistrationClosed } from "./RegistrationClosed";
 
 type Props = {
@@ -200,7 +202,11 @@ type ModalState = {
 export function CreateParticipant({ tournamentId, participantId, mode }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user, isAuthenticated } = useAuth0()
+  const userEmail = user?.email?.trim().toLowerCase() ?? ''
+  const { data: userRoles = [] } = useUserRoles(userEmail, isAuthenticated)
   const isEdit = Boolean(participantId);
+  const canBypassPreRegistrationClosed = userRoles.some((role) => ['organizer', 'administrator', 'admin'].includes(role))
 
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [copiedEtransferEmail, setCopiedEtransferEmail] = useState(false);
@@ -573,7 +579,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
     );
   };
 
-  if (isPreRegistrationClosed) {
+  if (isPreRegistrationClosed && !canBypassPreRegistrationClosed) {
   return <RegistrationClosed tournamentName={data?.name} />;
 }
 
