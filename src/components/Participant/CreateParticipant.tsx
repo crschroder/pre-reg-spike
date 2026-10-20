@@ -579,9 +579,17 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
     );
   };
 
+  if (isLoading || (isEdit && isLoadingParticipant)) {
+    return (
+      <div className="min-h-screen bg-gray-900 p-6 text-white flex items-center justify-center">
+        <div className="text-xl font-semibold">Loading...</div>
+      </div>
+    );
+  }
+
   if (isPreRegistrationClosed && !canBypassPreRegistrationClosed) {
-  return <RegistrationClosed tournamentName={data?.name} />;
-}
+    return <RegistrationClosed tournamentName={data?.name} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 p-6 pb-24 md:pb-6 text-white flex flex-col items-center">
