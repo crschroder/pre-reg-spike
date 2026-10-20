@@ -1,13 +1,8 @@
 import { useAuth0 } from '@auth0/auth0-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import type { ComponentType } from 'react'
 
-import api from '@/api/axios'
-
-const normalizeRoles = (roles: unknown): string[] =>
-  Array.isArray(roles)
-    ? roles.map((role) => String(role).trim().toLowerCase()).filter(Boolean)
-    : []
+import { useUserRoles } from '@/hooks/useUserRoles'
 
 export function NoAccess() {
   return (
@@ -23,14 +18,13 @@ export function RequireAllowedEmail<P extends object>(
 ) {
   const WrappedComponent = (props: P) => {
     const { isAuthenticated, isLoading, user, loginWithRedirect } = useAuth0()
-    const [userRoles, setUserRoles] = useState<string[]>([])
-    const [isCheckingRoles, setIsCheckingRoles] = useState(false)
 
     const normalizedRequiredRoles = useMemo(
       () => requiredRoles.map((role) => role.trim().toLowerCase()).filter(Boolean),
       [requiredRoles],
     )
     const userEmail = user?.email?.trim().toLowerCase() ?? ''
+    const { data: userRoles = [], isLoading: isCheckingRoles } = useUserRoles(userEmail, isAuthenticated)
 
     useEffect(() => {
       if (!isLoading && !isAuthenticated) {
@@ -41,44 +35,6 @@ export function RequireAllowedEmail<P extends object>(
         })
       }
     }, [isAuthenticated, isLoading, loginWithRedirect])
-
-    useEffect(() => {
-      if (!isAuthenticated || !userEmail) {
-        setUserRoles([])
-        setIsCheckingRoles(false)
-        return
-      }
-
-      let cancelled = false
-      setIsCheckingRoles(true)
-
-      const loadRoles = async () => {
-        try {
-          const response = await api.get('/api/me/roles', {
-            params: { email: userEmail },
-          })
-
-          if (!cancelled) {
-            setUserRoles(normalizeRoles(response.data?.roles))
-          }
-        } catch (error) {
-          console.error('Failed to load user roles', error)
-          if (!cancelled) {
-            setUserRoles([])
-          }
-        } finally {
-          if (!cancelled) {
-            setIsCheckingRoles(false)
-          }
-        }
-      }
-
-      void loadRoles()
-
-      return () => {
-        cancelled = true
-      }
-    }, [isAuthenticated, userEmail])
 
     if (isLoading || (isAuthenticated && userEmail && isCheckingRoles)) {
       return <div className="min-h-screen bg-slate-900 p-6 text-white">Checking access…</div>

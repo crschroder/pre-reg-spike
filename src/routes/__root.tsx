@@ -17,12 +17,10 @@ function RootLayout() {
   const {matches} = useRouterState();
   const isPublic = matches.some(match => match.staticData?.publicMode);
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       {/* {isPublic ? <HeaderPublic /> : <Header />} */}
       <Header />
-      <QueryClientProvider client={queryClient}>
-        <Outlet />
-      </QueryClientProvider>
+      <Outlet />
       <TanStackDevtools
         config={{
           position: 'bottom-right',
@@ -34,6 +32,6 @@ function RootLayout() {
           },
         ]}
       />
-    </>
+    </QueryClientProvider>
   )
 }
