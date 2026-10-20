@@ -138,3 +138,8 @@ X-API-Key: {{apiKey}}
 {
   "email": "chrisrss@hotmail.com"
 }
+
+### Get all roles
+GET {{baseUrl}}/api/roles
+Content-Type: application/json
+X-API-Key: {{apiKey}}

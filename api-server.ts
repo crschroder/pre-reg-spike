@@ -1385,6 +1385,18 @@ app.post('/api/volunteers', async (req: Request, res: Response, next: NextFuncti
   }
 })
 
+app.get('/api/roles', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const roles = await getPrisma().roles.findMany({
+      orderBy: { id: 'asc' },
+    })
+
+    return res.json(roles)
+  } catch (err) {
+    next(err)
+  }
+})
+
 app.get('/api/userRoles/:userId', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = Number(req.params.userId)

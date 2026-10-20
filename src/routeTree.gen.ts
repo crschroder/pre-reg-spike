@@ -16,6 +16,7 @@ import { Route as DemoTableRouteImport } from './routes/demo/table'
 import { Route as TournamentVolunteerIndexRouteImport } from './routes/tournament/volunteer/index'
 import { Route as TournamentParticipantIndexRouteImport } from './routes/tournament/participant/index'
 import { Route as TournamentOrganizerIndexRouteImport } from './routes/tournament/organizer/index'
+import { Route as TournamentVolunteerSignupRouteImport } from './routes/tournament/volunteer/signup'
 import { Route as TournamentOrganizerRegistrationSummaryRouteImport } from './routes/tournament/organizer/registration-summary'
 import { Route as TournamentOrganizerCreateRouteImport } from './routes/tournament/organizer/create'
 import { Route as TournamentOrganizerTournamentSummaryIdRouteImport } from './routes/tournament/organizer/tournamentSummary.$id'
@@ -71,6 +72,12 @@ const TournamentOrganizerIndexRoute =
   TournamentOrganizerIndexRouteImport.update({
     id: '/tournament/organizer/',
     path: '/tournament/organizer/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const TournamentVolunteerSignupRoute =
+  TournamentVolunteerSignupRouteImport.update({
+    id: '/tournament/volunteer/signup',
+    path: '/tournament/volunteer/signup',
     getParentRoute: () => rootRouteImport,
   } as any)
 const TournamentOrganizerRegistrationSummaryRoute =
@@ -187,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/organizer/divisions-double': typeof OrganizerDivisionsDoubleRoute
   '/tournament/organizer/create': typeof TournamentOrganizerCreateRoute
   '/tournament/organizer/registration-summary': typeof TournamentOrganizerRegistrationSummaryRoute
+  '/tournament/volunteer/signup': typeof TournamentVolunteerSignupRoute
   '/tournament/organizer': typeof TournamentOrganizerIndexRoute
   '/tournament/participant': typeof TournamentParticipantIndexRoute
   '/tournament/volunteer': typeof TournamentVolunteerIndexRoute
@@ -213,6 +221,7 @@ export interface FileRoutesByTo {
   '/organizer/divisions-double': typeof OrganizerDivisionsDoubleRoute
   '/tournament/organizer/create': typeof TournamentOrganizerCreateRoute
   '/tournament/organizer/registration-summary': typeof TournamentOrganizerRegistrationSummaryRoute
+  '/tournament/volunteer/signup': typeof TournamentVolunteerSignupRoute
   '/tournament/organizer': typeof TournamentOrganizerIndexRoute
   '/tournament/participant': typeof TournamentParticipantIndexRoute
   '/tournament/volunteer': typeof TournamentVolunteerIndexRoute
@@ -240,6 +249,7 @@ export interface FileRoutesById {
   '/organizer/divisions-double': typeof OrganizerDivisionsDoubleRoute
   '/tournament/organizer/create': typeof TournamentOrganizerCreateRoute
   '/tournament/organizer/registration-summary': typeof TournamentOrganizerRegistrationSummaryRoute
+  '/tournament/volunteer/signup': typeof TournamentVolunteerSignupRoute
   '/tournament/organizer/': typeof TournamentOrganizerIndexRoute
   '/tournament/participant/': typeof TournamentParticipantIndexRoute
   '/tournament/volunteer/': typeof TournamentVolunteerIndexRoute
@@ -268,6 +278,7 @@ export interface FileRouteTypes {
     | '/organizer/divisions-double'
     | '/tournament/organizer/create'
     | '/tournament/organizer/registration-summary'
+    | '/tournament/volunteer/signup'
     | '/tournament/organizer'
     | '/tournament/participant'
     | '/tournament/volunteer'
@@ -294,6 +305,7 @@ export interface FileRouteTypes {
     | '/organizer/divisions-double'
     | '/tournament/organizer/create'
     | '/tournament/organizer/registration-summary'
+    | '/tournament/volunteer/signup'
     | '/tournament/organizer'
     | '/tournament/participant'
     | '/tournament/volunteer'
@@ -320,6 +332,7 @@ export interface FileRouteTypes {
     | '/organizer/divisions-double'
     | '/tournament/organizer/create'
     | '/tournament/organizer/registration-summary'
+    | '/tournament/volunteer/signup'
     | '/tournament/organizer/'
     | '/tournament/participant/'
     | '/tournament/volunteer/'
@@ -347,6 +360,7 @@ export interface RootRouteChildren {
   OrganizerDivisionsDoubleRoute: typeof OrganizerDivisionsDoubleRoute
   TournamentOrganizerCreateRoute: typeof TournamentOrganizerCreateRoute
   TournamentOrganizerRegistrationSummaryRoute: typeof TournamentOrganizerRegistrationSummaryRoute
+  TournamentVolunteerSignupRoute: typeof TournamentVolunteerSignupRoute
   TournamentOrganizerIndexRoute: typeof TournamentOrganizerIndexRoute
   TournamentParticipantIndexRoute: typeof TournamentParticipantIndexRoute
   TournamentVolunteerIndexRoute: typeof TournamentVolunteerIndexRoute
@@ -416,6 +430,13 @@ declare module '@tanstack/react-router' {
       path: '/tournament/organizer'
       fullPath: '/tournament/organizer'
       preLoaderRoute: typeof TournamentOrganizerIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tournament/volunteer/signup': {
+      id: '/tournament/volunteer/signup'
+      path: '/tournament/volunteer/signup'
+      fullPath: '/tournament/volunteer/signup'
+      preLoaderRoute: typeof TournamentVolunteerSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tournament/organizer/registration-summary': {
@@ -548,6 +569,7 @@ const rootRouteChildren: RootRouteChildren = {
   TournamentOrganizerCreateRoute: TournamentOrganizerCreateRoute,
   TournamentOrganizerRegistrationSummaryRoute:
     TournamentOrganizerRegistrationSummaryRoute,
+  TournamentVolunteerSignupRoute: TournamentVolunteerSignupRoute,
   TournamentOrganizerIndexRoute: TournamentOrganizerIndexRoute,
   TournamentParticipantIndexRoute: TournamentParticipantIndexRoute,
   TournamentVolunteerIndexRoute: TournamentVolunteerIndexRoute,

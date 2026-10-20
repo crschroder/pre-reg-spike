@@ -61,6 +61,11 @@ export default function Header() {
     [userRoles],
   )
 
+  const hasVolunteerAccess = useMemo(
+    () => userRoles.includes('administrator') || userRoles.includes('volunteer'),
+    [userRoles],
+  )
+
   const buildVersion = import.meta.env.VITE_BUILD_VERSION as string | undefined
   const buildSha = import.meta.env.VITE_BUILD_SHA as string | undefined
   const buildTime = import.meta.env.VITE_BUILD_TIME as string | undefined
@@ -205,6 +210,21 @@ export default function Header() {
             <Database size={20} />
             <span className="font-medium">Register Tournament</span>
           </Link>
+          {hasVolunteerAccess && (
+            <Link
+              to="/tournament/volunteer"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+              activeOptions={{ exact: true }}
+              activeProps={{
+                className:
+                  'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+              }}
+            >
+              <Home size={20} />
+              <span className="font-medium">Volunteer Dashboard</span>
+            </Link>
+          )}
 
           {/* Demo Links Start */}
 
