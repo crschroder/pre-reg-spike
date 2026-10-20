@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useAuth0 } from '@auth0/auth0-react'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Database,
   Home,
@@ -10,51 +10,14 @@ import {
   X,
 } from 'lucide-react'
 
-import api from '@/api/axios'
-
-const normalizeRoles = (roles: unknown): string[] =>
-  Array.isArray(roles)
-    ? roles.map((role) => String(role).trim().toLowerCase()).filter(Boolean)
-    : []
+import { useUserRoles } from '@/hooks/useUserRoles'
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
-  const [userRoles, setUserRoles] = useState<string[]>([])
   const { isAuthenticated, user, loginWithRedirect, logout } = useAuth0()
 
   const userEmail = user?.email?.trim().toLowerCase() ?? ''
-
-  useEffect(() => {
-    if (!isAuthenticated || !userEmail) {
-      setUserRoles([])
-      return
-    }
-
-    let cancelled = false
-
-    const loadRoles = async () => {
-      try {
-        const response = await api.get('/api/me/roles', {
-          params: { email: userEmail },
-        })
-
-        if (!cancelled) {
-          setUserRoles(normalizeRoles(response.data?.roles))
-        }
-      } catch (error) {
-        console.error('Failed to load user roles for header', error)
-        if (!cancelled) {
-          setUserRoles([])
-        }
-      }
-    }
-
-    void loadRoles()
-
-    return () => {
-      cancelled = true
-    }
-  }, [isAuthenticated, userEmail])
+  const { data: userRoles = [] } = useUserRoles(userEmail, isAuthenticated)
 
   const hasOrganizerAccess = useMemo(
     () => userRoles.includes('organizer') || userRoles.includes('administrator'),

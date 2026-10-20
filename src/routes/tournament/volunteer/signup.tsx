@@ -1,5 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useAuth0 } from '@auth0/auth0-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { createVolunteerByEmail } from '@/api/tournaments'
 
@@ -11,6 +12,8 @@ const VOLUNTEER_SIGNUP_INTENT_KEY = 'volunteer-signup-intent'
 
 function RouteComponent() {
   const { isAuthenticated, isLoading, user, loginWithRedirect } = useAuth0()
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
 
@@ -20,7 +23,8 @@ function RouteComponent() {
 
     try {
       await createVolunteerByEmail(email)
-      setStatusMessage('Volunteer account created successfully.')
+      await queryClient.invalidateQueries({ queryKey: ['userRoles'] })
+      setStatusMessage('You are now enrolled as a volunteer.')
     } catch (error: any) {
       const status = error?.response?.status
       if (status === 409) {
@@ -36,6 +40,10 @@ function RouteComponent() {
   }
 
   const handleSignUp = async () => {
+    if (isSubmitting) {
+      return
+    }
+
     if (!isAuthenticated) {
       sessionStorage.setItem(VOLUNTEER_SIGNUP_INTENT_KEY, '1')
       await loginWithRedirect({
@@ -86,15 +94,28 @@ function RouteComponent() {
         </p>
 
         <div className="mt-8">
-          <button
-            type="button"
-            onClick={handleSignUp}
-            disabled={isLoading || isSubmitting}
-            className="inline-flex items-center justify-center rounded-lg bg-cyan-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-gray-800"
-          >
-            {isSubmitting ? 'Creating volunteer account...' : 'Sign up to volunteer'}
-          </button>
-          {statusMessage ? <p className="mt-3 text-sm text-gray-200">{statusMessage}</p> : null}
+          {!statusMessage ? (
+            <button
+              type="button"
+              onClick={handleSignUp}
+              disabled={isLoading || isSubmitting}
+              className="inline-flex items-center justify-center rounded-lg bg-cyan-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-gray-800"
+            >
+              {isSubmitting ? 'Creating volunteer account...' : 'Sign up to volunteer'}
+            </button>
+          ) : null}
+
+          {statusMessage ? (
+            <div className="space-y-4">
+              <p className="mt-3 text-base font-medium text-emerald-300">{statusMessage}</p>
+              <Link
+                to="/tournament/volunteer"
+                className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-gray-800"
+              >
+                Open Volunteer Dashboard
+              </Link>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
