@@ -423,6 +423,17 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
 // }
 
 
+const MANAGE_DIVISIONS_PAGE_SIZE_KEY = 'manage-divisions-page-size'
+
+const getStoredPageSize = () => {
+  if (typeof window === 'undefined') {
+    return 10
+  }
+
+  const storedValue = Number(window.sessionStorage.getItem(MANAGE_DIVISIONS_PAGE_SIZE_KEY))
+  return [10, 20, 30, 40, 50].includes(storedValue) ? storedValue : 10
+}
+
 export function ManageDivisions({
   tournamentId,
   search,
@@ -433,7 +444,10 @@ export function ManageDivisions({
 
   const [selectedRegistrations, setSelectedRegistrations] = useAtom(selectedRegistrationsAtom);
   const navigate = useNavigate();
-
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: getStoredPageSize(),
+  });
 
     const { data: registrations, isLoading: participantLoading } = useQuery<any[]>({
         queryKey: ['tournament-registrations', tournamentId],
@@ -694,7 +708,7 @@ export function ManageDivisions({
    const table = useReactTable({
        data: tableData ?? [],
        columns,
-       state: { sorting, columnFilters, rowSelection },
+       state: { sorting, columnFilters, rowSelection, pagination },
        onSortingChange: setSorting,
        onColumnFiltersChange: (updater) => {
         setColumnFilters((currentColumnFilters) => {
@@ -705,7 +719,7 @@ export function ManageDivisions({
             navigate({
               to: "/tournament/organizer/manage-divisions/$id",
               params: { id: tournamentId },
-              search: nextSearch,
+              search: { ...search, ...nextSearch, pageSize: search.pageSize ?? 10 },
               replace: true,
             })
           }
@@ -720,6 +734,17 @@ export function ManageDivisions({
         )
 
         setSelectedRegistrations(nextSelectedRegistrations)
+       },
+       onPaginationChange: (updater) => {
+         setPagination((currentPagination) => {
+           const nextPagination = functionalUpdate(updater, currentPagination)
+
+           if (typeof window !== 'undefined') {
+             window.sessionStorage.setItem(MANAGE_DIVISIONS_PAGE_SIZE_KEY, String(nextPagination.pageSize))
+           }
+
+           return nextPagination
+         })
        },
        getRowId: (row) => String(row.registrationId),
        enableRowSelection: true,
@@ -1013,7 +1038,12 @@ function onParticipantGenderChanged(value: string) {
         <select
           value={table.getState().pagination.pageSize}
           onChange={(e) => {
-            table.setPageSize(Number(e.target.value))
+            const nextPageSize = Number(e.target.value)
+            table.setPageSize(nextPageSize)
+
+            if (typeof window !== 'undefined') {
+              window.sessionStorage.setItem(MANAGE_DIVISIONS_PAGE_SIZE_KEY, String(nextPageSize))
+            }
           }}
           className="px-2 py-1 bg-gray-800 rounded-md border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
         >

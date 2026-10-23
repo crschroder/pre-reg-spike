@@ -240,6 +240,7 @@ view ParticipantSummary {
   participantEventId     Int        @map("participant_event_id")
   genderId               Int        @map("gender_id")
   displayName            String?    @map("display_name")
+  dojoName               String?    @map("dojo_name")
 
   
   @@map("participant_registration_summary")

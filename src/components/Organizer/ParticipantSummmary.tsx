@@ -23,6 +23,7 @@ interface GroupedParticipant {
   beltColor: string;
   participantGender: string;
   participantDivisionType: string;
+  dojoName?: string | null;
   paid: boolean;
   checkedIn: boolean;
   tournamentId: number;
@@ -40,6 +41,7 @@ export interface ParticipantSummaryRow {
   beltColor: string;
   participantGender: string;
   participantDivisionType: string;
+  dojoName?: string | null;
   paid: boolean;
   checkedIn: boolean;
   eventRegistered: string;
@@ -64,12 +66,17 @@ export function groupParticipants(rows: ParticipantSummaryRow[]): GroupedPartici
         beltColor: row.beltColor,
         participantGender: row.participantGender,
         participantDivisionType: row.participantDivisionType,
+        dojoName: row.dojoName ?? null,
         paid: row.paid,
         checkedIn: row.checkedIn,
         tournamentId: row.tournamentId,
         genderId: row.genderId,
         events: [],
       };
+    }
+
+    if (row.dojoName && (!acc[id].dojoName || acc[id].dojoName !== row.dojoName)) {
+      acc[id].dojoName = row.dojoName;
     }
 
     // Aggregate distinct participantDivisionType values
@@ -281,8 +288,12 @@ export function ParticipantTable({
 
   const editDetails = function (tournamentId: number, participantId: number) {
     navigate({
-      to: `/tournament/participant/register/${tournamentId}/update-participant/${participantId}`,
-      
+      to: '/tournament/participant/register/$id/update-participant/$participantId',
+      params: {
+        id: String(tournamentId),
+        participantId: String(participantId),
+      },
+      search: { mode: 'organizer' },
     });
   }
 
@@ -351,6 +362,10 @@ export function ParticipantTable({
                           <div>
                             {normalizeName(row.original.participantDivisionType)}
                           </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-400">Dojo</div>
+                          <div>{row.original.dojoName ? normalizeName(row.original.dojoName) : "—"}</div>
                         </div>
                       </div>
 

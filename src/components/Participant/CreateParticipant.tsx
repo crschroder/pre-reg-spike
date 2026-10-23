@@ -205,6 +205,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
   const { user, isAuthenticated } = useAuth0()
   const userEmail = user?.email?.trim().toLowerCase() ?? ''
   const { data: userRoles = [] } = useUserRoles(userEmail, isAuthenticated)
+  const normalizedMode = mode ?? (typeof window !== 'undefined' && window.location.pathname.includes('/update-participant/') && !window.location.pathname.includes('/update-participant-dayof/') ? 'organizer' : undefined)
   const isEdit = Boolean(participantId);
   const canBypassPreRegistrationClosed = userRoles.some((role) => ['organizer', 'administrator', 'admin'].includes(role))
 
@@ -621,7 +622,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
               ? `Registered for ${data?.name ?? ""}`
               : `Register for tournament: ${data?.name ?? ""}`}
         </h1>
-        {isEdit && mode === "participant" && (
+        {isEdit && normalizedMode === "participant" && (
             <div className="mb-6 text-sm text-gray-200">
               <p>Please review your form and make any necessary changes.</p>
               <p className="mt-2">
@@ -656,7 +657,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
               </div>
             </div>
           )}
-         {isEdit && mode === "organizer" && (
+         {isEdit && normalizedMode === "organizer" && (
           <div className=" mb-6 text-gray-100  whitespace-pre-line">
             {`Please review your form and make any necessary changes.\nClick "Update" to save your changes or "Back to Participants" to return to the participants list.`}
             
@@ -994,7 +995,8 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
             <span>{isSaving ? "Saving..." : isEdit ? "Update" : "Submit"}</span>
           </span>
         </button>
-        {isEdit && mode &&   (
+
+        {isEdit && normalizedMode === "participant" && (
           <button
             onClick={onCreateNewRegistration}
             className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
@@ -1003,7 +1005,14 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
           </button>
         )}
 
-        
+        {isEdit && normalizedMode === "organizer" && (
+          <button
+            onClick={onBackToParticipants}
+            className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
+          >
+            Back to Participants
+          </button>
+        )}
       </div>
 
               {/* Mobile actions (below md). Fixed bottom action bar. */}
@@ -1037,7 +1046,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
                 <span>{isSaving ? "Saving..." : isEdit ? "Update" : "Submit"}</span>
               </span>
             </button>
-            {isEdit && mode == "participant" && (
+            {isEdit && normalizedMode == "participant" && (
               <button
                 onClick={onCreateNewRegistration}
                 disabled={mutation.isPending}
@@ -1050,7 +1059,7 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
                 Create New Registration
               </button>              
             )}
-            {isEdit && mode == "organizer" && (
+            {isEdit && normalizedMode == "organizer" && (
                <button
               onClick={onBackToParticipants}
               className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
