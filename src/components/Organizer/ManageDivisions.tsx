@@ -204,6 +204,9 @@ function buildSelectedListPrintDocumentMarkup(
         <td>${escapeHtml(eventNumber)}</td>
         <td>${escapeHtml(registration.participantRank)}</td>
         <td class="checkbox-cell"><span class="checkbox-box"></span></td>
+        <td class="checkbox-cell"><span class="checkbox-box"></span></td>
+        <td class="checkbox-cell"><span class="checkbox-box"></span></td>
+        <td class="checkbox-cell"><span class="checkbox-box"></span></td>
       </tr>`
     })
     .join("")
@@ -305,6 +308,14 @@ function buildSelectedListPrintDocumentMarkup(
           .selected-list-table th {
             background: #e5e7eb;
             font-weight: 700;
+            text-align: center;
+          }
+
+          .selected-list-table td:nth-child(4),
+          .selected-list-table td:nth-child(5),
+          .selected-list-table td:nth-child(6),
+          .selected-list-table td:nth-child(7) {
+            text-align: center;
           }
 
           .selected-list-table tr {
@@ -369,7 +380,10 @@ function buildSelectedListPrintDocumentMarkup(
                 <th>Name</th>
                 <th>Event Number</th>
                 <th>Rank</th>
-                <th>Present</th>
+                <th>Group A</th>
+                <th>Group B</th>
+                <th>Group C</th>
+                <th>Group D</th>
               </tr>
             </thead>
             <tbody>${rowsMarkup}</tbody>
