@@ -35,6 +35,7 @@ import { normalizeName } from "@/helpers/stringHelpers";
 import { rankItem } from '@tanstack/match-sorter-utils';
 import type { FilterFn } from '@tanstack/react-table';
 import { IndeterminateCheckbox, PillButton, SegmentedButton } from "@/components/Custom/";
+import { randomizeBracketOrder, sortByDrawOrder } from "@/helpers/drawOrder";
 
 
 export type RegistrationRow = {
@@ -203,6 +204,9 @@ function buildSelectedListPrintDocumentMarkup(
         <td>${escapeHtml(eventNumber)}</td>
         <td>${escapeHtml(registration.participantRank)}</td>
         <td class="checkbox-cell"><span class="checkbox-box"></span></td>
+        <td class="checkbox-cell"><span class="checkbox-box"></span></td>
+        <td class="checkbox-cell"><span class="checkbox-box"></span></td>
+        <td class="checkbox-cell"><span class="checkbox-box"></span></td>
       </tr>`
     })
     .join("")
@@ -304,6 +308,14 @@ function buildSelectedListPrintDocumentMarkup(
           .selected-list-table th {
             background: #e5e7eb;
             font-weight: 700;
+            text-align: center;
+          }
+
+          .selected-list-table td:nth-child(4),
+          .selected-list-table td:nth-child(5),
+          .selected-list-table td:nth-child(6),
+          .selected-list-table td:nth-child(7) {
+            text-align: center;
           }
 
           .selected-list-table tr {
@@ -368,7 +380,10 @@ function buildSelectedListPrintDocumentMarkup(
                 <th>Name</th>
                 <th>Event Number</th>
                 <th>Rank</th>
-                <th>Present</th>
+                <th>Group A</th>
+                <th>Group B</th>
+                <th>Group C</th>
+                <th>Group D</th>
               </tr>
             </thead>
             <tbody>${rowsMarkup}</tbody>
@@ -408,6 +423,17 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
 // }
 
 
+const MANAGE_DIVISIONS_PAGE_SIZE_KEY = 'manage-divisions-page-size'
+
+const getStoredPageSize = () => {
+  if (typeof window === 'undefined') {
+    return 10
+  }
+
+  const storedValue = Number(window.sessionStorage.getItem(MANAGE_DIVISIONS_PAGE_SIZE_KEY))
+  return [10, 20, 30, 40, 50].includes(storedValue) ? storedValue : 10
+}
+
 export function ManageDivisions({
   tournamentId,
   search,
@@ -418,7 +444,10 @@ export function ManageDivisions({
 
   const [selectedRegistrations, setSelectedRegistrations] = useAtom(selectedRegistrationsAtom);
   const navigate = useNavigate();
-
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: getStoredPageSize(),
+  });
 
     const { data: registrations, isLoading: participantLoading } = useQuery<any[]>({
         queryKey: ['tournament-registrations', tournamentId],
@@ -582,7 +611,7 @@ export function ManageDivisions({
       maxAge: r.tournamentEventDivision.division.divisionType.maxAge,
       eventDisplayName: normalizeName(r.tournamentEventDivision.displayName),
       eventName: normalizeName(r.tournamentEventDivision.tournamentEvent.event.name),
-      
+      dojoName: p.dojo?.dojoName || p.otherDojoName || "Unknown",
     }))
   )
 }, [registrations])
@@ -594,6 +623,15 @@ export function ManageDivisions({
     if (!flattened) return [] as string[];
     return Array.from(new Set(flattened.map((r: any) => r.eventDisplayName))).sort((a: string, b: string) => eventNumberCollator.compare(a, b));
   }, [flattened]);
+
+  const tableData = useMemo(() => {
+    if (!flattened.length) {
+      return [] as typeof flattened;
+    }
+
+    return sortByDrawOrder(flattened, selectedRegistrations);
+  }, [flattened, selectedRegistrations]);
+
   const rowSelection = useMemo(
     () => buildRowSelectionFromRegistrations(selectedRegistrations),
     [selectedRegistrations],
@@ -658,10 +696,19 @@ export function ManageDivisions({
     }
   }
 
+  function handleRandomizeSelectedOrder() {
+    if (selectedRegistrations.length < 2) {
+      return
+    }
+
+    const randomized = randomizeBracketOrder(selectedRegistrations)
+    setSelectedRegistrations(randomized)
+  }
+
    const table = useReactTable({
-       data: flattened ?? [],
+       data: tableData ?? [],
        columns,
-       state: { sorting, columnFilters, rowSelection },
+       state: { sorting, columnFilters, rowSelection, pagination },
        onSortingChange: setSorting,
        onColumnFiltersChange: (updater) => {
         setColumnFilters((currentColumnFilters) => {
@@ -672,7 +719,7 @@ export function ManageDivisions({
             navigate({
               to: "/tournament/organizer/manage-divisions/$id",
               params: { id: tournamentId },
-              search: nextSearch,
+              search: { ...search, ...nextSearch, pageSize: search.pageSize ?? 10 },
               replace: true,
             })
           }
@@ -687,6 +734,17 @@ export function ManageDivisions({
         )
 
         setSelectedRegistrations(nextSelectedRegistrations)
+       },
+       onPaginationChange: (updater) => {
+         setPagination((currentPagination) => {
+           const nextPagination = functionalUpdate(updater, currentPagination)
+
+           if (typeof window !== 'undefined') {
+             window.sessionStorage.setItem(MANAGE_DIVISIONS_PAGE_SIZE_KEY, String(nextPagination.pageSize))
+           }
+
+           return nextPagination
+         })
        },
        getRowId: (row) => String(row.registrationId),
        enableRowSelection: true,
@@ -906,6 +964,14 @@ function onParticipantGenderChanged(value: string) {
             </button>
 
             <button
+              className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-500 disabled:opacity-50"
+              disabled={selectedRegistrations.length < 2}
+              onClick={handleRandomizeSelectedOrder}
+            >
+              Randomize Draw Order
+            </button>
+
+            <button
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
               disabled={selectedRegistrations.length === 0}
               onClick={() => createDraw("/organizer/divisions")}
@@ -972,7 +1038,12 @@ function onParticipantGenderChanged(value: string) {
         <select
           value={table.getState().pagination.pageSize}
           onChange={(e) => {
-            table.setPageSize(Number(e.target.value))
+            const nextPageSize = Number(e.target.value)
+            table.setPageSize(nextPageSize)
+
+            if (typeof window !== 'undefined') {
+              window.sessionStorage.setItem(MANAGE_DIVISIONS_PAGE_SIZE_KEY, String(nextPageSize))
+            }
           }}
           className="px-2 py-1 bg-gray-800 rounded-md border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
         >

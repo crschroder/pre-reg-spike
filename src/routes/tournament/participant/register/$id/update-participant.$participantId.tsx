@@ -27,8 +27,13 @@ export const Route = createFileRoute(
 function RouteComponent() {
   const { id, participantId } = Route.useParams();
   const { mode } = Route.useSearch();
+  const effectiveMode = mode ?? 'organizer';
 
   return (
-    <CreateParticipant tournamentId={id} participantId={participantId} mode={'organizer'}/>
+    <CreateParticipant
+      tournamentId={id}
+      participantId={participantId}
+      mode={effectiveMode}
+    />
   )
 }

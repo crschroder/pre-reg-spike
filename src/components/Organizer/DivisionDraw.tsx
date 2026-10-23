@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useAtomValue } from "jotai";
+import { formatParticipantLabel } from "@/helpers/drawOrder";
 import { selectedRegistrationsAtom, type DrawRegistration } from "@/store/selectedRegistrations";
 
 type RegistrationRow = DrawRegistration;
@@ -113,6 +114,7 @@ type TemplateRenderModel = {
 };
 
 const SLOT_LABEL_FONT_SIZE = 16;
+const DOJO_LABEL_FONT_SIZE = 11;
 const SLOT_LABEL_OFFSET_Y = 6;
 const PLACEMENT_LABELS = ["1st", "2nd", "3rd", "4th"] as const;
 const THIRD_PLACE_OUTER_LINE_EXTENSION = 72;
@@ -209,7 +211,7 @@ function chooseTemplateSize(count: number): TemplateSize {
 }
 
 function getParticipantLabel(registration: RegistrationRow) {
-  return `${registration.firstName} ${registration.lastName}`;
+  return formatParticipantLabel(registration);
 }
 
 function getRoundLabel(roundIndex: number, totalRounds: number) {
@@ -550,10 +552,18 @@ function buildPrintSvgMarkup(renderModel: TemplateRenderModel) {
         return "";
       }
 
-      return `<text x="${source.x + 12}" y="${source.y - SLOT_LABEL_OFFSET_Y}" fill="currentColor" font-size="${SLOT_LABEL_FONT_SIZE}">
-        <tspan font-weight="700">${slot.seed}</tspan>
-        <tspan dx="12">${escapeHtml(slot.label)}</tspan>
-      </text>`;
+      const participantName = `${slot.competitor.firstName} ${slot.competitor.lastName}`.trim();
+      const dojoName = slot.competitor.dojoName?.trim();
+      const dojoMarkup = dojoName
+        ? `<text x="${source.x + 12}" y="${source.y - SLOT_LABEL_OFFSET_Y + 18}" fill="currentColor" font-size="${DOJO_LABEL_FONT_SIZE}" font-weight="500">[${escapeHtml(dojoName)}]</text>`
+        : "";
+
+      return `<g>
+        <text x="${source.x + 12}" y="${source.y - SLOT_LABEL_OFFSET_Y}" fill="currentColor" font-size="${SLOT_LABEL_FONT_SIZE}">
+          <tspan font-size="${SLOT_LABEL_FONT_SIZE}">${escapeHtml(participantName)}</tspan>
+        </text>
+        ${dojoMarkup}
+      </g>`;
     })
     .join("");
 
@@ -774,6 +784,9 @@ export function DivisionDraw() {
       return null;
     }
 
+    const participantName = `${slot.competitor.firstName} ${slot.competitor.lastName}`.trim();
+    const dojoName = slot.competitor.dojoName?.trim();
+
     return (
       <g key={slot.id} id={slot.id}>
         <text
@@ -783,9 +796,20 @@ export function DivisionDraw() {
           fontSize={SLOT_LABEL_FONT_SIZE}
           className="text-white print:text-black"
         >
-          <tspan fontWeight="700">{slot.seed}</tspan>
-          <tspan dx="12">{slot.label}</tspan>
+          <tspan fontSize={SLOT_LABEL_FONT_SIZE}>{participantName}</tspan>
         </text>
+        {dojoName && (
+          <text
+            x={source.x + 12}
+            y={source.y - SLOT_LABEL_OFFSET_Y + 18}
+            fill="currentColor"
+            fontSize={DOJO_LABEL_FONT_SIZE}
+            fontWeight={500}
+            className="text-gray-300 print:text-gray-600"
+          >
+            [{dojoName}]
+          </text>
+        )}
       </g>
     );
   }

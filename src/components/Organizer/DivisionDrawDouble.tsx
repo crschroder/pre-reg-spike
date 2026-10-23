@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useAtomValue } from "jotai";
+import { formatParticipantLabel } from "@/helpers/drawOrder";
 import { selectedRegistrationsAtom, type DrawRegistration } from "@/store/selectedRegistrations";
 
 type TemplateSize = 4 | 8 | 16;
@@ -208,6 +209,62 @@ function getLosersRoundIndex(matchId: string) {
     return Number(match[1]) - 1;
 }
 
+export function assignLoserFeedTarget(targetMatch: RenderedMatch, sourceMatchId: string) {
+    const assignedTop = targetMatch.top.feedMatchId === sourceMatchId;
+    const assignedBottom = targetMatch.bottom.feedMatchId === sourceMatchId;
+
+    if (assignedTop || assignedBottom) {
+        return;
+    }
+
+    if (!targetMatch.top.feedMatchId) {
+        targetMatch.top.feedMatchId = sourceMatchId;
+        targetMatch.top.feedLabelPrefix = "Loser of";
+        return;
+    }
+
+    if (!targetMatch.bottom.feedMatchId) {
+        targetMatch.bottom.feedMatchId = sourceMatchId;
+        targetMatch.bottom.feedLabelPrefix = "Loser of";
+    }
+}
+
+export function assignLoserDestinationLabel(
+    winnerMatch: { loserDestination?: string },
+    targetMatch?: { matchNumber?: number } | null
+) {
+    if (!targetMatch || targetMatch.matchNumber == null) {
+        return;
+    }
+
+    winnerMatch.loserDestination = `Loser to ${targetMatch.matchNumber}`;
+}
+
+export function applyWinnerLoserDestinationLabels(
+    winnerMatchesByRound: Array<Array<{ id: string; loserDestination?: string; matchNumber?: number }>>,
+    loserMatchesByRound: Array<Array<{ matchNumber?: number }>>
+) {
+    winnerMatchesByRound.forEach((roundMatches, roundIndex) => {
+        const targetRoundIndex = roundIndex === 0 ? 0 : 2 * roundIndex - 1;
+        const targetMatches = loserMatchesByRound[targetRoundIndex] ?? [];
+
+        roundMatches.forEach((match, matchIndex) => {
+            const preferredIndex = roundIndex === 0 ? Math.floor(matchIndex / 2) : matchIndex;
+            const candidateTarget = targetMatches[preferredIndex]
+                ?? targetMatches[matchIndex]
+                ?? targetMatches.find((candidate) => candidate.matchNumber != null);
+
+            if (!candidateTarget || candidateTarget.matchNumber == null) {
+                return;
+            }
+
+            if (!match.loserDestination) {
+                match.loserDestination = `Loser to ${candidateTarget.matchNumber}`;
+            }
+        });
+    });
+}
+
 function clearDynamicAnnotations(template: DoubleEliminationTemplate) {
     template.winnerMatches.forEach((match) => {
         delete match.matchNumber;
@@ -395,14 +452,7 @@ function applyDynamicNumberingAndFeeds(
         }
 
         winnerLoserTargets.set(match.id, targetMatch.id);
-
-        if (index % 2 === 0) {
-            targetMatch.top.feedMatchId = match.id;
-            targetMatch.top.feedLabelPrefix = "Loser of";
-        } else {
-            targetMatch.bottom.feedMatchId = match.id;
-            targetMatch.bottom.feedLabelPrefix = "Loser of";
-        }
+        assignLoserFeedTarget(targetMatch, match.id);
     });
 
     for (let round = 2; round < totalWinnerRounds; round += 1) {
@@ -417,8 +467,7 @@ function applyDynamicNumberingAndFeeds(
             }
 
             winnerLoserTargets.set(match.id, targetMatch.id);
-            targetMatch.top.feedMatchId = match.id;
-            targetMatch.top.feedLabelPrefix = "Loser of";
+            assignLoserFeedTarget(targetMatch, match.id);
         });
     }
 
@@ -510,6 +559,11 @@ function applyDynamicNumberingAndFeeds(
         numberByMatchId.set(template.secondPlaceMatch.id, template.secondPlaceMatch.matchNumber);
     }
 
+    applyWinnerLoserDestinationLabels(
+        visibleWinnerMatchesByRound,
+        visibleLosersByRound,
+    );
+
     function applySourceLabel(source: SourcePoint) {
         if (!source.feedMatchId || !source.feedLabelPrefix) {
             return;
@@ -535,12 +589,12 @@ function applyDynamicNumberingAndFeeds(
         const targetMatchNumber = numberByMatchId.get(targetMatchId);
 
         if (winnerMatch && targetMatchNumber != null) {
-            winnerMatch.loserDestination = `Loser to ${targetMatchNumber}`;
+            assignLoserDestinationLabel(winnerMatch, { matchNumber: targetMatchNumber });
         }
     });
 
     if (winnerFinal?.matchNumber != null && template.secondPlaceMatch.matchNumber != null) {
-        winnerFinal.loserDestination = `Loser to ${template.secondPlaceMatch.matchNumber}`;
+        assignLoserDestinationLabel(winnerFinal, { matchNumber: template.secondPlaceMatch.matchNumber });
     }
 
     const winners = buildWinnerRenderModel(participants, template);
@@ -577,6 +631,7 @@ const PRINT_FONT_SIZES = {
 const SHOW_BRACKET_SECTION_LABELS = false;
 const SHOW_BRACKET_ROUND_LABELS = false;
 const SLOT_LABEL_OFFSET_Y = 6;
+const DOJO_LABEL_FONT_SIZE = 10;
 const LOSERS_HEADER_LIFT = 58;
 const LOSERS_ROUND_LABEL_LIFT = 66;
 const LOSER_FEED_LABEL_OFFSET_Y = 20;
@@ -749,7 +804,7 @@ function chooseTemplateSize(count: number): TemplateSize | null {
 }
 
 function getParticipantLabel(registration: DrawRegistration) {
-    return `${registration.firstName} ${registration.lastName}`;
+    return formatParticipantLabel(registration);
 }
 
 function buildDrawMetaTitle(title: string, eventName: string) {
@@ -1065,7 +1120,11 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
     for (const match of winnerMatchesByRound[0]) {
         const targetMatch = losersMatchesByRound[0][Math.floor((match.matchNumber! - 1) / 2)];
 
-        match.loserDestination = `Loser to ${targetMatch.matchNumber}`;
+        if (!targetMatch) {
+            continue;
+        }
+
+        assignLoserDestinationLabel(match, targetMatch);
 
         if ((match.matchNumber! - 1) % 2 === 0) {
             targetMatch.top.label = `Loser of ${match.matchNumber}`;
@@ -1084,12 +1143,16 @@ function createDoubleTemplate(config: DoubleTemplateConfig): DoubleEliminationTe
         winnerMatchesByRound[round - 1].forEach((match, index) => {
             const targetMatch = losersMatchesByRound[targetLoserRoundIndex][index];
 
-            match.loserDestination = `Loser to ${targetMatch.matchNumber}`;
+            if (!targetMatch) {
+                return;
+            }
+
+            assignLoserDestinationLabel(match, targetMatch);
             targetMatch.top.label = `Loser of ${match.matchNumber}`;
         });
     }
 
-    winnerFinal.loserDestination = `Loser to ${secondPlaceMatchNumber}`;
+    assignLoserDestinationLabel(winnerFinal, { matchNumber: secondPlaceMatchNumber });
     secondPlaceMatch.top.label = `Winner of ${losersFinal.matchNumber}`;
     secondPlaceMatch.bottom.label = `Loser of ${winnerFinal.matchNumber}`;
 
@@ -1394,9 +1457,13 @@ function buildPrintSvgMarkup(renderModel: DoubleRenderModel) {
                 return "";
             }
 
+            const participantName = `${slot.competitor.firstName} ${slot.competitor.lastName}`.trim();
+            const dojoName = slot.competitor.dojoName?.trim();
+            const dojoMarkup = dojoName ? `<tspan dx="8" font-size="${DOJO_LABEL_FONT_SIZE}">[${escapeHtml(dojoName)}]</tspan>` : "";
+
             return `<text x="${source.x + 12}" y="${source.y - SLOT_LABEL_OFFSET_Y}" fill="currentColor" font-size="${PRINT_FONT_SIZES.slotLabel}">
-                <tspan font-weight="700">${slot.seed}</tspan>
-                <tspan dx="12">${escapeHtml(slot.label)}</tspan>
+                <tspan font-size="${PRINT_FONT_SIZES.slotLabel}">${escapeHtml(participantName)}</tspan>
+                ${dojoMarkup}
             </text>`;
         })
         .join("");
@@ -1728,6 +1795,9 @@ export function DivisionDrawDouble() {
             return null;
         }
 
+        const participantName = `${slot.competitor.firstName} ${slot.competitor.lastName}`.trim();
+        const dojoName = slot.competitor.dojoName?.trim();
+
         return (
             <g key={slot.id} id={slot.id}>
                 <text
@@ -1737,8 +1807,10 @@ export function DivisionDrawDouble() {
                     fontSize={LIVE_FONT_SIZES.slotLabel}
                     className="text-white print:text-black"
                 >
-                    <tspan fontWeight="700">{slot.seed}</tspan>
-                    <tspan dx="12">{slot.label}</tspan>
+                    <tspan fontSize={LIVE_FONT_SIZES.slotLabel}>{participantName}</tspan>
+                    {dojoName && (
+                        <tspan dx="8" fontSize={DOJO_LABEL_FONT_SIZE}>[{dojoName}]</tspan>
+                    )}
                 </text>
             </g>
         );
