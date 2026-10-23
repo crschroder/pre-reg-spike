@@ -10,6 +10,7 @@ export type DrawRegistration = {
 	divisionName: string;
 	eventName: string;
 	eventDisplayName: string;
+	dojoName?: string | null;
 };
 
 export const selectedRegistrationsAtom = atom<DrawRegistration[]>([]);

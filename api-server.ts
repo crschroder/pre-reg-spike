@@ -845,11 +845,12 @@ app.get('/api/tournaments/:id/participants', async (req: Request, res: Response,
       include: {
         gender: true,
         rank: true,
+        dojo: true,
         registrations: {
           include: {
             tournamentEventDivision: {
               include: {
-                eventGender: true,
+                eventGender: true,                
                 division: {
                   include: {
                     divisionType: true,

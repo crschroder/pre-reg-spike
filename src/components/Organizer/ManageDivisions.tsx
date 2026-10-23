@@ -35,6 +35,7 @@ import { normalizeName } from "@/helpers/stringHelpers";
 import { rankItem } from '@tanstack/match-sorter-utils';
 import type { FilterFn } from '@tanstack/react-table';
 import { IndeterminateCheckbox, PillButton, SegmentedButton } from "@/components/Custom/";
+import { randomizeBracketOrder, sortByDrawOrder } from "@/helpers/drawOrder";
 
 
 export type RegistrationRow = {
@@ -582,7 +583,7 @@ export function ManageDivisions({
       maxAge: r.tournamentEventDivision.division.divisionType.maxAge,
       eventDisplayName: normalizeName(r.tournamentEventDivision.displayName),
       eventName: normalizeName(r.tournamentEventDivision.tournamentEvent.event.name),
-      
+      dojoName: p.dojo?.dojoName || p.otherDojoName || "Unknown",
     }))
   )
 }, [registrations])
@@ -594,6 +595,15 @@ export function ManageDivisions({
     if (!flattened) return [] as string[];
     return Array.from(new Set(flattened.map((r: any) => r.eventDisplayName))).sort((a: string, b: string) => eventNumberCollator.compare(a, b));
   }, [flattened]);
+
+  const tableData = useMemo(() => {
+    if (!flattened.length) {
+      return [] as typeof flattened;
+    }
+
+    return sortByDrawOrder(flattened, selectedRegistrations);
+  }, [flattened, selectedRegistrations]);
+
   const rowSelection = useMemo(
     () => buildRowSelectionFromRegistrations(selectedRegistrations),
     [selectedRegistrations],
@@ -658,8 +668,17 @@ export function ManageDivisions({
     }
   }
 
+  function handleRandomizeSelectedOrder() {
+    if (selectedRegistrations.length < 2) {
+      return
+    }
+
+    const randomized = randomizeBracketOrder(selectedRegistrations)
+    setSelectedRegistrations(randomized)
+  }
+
    const table = useReactTable({
-       data: flattened ?? [],
+       data: tableData ?? [],
        columns,
        state: { sorting, columnFilters, rowSelection },
        onSortingChange: setSorting,
@@ -903,6 +922,14 @@ function onParticipantGenderChanged(value: string) {
               onClick={handlePrintSelectedList}
             >
               Print Selected List
+            </button>
+
+            <button
+              className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-500 disabled:opacity-50"
+              disabled={selectedRegistrations.length < 2}
+              onClick={handleRandomizeSelectedOrder}
+            >
+              Randomize Draw Order
             </button>
 
             <button
