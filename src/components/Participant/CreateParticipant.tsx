@@ -202,10 +202,12 @@ type ModalState = {
 export function CreateParticipant({ tournamentId, participantId, mode }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const pathName = typeof window !== "undefined" ? window.location.pathname : "";
   const { user, isAuthenticated } = useAuth0()
   const userEmail = user?.email?.trim().toLowerCase() ?? ''
   const { data: userRoles = [] } = useUserRoles(userEmail, isAuthenticated)
-  const normalizedMode = mode ?? (typeof window !== 'undefined' && window.location.pathname.includes('/update-participant/') && !window.location.pathname.includes('/update-participant-dayof/') ? 'organizer' : undefined)
+  const normalizedMode = mode ?? (pathName.includes('/update-participant/') && !pathName.includes('/update-participant-dayof/') ? 'organizer' : undefined)
+  const isDayOfRegistrationRoute = pathName.includes('/create-participant-dayof') || pathName.includes('/update-participant-dayof/');
   const isEdit = Boolean(participantId);
   const canBypassPreRegistrationClosed = userRoles.some((role) => ['organizer', 'administrator', 'admin'].includes(role))
 
@@ -268,18 +270,36 @@ export function CreateParticipant({ tournamentId, participantId, mode }: Props) 
   }
 
   const isPreRegistrationClosed = (() => {
-    if (!data?.preRegistrationCloseDate || !data?.date) {
+    if (!data?.preRegistrationCloseDate) {
       return false;
     }
 
     const closeDate = new Date(data.preRegistrationCloseDate);
-    const tournamentDate = new Date(data.date);
     const now = new Date();
-    const isAfterCloseDate = now >= closeDate;
+    if (Number.isNaN(closeDate.getTime()) || now < closeDate) {
+      return false;
+    }
 
-    const isDayOfTournament = now < tournamentDate;
-    
-    return isAfterCloseDate && isDayOfTournament;
+    // Day-of routes remain open only on the tournament date.
+    if (isDayOfRegistrationRoute && data?.date) {
+      const dateOnlyMatch = data.date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      const tournamentDate = dateOnlyMatch
+        ? new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]))
+        : new Date(data.date);
+
+      if (!Number.isNaN(tournamentDate.getTime())) {
+        const isTournamentDay =
+          now.getFullYear() === tournamentDate.getFullYear() &&
+          now.getMonth() === tournamentDate.getMonth() &&
+          now.getDate() === tournamentDate.getDate();
+
+        if (isTournamentDay) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   })();
   if (!isLoading) {
     console.log("Fetched tournament data:", data);
