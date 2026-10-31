@@ -145,6 +145,34 @@ const buildSearchFromColumnFilters = (columnFilters: ColumnFiltersState): Manage
   return search
 }
 
+export const buildRouteSearch = (
+  currentSearch: Partial<ManageDivisionsSearch> & { pageSize?: number },
+  nextSearch: Partial<ManageDivisionsSearch> & { pageSize?: number } = {},
+) => {
+  const mergedSearch = { ...currentSearch }
+
+  for (const filterKey of FILTER_IDS) {
+    if (!(filterKey in nextSearch)) {
+      delete (mergedSearch as Record<string, unknown>)[filterKey]
+    }
+  }
+
+  const routeSearch = { ...mergedSearch, ...nextSearch }
+
+  for (const filterKey of FILTER_IDS) {
+    const value = (routeSearch as Record<string, unknown>)[filterKey]
+    if (value === undefined || (Array.isArray(value) && value.length === 0)) {
+      delete (routeSearch as Record<string, unknown>)[filterKey]
+    }
+  }
+
+  if (routeSearch.pageSize === undefined) {
+    routeSearch.pageSize = currentSearch.pageSize ?? 10
+  }
+
+  return routeSearch
+}
+
 const buildRowSelectionFromRegistrations = (registrations: DrawRegistration[]): RowSelectionState => {
   const rowSelection: RowSelectionState = {}
 
@@ -719,7 +747,7 @@ export function ManageDivisions({
             navigate({
               to: "/tournament/organizer/manage-divisions/$id",
               params: { id: tournamentId },
-              search: { ...search, ...nextSearch, pageSize: search.pageSize ?? 10 },
+              search: buildRouteSearch(search, nextSearch),
               replace: true,
             })
           }
@@ -872,7 +900,15 @@ function onParticipantGenderChanged(value: string) {
       })
     })}
      <button
-                          onClick={() => table.resetColumnFilters()}
+                          onClick={() => {
+                            table.resetColumnFilters()
+                            navigate({
+                              to: "/tournament/organizer/manage-divisions/$id",
+                              params: { id: tournamentId },
+                              search: buildRouteSearch(search, {}),
+                              replace: true,
+                            })
+                          }}
                           disabled={table.getState().columnFilters.length === 0}
                           className={`px-3 py-1 rounded transition ${table.getState().columnFilters.length === 0
                                   ? "bg-gray-700 text-gray-500 cursor-not-allowed"
